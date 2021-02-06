@@ -3,7 +3,6 @@
  
  ## Steps to run lexer:
  ```ruby
- mkdir bin
  cd src/
  make
  cd ..
