@@ -4,8 +4,11 @@ LEX=flex
 
 all: lexer
 
-lexer : lex.yy.c parse.tab.h
+lexer : lex.yy.c parse.tab.h bin
 	$(CC) -o ../bin/lexer lex.yy.c
+
+bin:
+	mkdir -p ../bin
 
 lex.yy.c : lexer.l
 	$(LEX) lexer.l
