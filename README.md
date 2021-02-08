@@ -1,7 +1,7 @@
 # CS335-Compiler
  C to x86 compiler developed under CS335 at IIT Kanpur
  
- ### Steps to build and run lexer on a test case (say test1.c) :
+ ### Steps to build and run lexer :
  ```ruby
  make
  ./bin/lexer -help  #To see the Usage Info
