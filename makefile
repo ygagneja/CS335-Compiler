@@ -4,7 +4,7 @@ LEX=flex
 
 all: lexer
 
-lexer : ./src/lex.yy.c ./src/parse.tab.h bin
+./bin/lexer : ./src/lex.yy.c ./src/parse.tab.h bin
 	$(CC) -o ./bin/lexer ./src/lex.yy.c
 
 bin:
