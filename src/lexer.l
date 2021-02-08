@@ -156,18 +156,55 @@ void count(char* token){
         else column++;
     }
     if (token[0]!='\0'){
-        printf ("%s\t", token);
-        if (strlen(token) < 8) printf ("\t");
-        printf ("%s\t", yytext);
-        if (strlen(yytext) < 8) printf ("\t");
-        printf ("%d\t\t%d\n", line, prev_col);
+        fprintf (yyout, "%s\t", token);
+        if (strlen(token) < 8) fprintf (yyout, "\t");
+        fprintf (yyout, "%s\t", yytext);
+        if (strlen(yytext) < 8) fprintf (yyout, "\t");
+        fprintf (yyout, "%d\t\t%d\n", line, prev_col);
     }
 }
 
+void usage_info(){
+    printf("Specify -help for usage info\n");
+    printf("Specify test program with -i flag\n");
+    printf("Specify output file with -o flag (default is STDOUT)\n");
+    return;
+}
+
 int main (int argc, char* argv[]){
-    yyin = fopen (argv[1], "r");
-    printf ("Token\t\tLexeme\t\tLine#\t\tColumn#\n");
+    if(argc == 1){
+        usage_info();
+        return 0;
+    }
+    yyin = NULL;
+    yyout = stdout;
+    for(int i = 0; i < argc-1; i++){
+        if(!strcmp(argv[i+1], "-help")){
+            usage_info();
+            return 0;
+        }
+        if(i == argc-2){
+            usage_info();
+            return 0;
+        }
+        if(!strcmp(argv[i+1], "-i")){
+            yyin = fopen (argv[i+2], "r");
+            i++;
+        }else if(!strcmp(argv[i+1], "-o")){
+            yyout = fopen(argv[i+2], "w");
+            i++;
+        }else{
+            usage_info();
+            return 0;
+        }
+    }
+    if(yyin == NULL){
+        printf("Specified input file doesn't exist\n");
+        return 0;
+    }
+    fprintf (yyout, "Token\t\tLexeme\t\tLine#\t\tColumn#\n");
     while (yylex() != 0);
     fclose (yyin);
+    fclose (yyout);
     return 0;
 }

@@ -16,3 +16,4 @@ bin:
 clean:
 	rm ./src/lex.yy.c
 	rm -rf bin
+	rm -rf *.txt
