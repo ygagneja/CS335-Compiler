@@ -2,7 +2,7 @@ CC=gcc
 LEX=flex
 .PHONY: all clean
 
-all: lexer
+all: ./bin/lexer
 
 ./bin/lexer : ./src/lex.yy.c ./src/parse.tab.h bin
 	$(CC) -o ./bin/lexer ./src/lex.yy.c
