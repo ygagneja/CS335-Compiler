@@ -156,9 +156,11 @@ void count(char* token){
         else column++;
     }
     if (token[0]!='\0'){
-        printf ("%s", token);
-        if(strlen(token) < 8) printf("\t");
-        printf ("\t%s\t\t%d\t\t%d\n", yytext, line, prev_col);
+        printf ("%s\t", token);
+        if (strlen(token) < 8) printf ("\t");
+        printf ("%s\t", yytext);
+        if (strlen(yytext) < 8) printf ("\t");
+        printf ("%d\t\t%d\n", line, prev_col);
     }
 }
 
