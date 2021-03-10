@@ -49,7 +49,7 @@ FILE *ast;
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1); }
   | CONSTANT                      {$$ = terminal($1); }
-  | STRING_LITERAL                {$$ = terminal($1); }
+  | STRING_LITERAL                {$$ = terminal("STRING_LITERAL"); }
   | '(' expression ')'            {$$ = $2; }
   ;
 
