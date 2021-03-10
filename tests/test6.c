@@ -1,9 +1,3 @@
-
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "ctype.h"
-
 const int MAX_SIZE = 500;
 
 int a[2][2] = {{1, 2}, {3, 5}};
