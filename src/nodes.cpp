@@ -18,14 +18,14 @@ void graph_end() {
 node* terminal(char* label){
     node* curr_node = (node*)malloc(sizeof(node));
     curr_node->label = label, curr_node->id = ++id;
-    fprintf(ast, "\t%lu [label=\"%s\"];\n", curr_node->id, curr_node->label);
+    fprintf(ast, "\t%lu [label=\"%s\"];\n", id, label);
     return curr_node;
 }
 
 node* non_terminal(int case_no, char* label, node* n1, node* n2, node* n3, node* n4, node* n5, char* op1, char* op2, char* op3){
     node* curr_node = (node*)malloc(sizeof(node));
     curr_node->label = label, curr_node->id = ++id;
-    fprintf(ast, "\t%lu [label=\"%s\"];\n", curr_node->id, curr_node->label);
+    fprintf(ast, "\t%lu [label=\"%s\"];\n", id, label);
     if (case_no == 0){
         int operator_id = ++id;
         if(op1) fprintf(ast, "\t%lu [label=\"%s\"];\n", operator_id, op1);

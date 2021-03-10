@@ -48,7 +48,7 @@ FILE *ast;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1); }
-  | CONSTANT                      {$$ = terminal($1); }
+  | CONSTANT                      {$$ = terminal("CONSTANT"); }
   | STRING_LITERAL                {$$ = terminal("STRING_LITERAL"); }
   | '(' expression ')'            {$$ = $2; }
   ;
@@ -493,7 +493,7 @@ int main (int argc, char* argv[]){
         }
     }
     if(yyin == NULL){
-        printf("Specified input file doesn't exist\n");
+        printf("Please specify a valid input file\n");
         return 0;
     }
     if (ast == NULL){
@@ -507,10 +507,6 @@ int main (int argc, char* argv[]){
     fclose (ast);
     return 0;
 }
-// error handling
-// decl ast remove
-// grbge out
 // readme
 // test progs
-// git tag
-// meaningful nodes
+// git tag and submit

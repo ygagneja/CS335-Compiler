@@ -16,6 +16,7 @@ using namespace std;
 
 void comment();
 void count(char* token);
+void yyerror(char* s);
 
 int column = 1;
 int line = 1;
@@ -58,7 +59,7 @@ int line = 1;
 "volatile"		{ yylval.str=strdup(yytext); count("VOLATILE"); return(VOLATILE); }
 "while"			{ yylval.str=strdup(yytext); count("WHILE"); return(WHILE); }
 
-{L}({L}|{D})*		{ count("IDENTIFIER"); return(IDENTIFIER); }
+{L}({L}|{D})*		{ yylval.str=strdup(yytext); count("IDENTIFIER"); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?		{ yylval.str=strdup(yytext); count("CONSTANT"); return(CONSTANT); }
 0{D}+{IS}?		{ yylval.str=strdup(yytext); count("CONSTANT"); return(CONSTANT); }
@@ -119,7 +120,7 @@ L?\"(\\.|[^\\"])*\"	{ yylval.str=strdup(yytext); count("STRING_LITERAL"); return
 "?"			{ yylval.str=strdup(yytext); count("?"); return('?'); }
 
 [ \t\v\n\f]		{ count("\0"); }
-.			{ fprintf (stderr, "\n\nUnidentified expression found in line %d, terminating...\n\n", line); return 0; }
+.			{ yyerror("Unidentified expression found !!!\n");}
 
 %%
 
@@ -157,12 +158,5 @@ void count(char* token){
         //     column = column + 8 - (column%8);
         // }
         else column++;
-    }
-    if (token[0]!='\0'){
-        fprintf (yyout, "%s\t", token);
-        if (strlen(token) < 8) fprintf (yyout, "\t");
-        fprintf (yyout, "%s\t", yytext);
-        if (strlen(yytext) < 8) fprintf (yyout, "\t");
-        fprintf (yyout, "%d\t\t%d\n", line, prev_col);
     }
 }
