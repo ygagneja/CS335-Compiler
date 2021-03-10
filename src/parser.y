@@ -509,3 +509,8 @@ int main (int argc, char* argv[]){
 }
 // error handling
 // decl ast remove
+// grbge out
+// readme
+// test progs
+// git tag
+// meaningful nodes
