@@ -10,7 +10,6 @@
  ```
  ### Example test commands:
  ```ruby
- ./bin/parser -i ./tests/test6.c
  ./bin/parser -i ./tests/test6.c -o myAST.dot
  dot -Tps myAST.dot -o graph1.ps
  #Open file "graph1.ps" to see the generated AST

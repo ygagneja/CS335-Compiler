@@ -507,6 +507,3 @@ int main (int argc, char* argv[]){
     fclose (ast);
     return 0;
 }
-// readme
-// test progs
-// git tag and submit

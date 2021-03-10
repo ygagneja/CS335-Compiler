@@ -10,11 +10,11 @@ enum week{Mon, Tue, Wed, Thur, Fri, Sat, Sun};
 int main(){
     int a, b;
     int c;
-    c = a + b;
-    printf("%d",c);
-
+    enum week day; 
     struct Books Book1;        
-    struct Books Book2;        
+    struct Books Book2; 
+    c = a + b;
+    printf("%d",c);       
     
     strcpy( Book1.title, "CLRS");
     strcpy( Book1.author, "Bose"); 
@@ -36,7 +36,6 @@ int main(){
     printf( "Book 2 subject : %s\n", Book2.subject);
     printf( "Book 2 book_id : %d\n", Book2.book_id);
 
-    enum week day; 
     day = Wed; 
     printf("%d",day); 
 
