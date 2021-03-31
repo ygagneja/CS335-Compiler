@@ -7,6 +7,9 @@
 #include "nodes.h"
 using namespace std;
 
+bool error_throw = false;
+string curr_args_types;
+
 int yylex(void);
 void yyerror(char *s);
 FILE *ast;
@@ -47,26 +50,110 @@ FILE *ast;
 %%
 
 primary_expression
-  : IDENTIFIER                    {$$ = terminal($1); }
-  | CONSTANT                      {$$ = terminal("CONSTANT"); }
-  | STRING_LITERAL                {$$ = terminal("STRING_LITERAL"); }
+  : IDENTIFIER                    {$$ = terminal($1);
+                                    string type = id_type($1);
+                                    if (type != ""){
+                                      $$->init = lookup($1)->init;
+                                      $$->nodetype = string(type);
+                                    }
+                                    else {
+                                      error_throw = true;
+                                      $$->nodetype = string(type);
+                                      fprintf(stderr, "Error : %s is not declared in this scope", $1);
+                                    }
+                                  }
+  | CONSTANT                      {$$ = terminal("CONSTANT");
+                                    string type = const_type($1);
+                                    $$->init = true;
+                                    $$->nodetype = string(type);
+                                  }
+  | STRING_LITERAL                {$$ = terminal("STRING_LITERAL");
+                                    $$->nodetype = string("char*");
+                                    $$->init = true;
+                                  }
   | '(' expression ')'            {$$ = $2; }
   ;
 
 postfix_expression
   : primary_expression                       {$$ = $1; }
-  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);}
-  | postfix_expression '(' ')'               {$$ = $1;}
-  | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);}
-  | postfix_expression '.' IDENTIFIER        {$$ = non_terminal(0, "postfix_expression.IDENTIFIER", $1, terminal($3));}
-  | postfix_expression PTR_OP IDENTIFIER     {$$ = non_terminal(0, $2, $1, terminal($3));}
-  | postfix_expression INC_OP                {$$ = non_terminal(0, $2, $1);}
-  | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);}
+  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
+                                              if ($1->init && $3->init){
+                                                $$->init = true;
+                                              }
+                                              string type = postfix_type($1->nodetype, 1);
+                                              if (type != ""){
+                                                $$->nodetype = string(type);
+                                              }
+                                              else {
+                                                error_throw = true;
+                                                $$->nodetype = string(type);
+                                                fprintf(stderr,"Error : Array indexed with more indices than its dimension");
+                                              }
+                                             }
+  | postfix_expression '(' ')'               {$$ = $1;
+                                              $$->init = true;
+                                              string type = postfix_type($1->nodetype, 2);
+                                              $$->nodetype = string(type);
+                                              if (type != ""){
+                                                // check if expr type of $1 is correct
+                                                // check if its a valid func call argument wise
+                                              }
+                                              else {
+                                                error_throw = true;
+                                                fprintf("Error : Invalid function call");
+                                              }
+                                             }
+  | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
+                                                            if ($3->init) $$->init = true;
+                                                            string type = postfix_type($1->nodetype, 3);
+                                                            $$->nodetype = string(type);
+                                                            if (type != ""){
+                                                              // check if expr type of $1 is correct
+                                                              // get args from func defn
+                                                              // do all the complex type checking and type casting
+
+                                                            }
+                                                            else {
+                                                              error_throw = true;
+                                                              fprintf("Error : Invalid function call");
+                                                            }
+                                                          }
+  | postfix_expression '.' IDENTIFIER        {$$ = non_terminal(0, "postfix_expression.IDENTIFIER", $1, terminal($3));
+                                              // what is this
+                                             }
+  | postfix_expression PTR_OP IDENTIFIER     {$$ = non_terminal(0, $2, $1, terminal($3));
+                                              // what is this
+                                             }
+  | postfix_expression INC_OP                {$$ = non_terminal(0, $2, $1);
+                                              if ($1->init) $$->init = true;
+                                              string type = postfix_type($1->nodetype, 6);
+                                              $$->nodetype = string(type);
+                                              if (type == ""){
+                                                error_throw = true;
+                                                fprintf(stderr, "Error : Increment used with incompatible type");
+                                              }
+                                             }
+  | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
+                                              if ($1->init) $$->init = true;
+                                              string type = postfix_type($1->nodetype, 7);
+                                              $$->nodetype = string(type);
+                                              if (type == ""){
+                                                error_throw = true;
+                                                fprintf(stderr, "Error : Increment used with incompatible type");
+                                              }
+                                             }
   ;
 
 argument_expression_list
-  : assignment_expression            {$$ = $1; }
-  | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); }
+  : assignment_expression            {$$ = $1; 
+                                      curr_args_types = $$->nodetype;
+                                     }
+  | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
+                                                          string type = args_type($1->nodetype, $3->nodetype);
+                                                          $$->nodetype = string(type);
+                                                          if ($1->init && $3->init) $$->init = true;
+                                                          curr_args_types = curr_args_types + string(",") + $3->nodetype;
+                                                          }
   ;
 
 unary_expression

@@ -1,6 +1,8 @@
 typedef struct {
     int id;
     char* label;
+    string nodetype;
+    bool init;
 } node;
 
 void graph_init();
