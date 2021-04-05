@@ -1,8 +1,12 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
 typedef struct {
     int id;
     char* label;
     string nodetype;
-    bool init;
+    bool init = false;
 } node;
 
 void graph_init();

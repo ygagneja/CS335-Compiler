@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "nodes.h"
+#include "type_check.h"
 using namespace std;
 
 bool error_throw = false;
@@ -100,7 +101,7 @@ postfix_expression
                                               }
                                               else {
                                                 error_throw = true;
-                                                fprintf("Error : Invalid function call");
+                                                fprintf(stderr, "Error : Invalid function call");
                                               }
                                              }
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
@@ -115,7 +116,7 @@ postfix_expression
                                                             }
                                                             else {
                                                               error_throw = true;
-                                                              fprintf("Error : Invalid function call");
+                                                              fprintf(stderr, "Error : Invalid function call");
                                                             }
                                                           }
   | postfix_expression '.' IDENTIFIER        {$$ = non_terminal(0, "postfix_expression.IDENTIFIER", $1, terminal($3));
@@ -139,7 +140,7 @@ postfix_expression
                                               $$->nodetype = string(type);
                                               if (type == ""){
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Increment used with incompatible type");
+                                                fprintf(stderr, "Error : Decrement used with incompatible type");
                                               }
                                              }
   ;
@@ -158,12 +159,49 @@ argument_expression_list
 
 unary_expression
   : postfix_expression            {$$ = $1; }
-  | INC_OP unary_expression       {$$ = non_terminal(0, $1, $2); }
+  | INC_OP unary_expression       {$$ = non_terminal(0, $1, $2);
+                                    if ($2->init) $$->init = true;
+                                    string type = postfix_type($2->nodetype, 6);
+                                    if (type == ""){
+                                      error_throw = true;
+                                      fprintf(stderr, "Increment used with incompatible type");
+                                    }
+                                  }
 
-  | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); }
-  | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); }
-  | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); }
-  | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); }
+  | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); 
+                                    if ($2->init) $$->init = true;
+                                    string type = postfix_type($2->nodetype, 7);
+                                    if (type == ""){
+                                      error_throw = true;
+                                      fprintf(stderr, "Decrement used with incompatible type");
+                                    }
+                                  }
+  | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
+                                    if ($2->init) $$->init = true;
+                                    string type = unary_type($1->label, $2->nodetype);
+                                    if (type == ""){
+                                      error_throw = true;
+                                      fprintf(stderr, "Increment used with incompatible type");
+                                    }
+                                  }
+  | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
+                                    if ($2->init) $$->init = true;
+                                    $$->nodetype = string("unsigned int");
+                                    string type = $2->nodetype;
+                                    if (type == ""){
+                                      error_throw = true;
+                                      fprintf(stderr, "Error : sizeof cannot be defined for given identifiers");
+                                    }
+                                  }
+  | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); 
+                                    if ($3->init) $$->init = true;
+                                    $$->nodetype = string("unsigned int");
+                                    string type = $3->nodetype;
+                                    if (type == ""){
+                                      error_throw = true;
+                                      fprintf(stderr, "Error : sizeof cannot be defined for given identifiers");
+                                    }
+                                  }
   ;
 
 unary_operator
@@ -177,66 +215,308 @@ unary_operator
 
 cast_expression
   : unary_expression                  {$$ = $1; }
-  | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); }
+  | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); 
+                                        $$->nodetype = $2->nodetype;
+                                        if ($4->init) $$->init = true;
+                                      }
   ;
 
 multiplicative_expression
   : cast_expression                                     {$$ = $1; }
-  | multiplicative_expression '*' cast_expression       {$$ = non_terminal(0, "*", $1, $3); }
-  | multiplicative_expression '/' cast_expression       {$$ = non_terminal(0, "/", $1, $3); }
-  | multiplicative_expression '%' cast_expression       {$$ = non_terminal(0, "%", $1, $3); }
+  | multiplicative_expression '*' cast_expression       { if ($1->init && $3->init) $$->init = true;
+                                                          string type = mul_type($1->nodetype, $3->nodetype, '*');
+                                                          if (type != ""){
+                                                            if (type == string("int")){
+                                                              $$ = non_terminal(0, "* int", $1, $3);
+                                                              $$->nodetype = string("long long");
+                                                            }
+                                                            else if (type == string("float")){
+                                                              $$ = non_terminal(0, "* float", $1, $3);
+                                                              $$->nodetype = string("long double");
+                                                            }
+                                                          }
+                                                          else {
+                                                            error_throw = true;
+                                                            fprintf(stderr, "Error : Incompatible type for * operator");
+                                                            $$ = non_terminal(0, "*", $1, $3);
+                                                            $$->nodetype = string(""); 
+                                                          }
+                                                        }
+  | multiplicative_expression '/' cast_expression       {if ($1->init && $3->init) $$->init = true;
+                                                          string type = mul_type($1->nodetype, $3->nodetype, '/');
+                                                          if (type != ""){
+                                                            if (type == string("int")){
+                                                              $$ = non_terminal(0, "/ int", $1, $3);
+                                                              $$->nodetype = string("long long");
+                                                            }
+                                                            else if (type == string("float")){
+                                                              $$ = non_terminal(0, "/ float", $1, $3);
+                                                              $$->nodetype = string("long double");
+                                                            }
+                                                          }
+                                                          else {
+                                                            error_throw = true;
+                                                            fprintf(stderr, "Error : Incompatible type for / operator");
+                                                            $$ = non_terminal(0, "/", $1, $3);
+                                                            $$->nodetype = string(""); 
+                                                          } 
+                                                        }
+  | multiplicative_expression '%' cast_expression       {if ($1->init && $3->init) $$->init = true;
+                                                          string type = mul_type($1->nodetype, $3->nodetype, '%');
+                                                          if (type != ""){
+                                                            $$ = non_terminal(0, "% int", $1, $3);
+                                                            $$->nodetype = string("long long");
+                                                          }
+                                                          else {
+                                                            error_throw = true;
+                                                            fprintf(stderr, "Error : Incompatible type for % operator");
+                                                            $$ = non_terminal(0, "%", $1, $3);
+                                                            $$->nodetype = string(""); 
+                                                          } 
+                                                        }
   ;
 
 additive_expression
   : multiplicative_expression                           {$$ = $1; }
-  | additive_expression '+' multiplicative_expression   {$$ = non_terminal(0, "+", $1, $3); }
-  | additive_expression '-' multiplicative_expression   {$$ = non_terminal(0, "-", $1, $3); }
+  | additive_expression '+' multiplicative_expression   {if ($1->init && $3->init) $$->init = true;
+                                                          string type = add_type($1->nodetype, $3->nodetype);
+                                                          if (type != ""){
+                                                            if (type == string("int")){
+                                                              $$->nodetype = string("long long");
+                                                              $$ = non_terminal(0, "+ " + type, $1, $3);
+                                                            }
+                                                            else if (type == string("float")){
+                                                              $$->nodetype = string("long double");
+                                                              $$ = non_terminal(0, "+ " + type, $1, $3);
+                                                            }
+                                                            else {
+                                                              $$->nodetype = type;
+                                                              $$ = non_terminal(0, "+ " + type, $1, $3);
+                                                            }
+                                                          }
+                                                          else {
+                                                            error_throw = true;
+                                                            fprintf(stderr, "Error : Incompatible type for + operator");
+                                                            $$ = non_terminal(0, "+", $1, $3);
+                                                            $$->nodetype = string("");
+                                                          }
+                                                        }
+  | additive_expression '-' multiplicative_expression   {if ($1->init && $3->init) $$->init = true;
+                                                          string type = add_type($1->nodetype, $3->nodetype);
+                                                          if (type != ""){
+                                                            if (type == string("int")){
+                                                              $$->nodetype = string("long long");
+                                                              $$ = non_terminal(0, "- " + type, $1, $3);
+                                                            }
+                                                            else if (type == string("float")){
+                                                              $$->nodetype = string("long double");
+                                                              $$ = non_terminal(0, "- " + type, $1, $3);
+                                                            }
+                                                            else {
+                                                              $$->nodetype = type;
+                                                              $$ = non_terminal(0, "- " + type, $1, $3);
+                                                            }
+                                                          }
+                                                          else {
+                                                            error_throw = true;
+                                                            fprintf(stderr, "Error : Incompatible type for - operator");
+                                                            $$ = non_terminal(0, "-", $1, $3);
+                                                            $$->nodetype = string("");
+                                                          }
+                                                        }
   ;
 
 
 shift_expression
   : additive_expression                           {$$ = $1; }
-  | shift_expression LEFT_OP additive_expression  {$$ = non_terminal(0, $2, $1, $3); }
-  | shift_expression RIGHT_OP additive_expression {$$ = non_terminal(0, $2, $1, $3); }
+  | shift_expression LEFT_OP additive_expression  {$$ = non_terminal(0, $2, $1, $3);
+                                                    if ($1->init && $3->init) $$->init = true;
+                                                    string type = shift_type($1->nodetype, $3->nodetype);
+                                                    $$->nodetype = type;
+                                                    if (type == ""){
+                                                      error_throw = true;
+                                                      fprintf(stderr, "Error : Invalid operand(s) with <<");
+                                                    }
+                                                  }
+  | shift_expression RIGHT_OP additive_expression {$$ = non_terminal(0, $2, $1, $3); 
+                                                    if ($1->init && $3->init) $$->init = true;
+                                                    string type = shift_type($1->nodetype, $3->nodetype);
+                                                    $$->nodetype = type;
+                                                    if (type == ""){
+                                                      error_throw = true;
+                                                      fprintf(stderr, "Error : Invalid operand(s) with >>");
+                                                    }
+                                                  }
   ;
 
 relational_expression
   : shift_expression                              {$$ = $1;}
-  | relational_expression '<' shift_expression    {$$ = non_terminal(0, $2, $1, $3); }
-  | relational_expression '>' shift_expression    {$$ = non_terminal(0, $2, $1, $3); }
-  | relational_expression LE_OP shift_expression  {$$ = non_terminal(0, $2, $1, $3); }
-  | relational_expression GE_OP shift_expression  {$$ = non_terminal(0, $2, $1, $3); }
+  | relational_expression '<' shift_expression    {if ($1->init && $3->init) $$->init = true;
+                                                    string type = relat_type($1->nodetype, $3->nodetype);
+                                                    if (type != ""){
+                                                      $$->nodetype = string("bool");
+                                                      $$ = non_terminal(0, "< " + type, $1, $3);
+                                                    }
+                                                    else {
+                                                      error_throw = true;
+                                                      fprintf(stderr, "Invalid operand(s) with <");
+                                                      $$->nodetype = type;
+                                                      $$ = non_terminal(0, $2, $1, $3);
+                                                    }
+                                                  }
+  | relational_expression '>' shift_expression    {if ($1->init && $3->init) $$->init = true;
+                                                    string type = relat_type($1->nodetype, $3->nodetype);
+                                                    if (type != ""){
+                                                      $$->nodetype = string("bool");
+                                                      $$ = non_terminal(0, "> " + type, $1, $3);
+                                                    }
+                                                    else {
+                                                      error_throw = true;
+                                                      fprintf(stderr, "Invalid operand(s) with >");
+                                                      $$->nodetype = type;
+                                                      $$ = non_terminal(0, $2, $1, $3);
+                                                    } 
+                                                  }
+  | relational_expression LE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
+                                                    string type = relat_type($1->nodetype, $3->nodetype);
+                                                    if (type != ""){
+                                                      $$->nodetype = string("bool");
+                                                      $$ = non_terminal(0, "<= " + type, $1, $3);
+                                                    }
+                                                    else {
+                                                      error_throw = true;
+                                                      fprintf(stderr, "Invalid operand(s) with <=");
+                                                      $$->nodetype = type;
+                                                      $$ = non_terminal(0, $2, $1, $3);
+                                                    }
+                                                  }
+  | relational_expression GE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
+                                                    string type = relat_type($1->nodetype, $3->nodetype);
+                                                    if (type != ""){
+                                                      $$->nodetype = string("bool");
+                                                      $$ = non_terminal(0, ">= " + type, $1, $3);
+                                                    }
+                                                    else {
+                                                      error_throw = true;
+                                                      fprintf(stderr, "Invalid operand(s) with >=");
+                                                      $$->nodetype = type;
+                                                      $$ = non_terminal(0, $2, $1, $3);
+                                                    }
+                                                  }
   ;
 
 equality_expression
   : relational_expression                           {$$ = $1;}
-  | equality_expression EQ_OP relational_expression {$$ = non_terminal(0, $2, $1, $3); }
-  | equality_expression NE_OP relational_expression {$$ = non_terminal(0, $2, $1, $3); }
+  | equality_expression EQ_OP relational_expression {if ($1->init && $3->init) $$->init = true;
+                                                      string type = relat_type($1->nodetype, $3->nodetype);
+                                                      if (type != ""){
+                                                        $$->nodetype = string("bool");
+                                                        $$ = non_terminal(0, "== " + type, $1, $3);
+                                                      }
+                                                      else {
+                                                        error_throw = true;
+                                                        fprintf(stderr, "Invalid operand(s) with ==");
+                                                        $$->nodetype = type;
+                                                        $$ = non_terminal(0, $2, $1, $3);
+                                                      } 
+                                                    }
+  | equality_expression NE_OP relational_expression {if ($1->init && $3->init) $$->init = true;
+                                                      string type = relat_type($1->nodetype, $3->nodetype);
+                                                      if (type != ""){
+                                                        $$->nodetype = string("bool");
+                                                        $$ = non_terminal(0, "!= " + type, $1, $3);
+                                                      }
+                                                      else {
+                                                        error_throw = true;
+                                                        fprintf(stderr, "Invalid operand(s) with !=");
+                                                        $$->nodetype = type;
+                                                        $$ = non_terminal(0, $2, $1, $3);
+                                                      } 
+                                                    }
   ;
 
 and_expression
   : equality_expression                     {$$ = $1;}
-  | and_expression '&' equality_expression  {$$ = non_terminal(0, $2, $1, $3); }
+  | and_expression '&' equality_expression  {if ($1->init && $3->init) $$->init = true;
+                                              string type = bit_type($1->nodetype, $3>nodetype);
+                                              if (type != ""){
+                                                if (type == string("int")){
+                                                  $$ = non_terminal(0, "& int", $1, $3);
+                                                  $$->nodetype = string("long long");
+                                                }
+                                                else {
+                                                  $$ = non_terminal(0, "& bool", $1, $3);
+                                                  $$->nodetype = type;
+                                                }
+                                              }
+                                              else {
+                                                error_throw = true;
+                                                fprintf(stderr, "Invalid operand(s) with &");
+                                                $$->nodetype = type;
+                                                $$ = non_terminal(0, $2, $1, $3);
+                                              }
+                                            }
   ;
 
 exclusive_or_expression
   : and_expression                              {$$ = $1;}
-  | exclusive_or_expression '^' and_expression  {$$ = non_terminal(0, $2, $1, $3); }
+  | exclusive_or_expression '^' and_expression  {if ($1->init && $3->init) $$->init = true;
+                                                  string type = bit_type($1->nodetype, $3>nodetype);
+                                                  if (type != ""){
+                                                    if (type == string("int")){
+                                                      $$ = non_terminal(0, "^ int", $1, $3);
+                                                      $$->nodetype = string("long long");
+                                                    }
+                                                    else {
+                                                      $$ = non_terminal(0, "^ bool", $1, $3);
+                                                      $$->nodetype = type;
+                                                    }
+                                                  }
+                                                  else {
+                                                    error_throw = true;
+                                                    fprintf(stderr, "Invalid operand(s) with ^");
+                                                    $$->nodetype = type;
+                                                    $$ = non_terminal(0, $2, $1, $3);
+                                                  } 
+                                                }
   ;
 
 inclusive_or_expression
   : exclusive_or_expression                              {$$ = $1;}
-  | inclusive_or_expression '|' exclusive_or_expression  {$$ = non_terminal(0, $2, $1, $3); }
+  | inclusive_or_expression '|' exclusive_or_expression  {if ($1->init && $3->init) $$->init = true;
+                                                          string type = bit_type($1->nodetype, $3>nodetype);
+                                                          if (type != ""){
+                                                            if (type == string("int")){
+                                                              $$ = non_terminal(0, "| int", $1, $3);
+                                                              $$->nodetype = string("long long");
+                                                            }
+                                                            else {
+                                                              $$ = non_terminal(0, "| bool", $1, $3);
+                                                              $$->nodetype = type;
+                                                            }
+                                                          }
+                                                          else {
+                                                            error_throw = true;
+                                                            fprintf(stderr, "Invalid operand(s) with |");
+                                                            $$->nodetype = type;
+                                                            $$ = non_terminal(0, $2, $1, $3);
+                                                          } }
   ;
 
 logical_and_expression
   : inclusive_or_expression                              {$$ = $1;}
-  | logical_and_expression AND_OP inclusive_or_expression{$$ = non_terminal(0, $2, $1, $3); }
+  | logical_and_expression AND_OP inclusive_or_expression{$$ = non_terminal(0, $2, $1, $3); 
+                                                          if ($1->init && $3->init) $$->init = true;
+                                                          $$->nodetype = string("bool");
+                                                         }
   ;
 
 logical_or_expression
   : logical_and_expression                               {$$ = $1;}
-  | logical_or_expression OR_OP logical_and_expression   {$$ = non_terminal(0, $2, $1, $3); }
+  | logical_or_expression OR_OP logical_and_expression   {$$ = non_terminal(0, $2, $1, $3); 
+                                                          if ($1->init && $3->init) $$->init = true;
+                                                          $$->nodetype = string("bool");
+                                                         }
   ;
 
 conditional_expression

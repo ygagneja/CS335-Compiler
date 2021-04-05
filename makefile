@@ -5,7 +5,7 @@ YACC=bison
 
 all: ./bin/parser
 
-./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.o
+./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.o ./src/type_check.o
 	mkdir -p bin
 	$(CC) $^ -o $@
 
@@ -15,7 +15,10 @@ all: ./bin/parser
 ./src/lex.yy.c : ./src/lexer.l
 	$(LEX) -o $@ $^
 
-./src/nodes.o : ./src/nodes.cpp
+./src/nodes.o : ./src/nodes.cpp ./src/nodes.h
+	$(CC) -c $^ -o $@
+
+./src/type_check.o : ./src/type_check.cpp ./src/type_check.h
 	$(CC) -c $^ -o $@
 
 clean:
