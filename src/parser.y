@@ -521,12 +521,37 @@ logical_or_expression
 
 conditional_expression
   : logical_or_expression                                            {$$ = $1;}
-  | logical_or_expression '?' expression ':' conditional_expression  {$$ = non_terminal(3, "conditional_expression", $1, $3, $5);}
+  | logical_or_expression '?' expression ':' conditional_expression  {$$ = non_terminal(3, "conditional_expression", $1, $3, $5);
+                                                                      string type = cond_type($3->nodetype, $5->nodetype);
+                                                                      if (type != ""){
+                                                                        $$->nodetype = type;
+                                                                      }
+                                                                      else {
+                                                                        error_throw = true;
+                                                                        $$->nodetype = type;
+                                                                        fprintf(stderr, "Error : Type mismatch in ternary expression");
+                                                                      }
+                                                                      if ($1->init && $3->init && $5->init) $$->init = true;
+                                                                     }
   ;
 
 assignment_expression
   : conditional_expression                                      {$$ = $1;}
-  | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(3, "assignment_expression", $1, $2, $3);}
+  | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(3, "assignment_expression", $1, $2, $3);
+                                                                  string type = assign_type($1->nodetype, $3->nodetype, $2->label);
+                                                                  if (type == string("0")){
+                                                                    $$->nodetype = $1->nodetype;
+                                                                    fprintf(stderr, "Warning : Incompatible pointer type assignment");
+                                                                  }
+                                                                  else if (type == string("1")){
+                                                                    $$->nodetype = $1->nodetype;
+                                                                  }
+                                                                  else {
+                                                                    error_throw = true;
+                                                                    $$->nodetype = type;
+                                                                    fprintf(stderr, "Error : Incompatible type conversion from %s to %s", ($3->nodetype).c_str(), ($1->nodetype).c_str());
+                                                                  }
+                                                                }
   ;
 
 assignment_operator
