@@ -3,8 +3,10 @@
 map<string, sym_tab*> func_sym_tab_map;
 map<string, string> func_args; 
 sym_tab global_tab;
+sym_tab* curr;
 
 void sym_tab_init(){
+    curr = &global_tab;
     // add reserved keywords in table so they arent used again
 }
 
@@ -27,17 +29,17 @@ sym_tab_entry* make_entry(string sym_name, unsigned long long size, long long of
     return entry;
 }
 
-int insert_entry(sym_tab* table, sym_tab_entry* sym_tab_entry){
-    if (table.find({sym_tab_entry->sym_name, sym_tab_entry->level, sym_tab_entry->level_id}) != table.end()){
+int insert_entry(sym_tab_entry* sym_tab_entry){
+    if (*curr.find({sym_tab_entry->sym_name, sym_tab_entry->level, sym_tab_entry->level_id}) != *curr.end()){
         return -1;
     }
-    table[{sym_tab_entry->sym_name, sym_tab_entry->level, sym_tab_entry->level_id}}] = sym_tab_entry;
+    *curr[{sym_tab_entry->sym_name, sym_tab_entry->level, sym_tab_entry->level_id}}] = sym_tab_entry;
     return 0;
 }
 
-sym_tab_entry* lookup(sym_tab* table, string sym_name, unsigned long long level, unsigned long long level_id){
-    if (table.find({sym_name, level, level_id}).find() != table.end()){
-        return table[{sym_name, level, level_id}];
+sym_tab_entry* lookup(string sym_name, unsigned long long level, unsigned long long level_id){
+    if (*curr.find({sym_name, level, level_id}).find() != *curr.end()){
+        return *curr[{sym_name, level, level_id}];
     }
     return NULL;
 }
