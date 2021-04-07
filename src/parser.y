@@ -55,11 +55,11 @@ primary_expression
                                     string type = id_type($1);
                                     if (type != ""){
                                       $$->init = lookup($1)->init;
-                                      $$->nodetype = string(type);
+                                      $$->nodetype = type;
                                     }
                                     else {
                                       error_throw = true;
-                                      $$->nodetype = string(type);
+                                      $$->nodetype = type;
                                       fprintf(stderr, "Error : %s is not declared in this scope", $1);
                                     }
                                   }
@@ -83,11 +83,11 @@ postfix_expression
                                               }
                                               string type = postfix_type($1->nodetype, 1);
                                               if (type != ""){
-                                                $$->nodetype = string(type);
+                                                $$->nodetype = type;
                                               }
                                               else {
                                                 error_throw = true;
-                                                $$->nodetype = string(type);
+                                                $$->nodetype = type;
                                                 fprintf(stderr,"Error : Array indexed with more indices than its dimension");
                                               }
                                              }
@@ -111,7 +111,7 @@ postfix_expression
                                                             if (type != ""){
                                                               // check if expr type of $1 is correct
                                                               // get args from func defn
-                                                              // do all the complex type checking and type casting
+                                                              // do all the complex   type checking and type casting
 
                                                             }
                                                             else {
@@ -148,6 +148,7 @@ postfix_expression
 argument_expression_list
   : assignment_expression            {$$ = $1; 
                                       curr_args_types = $$->nodetype;
+                                      if ($$->nodetype != "") $$->nodetype = "void";
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
                                                           string type = args_type($1->nodetype, $3->nodetype);
@@ -162,6 +163,7 @@ unary_expression
   | INC_OP unary_expression       {$$ = non_terminal(0, $1, $2);
                                     if ($2->init) $$->init = true;
                                     string type = postfix_type($2->nodetype, 6);
+                                    $$->nodetype = type;
                                     if (type == ""){
                                       error_throw = true;
                                       fprintf(stderr, "Increment used with incompatible type");
@@ -171,6 +173,7 @@ unary_expression
   | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); 
                                     if ($2->init) $$->init = true;
                                     string type = postfix_type($2->nodetype, 7);
+                                    $$->nodetype = type;
                                     if (type == ""){
                                       error_throw = true;
                                       fprintf(stderr, "Decrement used with incompatible type");
@@ -179,9 +182,10 @@ unary_expression
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
                                     if ($2->init) $$->init = true;
                                     string type = unary_type($1->label, $2->nodetype);
+                                    $$->nodetype = type;
                                     if (type == ""){
                                       error_throw = true;
-                                      fprintf(stderr, "Increment used with incompatible type");
+                                      fprintf(stderr, "Type inconsistent with %s operator", ($1->label).c_str());
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -216,7 +220,19 @@ unary_operator
 cast_expression
   : unary_expression                  {$$ = $1; }
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); 
-                                        $$->nodetype = $2->nodetype;
+                                        string type = cast_type($2->nodetype, $4->nodetype);
+                                        $$->nodetype = type;
+                                        if (type == string("0")){
+                                          $$->nodetype = $2->nodetype;
+                                          fprintf(stderr, "Warning : Incompatible pointer typecasting");
+                                        }
+                                        else if (type == string("1")){
+                                          $$->nodetype = $2->nodetype;
+                                        }
+                                        else {
+                                          error_throw = true;
+                                          fprintf(stderr, "Error : Cannot typecast given expression to %s", ($2->nodetype).c_str());
+                                        }
                                         if ($4->init) $$->init = true;
                                       }
   ;
@@ -354,6 +370,10 @@ relational_expression
   | relational_expression '<' shift_expression    {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
+                                                      if (type == string("*warning")){
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        type = string("*");
+                                                      }
                                                       $$->nodetype = string("bool");
                                                       $$ = non_terminal(0, "< " + type, $1, $3);
                                                     }
@@ -367,6 +387,10 @@ relational_expression
   | relational_expression '>' shift_expression    {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
+                                                      if (type == string("*warning")){
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        type = string("*");
+                                                      }
                                                       $$->nodetype = string("bool");
                                                       $$ = non_terminal(0, "> " + type, $1, $3);
                                                     }
@@ -380,6 +404,10 @@ relational_expression
   | relational_expression LE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
+                                                      if (type == string("*warning")){
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        type = string("*");
+                                                      }
                                                       $$->nodetype = string("bool");
                                                       $$ = non_terminal(0, "<= " + type, $1, $3);
                                                     }
@@ -393,6 +421,10 @@ relational_expression
   | relational_expression GE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
+                                                      if (type == string("*warning")){
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        type = string("*");
+                                                      }
                                                       $$->nodetype = string("bool");
                                                       $$ = non_terminal(0, ">= " + type, $1, $3);
                                                     }
@@ -410,6 +442,10 @@ equality_expression
   | equality_expression EQ_OP relational_expression {if ($1->init && $3->init) $$->init = true;
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != ""){
+                                                        if (type == string("*warning")){
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        type = string("*");
+                                                      }
                                                         $$->nodetype = string("bool");
                                                         $$ = non_terminal(0, "== " + type, $1, $3);
                                                       }
@@ -423,6 +459,10 @@ equality_expression
   | equality_expression NE_OP relational_expression {if ($1->init && $3->init) $$->init = true;
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != ""){
+                                                        if (type == string("*warning")){
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        type = string("*");
+                                                      }
                                                         $$->nodetype = string("bool");
                                                         $$ = non_terminal(0, "!= " + type, $1, $3);
                                                       }

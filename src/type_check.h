@@ -10,6 +10,7 @@ string const_type(string str);
 string postfix_type(string str, int label);
 string args_type(string str1, string str2);
 string unary_type(char* op, string str);
+string cast_type(string str1, string str2);
 string mul_type(string str1, string str2, char op);
 string add_type(string str1, string str2);
 string shift_type(string str1, string str2);
