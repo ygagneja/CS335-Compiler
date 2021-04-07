@@ -10,6 +10,7 @@ using namespace std;
 
 bool error_throw = false;
 string curr_args_types;
+int level = 0, level_id = 0;
 
 int yylex(void);
 void yyerror(char *s);
@@ -637,8 +638,41 @@ init_declarator_list
   ;
 
 init_declarator
-  : declarator                  {$$ = $1;}
-  | declarator '=' initializer  {$$ = non_terminal(0, $2, $1, $3);}
+  : declarator                  {$$ = $1;
+                                  if ($1->expr_type == 1){
+                                    string type = $1->nodetype;
+                                    if (lookup($1->symbol, level, level_id)){
+                                      error_throw = true;
+                                      fprintf(stderr, "Error : Redeclaration of symbol %s", ($1->symbol).c_str());
+                                    }
+                                    else if ($1->nodetype == string("void")){
+                                      error_throw = true;
+                                      fprintf(stderr, "Error : Variable or field %s declared as type void", ($1->symbol).c_str());
+                                    }
+                                    else {
+                                      insert_entry($1->symbol, $1->size, 0, false, level, level_id);
+                                    }
+                                  }
+                                }
+  | declarator '=' initializer  {$$ = non_terminal(0, $2, $1, $3);
+                                  if ($1->expr_type == 1 || $1->expr_type == 15){
+                                    string type = $1->nodetype;
+                                    if (lookup($1->symbol, level, level_id)){
+                                      error_throw = true;
+                                      fprintf(stderr, "Error : Redeclaration of symbol %s", ($1->symbol).c_str());
+                                    }
+                                    else if ($1->nodetype == string("void")){
+                                      error_throw = true;
+                                      fprintf(stderr, "Error : Variable or field %s declared as type void", ($1->symbol).c_str());
+                                    }
+                                    else {
+                                      if ($1->expr_type == 15){
+                                        // idk
+                                      }
+                                      insert_entry($1->symbol, $1->size, 0, true, level, level_id);
+                                    }
+                                  }
+                                }
   ;
 
 storage_class_specifier

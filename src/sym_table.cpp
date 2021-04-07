@@ -18,7 +18,7 @@ int make_symbol_table(string func_name){
     func_sym_tab_map[func_name] = new_tab;
 }
 
-sym_tab_entry* make_entry(string sym_name, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
+int insert_entry(string sym_name, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
     sym_tab_entry* entry = new sym_tab_entry();
     entry->sym_name = sym_name;
     entry->size = size;
@@ -26,14 +26,7 @@ sym_tab_entry* make_entry(string sym_name, unsigned long long size, long long of
     entry->init = init;
     entry->level = level;
     entry->level_id = level_id;
-    return entry;
-}
-
-int insert_entry(sym_tab_entry* sym_tab_entry){
-    if (*curr.find({sym_tab_entry->sym_name, sym_tab_entry->level, sym_tab_entry->level_id}) != *curr.end()){
-        return -1;
-    }
-    *curr[{sym_tab_entry->sym_name, sym_tab_entry->level, sym_tab_entry->level_id}}] = sym_tab_entry;
+    *curr[{entry->sym_name, entry->level, entry->level_id}}] = entry;
     return 0;
 }
 

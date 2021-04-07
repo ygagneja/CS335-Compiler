@@ -7,6 +7,8 @@ typedef struct {
     char* label;
     string nodetype;
     bool init = false;
+    string symbol;
+    int expr_type;
 } node;
 
 void graph_init();
