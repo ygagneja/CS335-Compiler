@@ -44,7 +44,7 @@ FILE *ast;
 %type <ptr> declarator initializer struct_or_union_specifier enum_specifier struct_or_union struct_declaration_list
 %type <ptr> struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enumerator pointer
 %type <ptr> direct_declarator type_qualifier_list parameter_type_list identifier_list parameter_list parameter_declaration  
-%type <ptr> abstract_declarator direct_abstract_declarator labeled_statement compound_statement expression_statement declaration_list
+%type <ptr> labeled_statement compound_statement expression_statement declaration_list
 %type <ptr> selection_statement iteration_statement jump_statement external_declaration translation_unit function_definition statement
 %type <ptr> relational_expression init_declarator statement_list enumerator_list
 
@@ -717,7 +717,7 @@ enumerator_list
 
 enumerator	
 	: IDENTIFIER                          {$$ = terminal($1);}
-    | IDENTIFIER '=' constant_expression  {$$ = non_terminal(0, $2, terminal($1), $3);}
+  | IDENTIFIER '=' constant_expression  {$$ = non_terminal(0, $2, terminal($1), $3);}
 	;
 
 type_qualifier
@@ -733,10 +733,10 @@ declarator
 direct_declarator
 	: IDENTIFIER                                      {$$ = terminal($1);}
 	| '(' declarator ')'                              {$$ = $2;}
-    | direct_declarator '[' constant_expression ']'   {$$ = non_terminal(0, "direct_declarator", $1, $3, NULL, NULL, NULL, "[]");}
+  | direct_declarator '[' constant_expression ']'   {$$ = non_terminal(0, "direct_declarator", $1, $3, NULL, NULL, NULL, "[]");}
 	| direct_declarator '[' ']'                       {$$ = non_terminal(0, "direct_declarator", $1, NULL, NULL, NULL, NULL, "[]");} 
 	| direct_declarator '(' parameter_type_list ')'   {$$ = non_terminal(0, "direct_declarator", $1, $3, NULL, NULL, NULL, "()");}
-    | direct_declarator '(' identifier_list ')'       {$$ = non_terminal(0, "direct_declarator", $1, $3, NULL, NULL, NULL, "()");}
+  | direct_declarator '(' identifier_list ')'       {$$ = non_terminal(0, "direct_declarator", $1, $3, NULL, NULL, NULL, "()");}
 	| direct_declarator '(' ')'                       {$$ = non_terminal(0, "direct_declarator", $1, NULL, NULL, NULL, NULL, "()");}
 	;
 
@@ -765,7 +765,6 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator             {$$ = non_terminal(0, "parameter_declaration", $1, $2); }
-	| declaration_specifiers abstract_declarator    {$$ = non_terminal(0, "parameter_declaration", $1, $2); }
 	| declaration_specifiers                        {$$ = $1; }
 	;
 
@@ -776,25 +775,6 @@ identifier_list
 
 type_name
 	: specifier_qualifier_list                      {$$ = $1; }
-	| specifier_qualifier_list abstract_declarator  {$$ = non_terminal(0, "type_name", $1, $2); }
-	;
-
-abstract_declarator
-	: pointer                               {$$ = $1; }
-	| direct_abstract_declarator            {$$ = $1; }
-	| pointer direct_abstract_declarator    {$$ = non_terminal(0, "abstract_declarator", $1, $2); }
-	;
-
-direct_abstract_declarator
-	: '(' abstract_declarator ')'                            {$$ = $2; }
-	| '[' ']'                                                {$$ = terminal("[]"); }
-	| '[' constant_expression ']'                            {$$ = $2; }
-	| direct_abstract_declarator '[' ']'                     {$$ = non_terminal(0, "direct_abstract_declarator", $1, NULL, NULL, NULL, NULL, "[]"); }
-	| direct_abstract_declarator '[' constant_expression ']' {$$ = non_terminal(0, "direct_abstract_declarator", $1, $3, NULL, NULL, NULL, "[]"); }
-	| '(' ')'                                                {$$ = terminal("()"); }
-	| '(' parameter_type_list ')'                            {$$ = $2; }
-	| direct_abstract_declarator '(' ')'                     {$$ = non_terminal(0, "direct_abstract_declarator", $1, NULL, NULL, NULL, NULL, "()"); }
-	| direct_abstract_declarator '(' parameter_type_list ')' {$$ = non_terminal(0, "direct_abstract_declarator", $1, $3, NULL, NULL, NULL, "()"); }
 	;
 
 initializer
