@@ -1,7 +1,7 @@
 #include "sym_table.h"
 
 map<string, sym_tab*> func_sym_tab_map;
-map<string, string> func_args; 
+map<string, string> func_args_map; 
 sym_tab global_sym_tab;
 type_tab global_type_tab;
 sym_tab* curr;
@@ -108,11 +108,11 @@ unsigned long long get_size(string type){
 }
 
 void insert_func_args(string func_name, string arg_types){
-    func_args[func_name] = arg_types;
+    func_args_map[func_name] = arg_types;
 }
 
 string get_func_args(string func_name){
-    return func_args[func_name];
+    return func_args_map[func_name];
 }
 
 void dump_tables(){
