@@ -17,7 +17,7 @@ string curr_args_types;
 string func_name;
 string func_type;
 string func_args;
-string type_name = "";
+string t_name = "";
 int struct_id = 0;
 int level_id[MAX_LEVELS];
 int level = 0;
@@ -47,6 +47,7 @@ FILE *ast;
 
 %start translation_unit 
 
+%type <str> empty1 empty2 op_brace cl_brace
 %type <ptr> multiplicative_expression additive_expression cast_expression primary_expression expression
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
@@ -435,7 +436,7 @@ relational_expression
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
                                                       if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($3->nodetype).c_str());
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
@@ -452,7 +453,7 @@ relational_expression
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
                                                       if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($3->nodetype).c_str());
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
@@ -469,7 +470,7 @@ relational_expression
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
                                                       if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($3->nodetype).c_str());
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
@@ -486,7 +487,7 @@ relational_expression
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != ""){
                                                       if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($3->nodetype).c_str());
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
@@ -507,7 +508,7 @@ equality_expression
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != ""){
                                                         if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($3->nodetype).c_str());
                                                         type = string("*");
                                                       }
                                                         $$->nodetype = string("bool");
@@ -524,7 +525,7 @@ equality_expression
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != ""){
                                                         if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($13->nodetype).c_str());
+                                                        fprintf(stderr, "Warning : Comparison between %s and %s", ($1->nodetype).c_str(), ($3->nodetype).c_str());
                                                         type = string("*");
                                                       }
                                                         $$->nodetype = string("bool");
@@ -687,12 +688,24 @@ declaration
   ;
 
 declaration_specifiers
-  // : storage_class_specifier                           {$$ = $1;}
-  // | storage_class_specifier declaration_specifiers    {$$ = non_terminal(0, "declaration_specifiers", $1, $2);}  
+  : storage_class_specifier                           {$$ = $1;
+                                                        error_throw = true;
+                                                        fprintf(stderr, "Error : Storage class specifier not implemented yet");
+                                                      }
+  | storage_class_specifier declaration_specifiers    {$$ = non_terminal(0, "declaration_specifiers", $1, $2);
+                                                        error_throw = true;
+                                                        fprintf(stderr, "Error : Storage class specifier not implemented yet");
+                                                      }  
   | type_specifier                                    {$$ = $1;}
   | type_specifier declaration_specifiers             {$$ = non_terminal(0, "declaration_specifiers", $1, $2);}
-  // | type_qualifier                                    {$$ = $1;}
-  // | type_qualifier declaration_specifiers             {$$ = non_terminal(0, "declaration_specifiers", $1, $2);}
+  | type_qualifier                                    {$$ = $1;
+                                                        error_throw = true;
+                                                        fprintf(stderr, "Error : Type qualifier not implemented yet");
+                                                      }
+  | type_qualifier declaration_specifiers             {$$ = non_terminal(0, "declaration_specifiers", $1, $2);
+                                                        error_throw = true;
+                                                        fprintf(stderr, "Error : Type qualifier not implemented yet");
+                                                      }
   ;
 
 init_declarator_list
@@ -738,31 +751,31 @@ init_declarator
                                 }
   ;
 
-// storage_class_specifier
-//   : TYPEDEF       {$$ = terminal($1);}
-//   | EXTERN        {$$ = terminal($1);}
-//   | STATIC        {$$ = terminal($1);}
-//   | AUTO          {$$ = terminal($1);}
-//   | REGISTER      {$$ = terminal($1);}
-//   ;
+storage_class_specifier
+  : TYPEDEF       {$$ = terminal($1);}
+  | EXTERN        {$$ = terminal($1);}
+  | STATIC        {$$ = terminal($1);}
+  | AUTO          {$$ = terminal($1);}
+  | REGISTER      {$$ = terminal($1);}
+  ;
 
 type_specifier
-  : VOID     {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | CHAR     {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | SHORT    {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | INT      {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | LONG     {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | FLOAT    {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | DOUBLE   {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | SIGNED   {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | UNSIGNED {$$ = terminal($1); type_name = (type_name=="") ? string($1) : type_name+" "+string($1);}
-  | struct_or_union_specifier  {$$ = $1; type_name = (type_name=="") ? string($1->nodetype) : type_name+" "+string($1->nodetype);}
+  : VOID     {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | CHAR     {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | SHORT    {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | INT      {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | LONG     {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | FLOAT    {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | DOUBLE   {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | SIGNED   {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | UNSIGNED {$$ = terminal($1); t_name = (t_name=="") ? string($1) : t_name+" "+string($1);}
+  | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? string($1->nodetype) : t_name+" "+string($1->nodetype);}
   | enum_specifier  {$$ = $1; 
                     error_throw = true;
                     fprintf(stderr, "Error : Enum not implemented yet"); 
                     }
   | TYPE_NAME       {$$ = terminal($1);
-                      type_name = (type_name=="") ? string($1) : type_name+" "+string($1);
+                      t_name = (t_name=="") ? string($1) : t_name+" "+string($1);
                     } 
   ;
 
@@ -812,7 +825,7 @@ struct_declaration_list
 
 struct_declaration
   : specifier_qualifier_list struct_declarator_list ';' {$$ = non_terminal(0, "struct_declaration", $1, $2);
-                                                          type_name = string("");
+                                                          t_name = string("");
                                                           $$->size = 8;
                                                         }
   ;
@@ -820,8 +833,14 @@ struct_declaration
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);}
 	| type_specifier                            {$$ = $1;}
-	// | type_qualifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);}
-	// | type_qualifier                            {$$ = $1;}
+	| type_qualifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
+                                                error_throw = true;
+                                                fprintf(stderr, "Error : Type qualifier not implemented yet");
+                                              }
+	| type_qualifier                            {$$ = $1;
+                                                error_throw = true;
+                                                fprintf(stderr, "Error : Type qualifier not implemented yet");
+                                              }
 	;
 
 struct_declarator_list
@@ -853,10 +872,10 @@ enumerator
   | IDENTIFIER '=' constant_expression  {$$ = non_terminal(0, $2, terminal($1), $3);}
 	;
 
-// type_qualifier
-// 	: CONST     {$$ = terminal($1);}
-// 	| VOLATILE  {$$ = terminal($1);}
-// 	;
+type_qualifier
+	: CONST     {$$ = terminal($1);}
+	| VOLATILE  {$$ = terminal($1);}
+	;
 
 declarator
 	: pointer direct_declarator {
@@ -886,8 +905,8 @@ direct_declarator
 														$$ = terminal($1);
                             $$->expr_type = 1;
 														$$->symbol = string($1);
-														$$->nodetype = type_name;
-														$$->size = get_size(type_name);
+														$$->nodetype = t_name;
+														$$->size = get_size(t_name);
 													}
 	| '(' declarator ')'    {
 														$$ = $2;
@@ -954,8 +973,8 @@ direct_declarator
 	;
 
 empty1
-  :     {
-          type_name = "";
+  : %empty{
+          t_name = "";
           func_args = "";
         }
   ;
@@ -987,7 +1006,7 @@ parameter_list
 parameter_declaration
 	: declaration_specifiers declarator     {
                                             $$ = non_terminal(0, "parameter_declaration", $1, $2);
-                                            type_name = "";
+                                            t_name = "";
                                             if($2->expr_type == 1){
                                               if(lookup($2->symbol, level, level_id[level])){
                                                 error_throw = true;
@@ -998,7 +1017,7 @@ parameter_declaration
                                             }
                                           }
 	| declaration_specifiers                {
-                                            $$ = $1; type_name = "";
+                                            $$ = $1; t_name = "";
                                           }
 	;
 
@@ -1059,7 +1078,7 @@ compound_statement
 op_brace
   : '{'       {
                 level++;
-                level_id[level][level]++;
+                level_id[level]++;
               }
   ;
 
@@ -1115,14 +1134,14 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition   {$$ = $1; type_name="";}
-	| declaration           {$$ = $1; type_name="";}
+	: function_definition   {$$ = $1; t_name="";}
+	| declaration           {$$ = $1; t_name="";}
 	;
 
 function_definition
 	: declaration_specifiers declarator empty2 declaration_list compound_statement  {
                                                                                     $$ = non_terminal(3, "function_definition", $1, $2, $4, $5); 
-                                                                                    type_name = "";
+                                                                                    t_name = "";
                                                                                     sym_tab_entry* entry = lookup(func_name, level, level_id[level]);
                                                                                     if (entry){
                                                                                       entry->init = true;
@@ -1130,20 +1149,18 @@ function_definition
                                                                                   }
 	| declaration_specifiers declarator empty2 compound_statement                  {
                                                                                     $$ = non_terminal(3, "function_definition", $1, $2, $4);
-                                                                                    type_name = "";
+                                                                                    t_name = "";
                                                                                     sym_tab_entry* entry = lookup(func_name, level, level_id[level]);
                                                                                     if (entry){
                                                                                       entry->init = true;
                                                                                     }
                                                                                   }
-	// | declarator declaration_list compound_statement                        {$$ = non_terminal(3, "function_definition", $1, $2, $3); // TODO}
-	// | declarator compound_statement                                         {$$ = non_terminal(0, "function_definition", $1, $2); // TODO}
 	;
 
 empty2
-  :     {
+  : %empty{
           set_current_sym_tab(func_name);
-          type_name = "";
+          t_name = "";
         }
   ;
 %%

@@ -10,8 +10,8 @@ IS			(u|U|l|L)*
 #include <stdlib.h>
 #include <iostream>
 #include "nodes.h"
-#include "parser.tab.h"
 #include "sym_table.h"
+#include "parser.tab.h"
 
 using namespace std;
 
