@@ -9,6 +9,8 @@ typedef struct {
     bool init = false;
     string symbol;
     int expr_type;
+    unsigned long long size;
+    unsigned long long max_size = 0;
 } node;
 
 void graph_init();

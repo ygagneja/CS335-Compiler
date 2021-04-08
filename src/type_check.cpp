@@ -4,7 +4,6 @@
 // sym table schema (id, name, size, offsets, init, scope_id, scope_offset)
 
 // total 8 types : int, float, char, bool, ptr, struct, func, void
-// handle structs
 
 bool is_type_int(string str){
     if (str == string("int") || str == string("long") || str == string("long int")) return true;
@@ -41,16 +40,16 @@ string is_valid(string str1, string str2){
     return string("");
 }
 
-string id_type(string str){
-    sym_tab_entry* e = lookup(str);
-    if (e) return e->type;
+string id_type(string str, int level, int level_id){
+    sym_tab_entry* entry = lookup(str, level, level_id);
+    if (entry) return entry->type;
     return string("");
 }
 
-string const_type(string str){
-    // write this function to check if a constant belongs to :
-    // int, long, long long, float, double, long double
-}
+// string const_type(string str){
+//     write this function to check if a constant belongs to :
+//     int, long, long long, float, double, long double
+// }
 
 string postfix_type(string str, int label){
     string ret_type = string(str);
@@ -62,8 +61,8 @@ string postfix_type(string str, int label){
         else return string("");
     }
     else if (label == 2 || label == 3){
-        if (str.substr(0, 6) == "#func_"){
-            ret_type.erase(0, 6);
+        if (str.substr(0, 5) == "func "){
+            ret_type.erase(0, 5);
             return ret_type;
         }
         return string("");

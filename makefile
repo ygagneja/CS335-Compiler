@@ -5,7 +5,7 @@ YACC=bison
 
 all: ./bin/parser
 
-./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.o ./src/type_check.o
+./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.o ./src/type_check.o ./src/sym_table.o
 	mkdir -p bin
 	$(CC) $^ -o $@
 
@@ -21,8 +21,12 @@ all: ./bin/parser
 ./src/type_check.o : ./src/type_check.cpp ./src/type_check.h
 	$(CC) -c $^ -o $@
 
+./src/sym_table.o : ./src/sym_table.cpp ./src/sym_table.h
+	$(CC) -c $^ -o $@
+
 clean:
 	rm -rf ./src/lex.yy.c ./src/parser.tab.* ./src/*.o
 	rm -rf bin
 	rm -rf *.dot
 	rm -rf *.ps
+	rm -rf *.csv

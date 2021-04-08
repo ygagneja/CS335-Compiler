@@ -11,6 +11,7 @@ IS			(u|U|l|L)*
 #include <iostream>
 #include "nodes.h"
 #include "parser.tab.h"
+#include "sym_table.h"
 
 using namespace std;
 
@@ -59,7 +60,7 @@ int line = 1;
 "volatile"		{ yylval.str=strdup(yytext); count("VOLATILE"); return(VOLATILE); }
 "while"			{ yylval.str=strdup(yytext); count("WHILE"); return(WHILE); }
 
-{L}({L}|{D})*		{ yylval.str=strdup(yytext); count("IDENTIFIER"); return(IDENTIFIER); }
+{L}({L}|{D})*		{ return is_type(); }
 
 0[xX]{H}+{IS}?		{ yylval.str=strdup(yytext); count("CONSTANT"); return(CONSTANT); }
 0{D}+{IS}?		{ yylval.str=strdup(yytext); count("CONSTANT"); return(CONSTANT); }
@@ -158,5 +159,16 @@ void count(char* token){
         //     column = column + 8 - (column%8);
         // }
         else column++;
+    }
+}
+
+int is_type(){
+    yylval.str=strdup(yytext);
+    count("IDENTIFIER");
+    if (lookup_type(string(yytext))){
+        return TYPE_NAME;
+    }
+    else {
+        return IDENTIFIER;
     }
 }
