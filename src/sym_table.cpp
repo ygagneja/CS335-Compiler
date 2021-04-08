@@ -5,7 +5,7 @@ map<string, string> func_args_map;
 sym_tab global_sym_tab;
 type_tab global_type_tab;
 sym_tab* curr;
-// total 9 types : int, float, char, bool, ptr, struct, func, array, void
+// total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
 void tab_init(){
 
@@ -14,7 +14,7 @@ void tab_init(){
 }
 
 void set_current_sym_tab(string func_name){
-    if (func_name == ""){
+    if (func_name == "#"){
         curr = &global_sym_tab;
     }
     else {
@@ -102,7 +102,7 @@ unsigned long long get_size(string type){
 
     if (lookup_type(type)) return lookup_type(type)->size;
 
-    if (type == "") return 0;
+    if (type == "null") return 0;
 
     return 8;
 }

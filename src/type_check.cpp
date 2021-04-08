@@ -4,7 +4,7 @@
 // set scope variables in sym table, we dont have to make a nester sym table
 // sym table schema (id, name, size, offsets, init, scope_id, scope_offset)
 
-// total 8 types : int, float, char, bool, ptr, struct, func, void
+// total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
 bool is_type_int(string str){
     if (str == string("int") || str == string("long") || str == string("long int")) return true;
@@ -29,7 +29,7 @@ bool is_type_float(string str){
 string is_valid(string str1, string str2){
     if (str1 == str2) return string("1");
     if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char") || str1 == string("bool")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char") || str2 == string("bool"))){
-        if (str1 == string("bool") || str2 == string("bool")) return string("");
+        if (str1 == string("bool") || str2 == string("bool")) return string("null");
         if (is_type_int(str1) || is_type_float(str1) || str1 == string("char")) return string("1");
     }
     else if (str1[str1.size()-1] == '*' && (is_type_int(str2) || str2 == string("char"))) return string("0");
@@ -38,13 +38,13 @@ string is_valid(string str1, string str2){
         if (str1 == string("void*") || str2 == string("void*") && str1 == str2) return string("1");
         else return string("0");
     }  
-    return string("");
+    return string("null");
 }
 
 string id_type(string str, int level, int level_id){
     sym_tab_entry* entry = lookup(str, level, level_id);
     if (entry) return entry->type;
-    return string("");
+    return string("null");
 }
 
 // string const_type(string str){
@@ -59,42 +59,42 @@ string postfix_type(string str, int label){
             ret_type[ret_type.size()-1] = '\0';
             return ret_type;
         }
-        else return string("");
+        else return string("null");
     }
     else if (label == 2 || label == 3){
         if (str.substr(0, 5) == "func "){
             ret_type.erase(0, 5);
             return ret_type;
         }
-        return string("");
+        return string("null");
     }
     else if (label == 6 || label == 7){
         if (is_type_int(str) || is_type_float(str) || str == string("char") || str[str.size()-1] == '*') return ret_type;
-        else return string("");
+        else return string("null");
     }
 }
 
 string args_type(string str1, string str2){
-    if (str1 == string("void") && str2 != string("")) return string("void");
-    else return string("");
+    if (str1 == string("void") && str2 != string("null")) return string("void");
+    else return string("null");
 }
 
 string unary_type(char* op, string str){
-    string ret_type("");
+    string ret_type("null");
     if (*op == '&'){
-        ret_type += str + string("*");
+        return string(str + "*");
     }
     else if (*op == '*'){
         return postfix_type(str, 1);
     }
     else if (*op == '+' || *op == '-'){
-        if (is_type_int(str) || is_type_float(str) || str == string("char")) ret_type += str;
+        if (is_type_int(str) || is_type_float(str) || str == string("char")) return string(str);
     }
     else if (*op == '~'){
-        if (is_type_int(str) || str == string("char") || str == string("bool")) ret_type += str;
+        if (is_type_int(str) || str == string("char") || str == string("bool")) return string(str);
     }
     else if (*op == '!'){
-        if (is_type_int(str) || is_type_float(str) || str == string("char") || str == string("bool")) ret_type += str;
+        if (is_type_int(str) || is_type_float(str) || str == string("char") || str == string("bool")) return string(str);
     }
     return ret_type;
 }
@@ -104,30 +104,30 @@ string cast_type(string str1, string str2){
 }
 
 string mul_type(string str1, string str2, char op){
-    string ret_type = string("");
+    string ret_type = string("null");
     if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char"))){
         if (op == '*' || op == '/'){
-            if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) ret_type += "int";
-            else ret_type += "float";
+            if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+            else return string("float");
         }
         else if (op == '%'){
-            if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) ret_type += "int";
+            if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
         }
     }
     return ret_type;
 }
 
 string add_type(string str1, string str2){
-    string ret_type = string("");
+    string ret_type = string("null");
     if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char"))){
-        if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) ret_type += "int";
-        else ret_type += "float";
+        if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+        else return string("float");
     }
     else if (str1[str1.size()-1] == '*' && (is_type_int(str2) || str2== string("char"))){
-        ret_type += str1;
+        return string(str1);
     }
     else if (str2[str2.size()-1] == '*' && (is_type_int(str1) || str1 == string("char"))){
-        ret_type += str2;
+        return string(str2);
     }
     return ret_type;
 }
@@ -136,34 +136,34 @@ string shift_type(string str1, string str2){
     if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))){
         return string(str1);
     }
-    return string("");
+    return string("null");
 }
 
 string relat_type(string str1, string str2){
-    string ret_type = string("");
+    string ret_type = string("null");
     if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char"))){
-        if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) ret_type += "int";
-        else ret_type += "float";
+        if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+        else return string("float");
     }
     if (str1[str1.size()-1] == '*' && str2[str2.size()-1] == '*'){
         if (str1 == str2){
-            ret_type += "*";
+            return string("*");
         }
         else {
-            ret_type += "*warning";
+            return string("*warning");
         }
     }
     else if ((str1[str1.size()-1] == '*' && (is_type_int(str2) || str2 == string("char"))) || (str2[str2.size()-1] == '*') && (is_type_int(str1) || str1 == string("char"))){
-        ret_type += "*warning";
+        return string("*warning");
     }
     return ret_type;
 }
 
 string bit_type(string str1, string str2){
-    string ret_type = string("");
+    string ret_type = string("null");
     if ((is_type_int(str1) || str1 == string("bool") || str1 == string("char")) && (is_type_int(str2) || str2 == string("bool") || str2 == string("char"))){
-        if (str1 == string("bool") && str2 == string("bool")) ret_type += "bool";
-        else ret_type += "int";
+        if (str1 == string("bool") && str2 == string("bool")) return string("bool");
+        else return string("int");
     }
     return ret_type;
 }
@@ -175,25 +175,25 @@ string cond_type(string str1, string str2){
         return string("long double");
     }
     if (str1[str1.size()-1] == '*' && str2[str2.size()-1] == '*') return string("void*");
-    return string("");
+    return string("null");
 }
 
 string assign_type(string str1, string str2, char* op){
-    string ret_type = string("");
+    string ret_type = string("null");
     if (!strcmp(op, "=")){
-        ret_type += is_valid(str1, str2);
+        return is_valid(str1, str2);
     }
     else if (!strcmp(op, "*=") || !strcmp(op, "/=") || !strcmp(op, "%=")){
-        if (mul_type(str1, str2, op[0]) != "") return string("1");
+        if (mul_type(str1, str2, op[0]) != "null") return string("1");
     }
     else if (!strcmp(op, "+=") || !strcmp(op, "-=")){
-        if (add_type(str1, str2) != "") return string("1");
+        if (add_type(str1, str2) != "null") return string("1");
     }
     else if (!strcmp(op, ">>=") || !strcmp(op, "<<=")){
-        if (shift_type(str1, str2) != "") return string("1");
+        if (shift_type(str1, str2) != "null") return string("1");
     }
     else if (!strcmp(op, "&=") || !strcmp(op, "^=") || !strcmp(op, "|=")){
-        if (bit_type(str1, str2) != "") return string("1");
+        if (bit_type(str1, str2) != "null") return string("1");
     }
     return ret_type;
 }

@@ -1,17 +1,18 @@
-int main(){
-    int i = 0;
-    int a = 5+10;
+void printf();
+
+int main(int x){
+    int i;
+    int a;
     int c = a;
-    float x = c&a; // one line comment
-    float a = 2;
-    for (i=0; i<10; i++){
-        if (i == 2)
-            printf ("hey there");
+    int x = c&a; // one line comment
+    for (i=a; i<c; i++){
+        if (i == a)
+            printf ();
     }
     while (a--){
         break;
     }
-    x += a - c<<5; 
+    x += a - c<<i; 
     /* multi 
         line comment */
     return 0;

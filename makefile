@@ -1,4 +1,4 @@
-CC=g++ -ggdb3 -std=c++11 -w
+CC=g++ -ggdb3 -std=c++17 -w
 LEX=flex
 YACC=bison
 .PHONY: all clean
