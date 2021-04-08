@@ -4,8 +4,8 @@ using namespace std;
 
 bool is_type_int(string str);
 bool is_type_float(string str);
-string is_valid(string str1, string str2)
-string id_type(string str);
+string is_valid(string str1, string str2);
+string id_type(string str, int level, int level_id);
 string const_type(string str);
 string postfix_type(string str, int label);
 string args_type(string str1, string str2);

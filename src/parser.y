@@ -176,7 +176,8 @@ postfix_expression
                                                                     fprintf(stderr, "Too many arguments for the function %s", ($1->symbol).c_str());
                                                                     break;
                                                                   }
-                                                                  else break;  
+                                                                  else break;
+                                                                } 
                                                               }
                                                             }
                                                             else {
@@ -795,7 +796,7 @@ struct_or_union_specifier
   | struct_or_union '{' struct_declaration_list '}'             {$$ = non_terminal(0, "struct_or_union_specifier", $1, $3);
                                                                   struct_id++;
                                                                   $$->nodetype = string($1->label) + " " + to_string(struct_id);
-                                                                  int size = string($1->label) == "struct" ? $4->size : $4->max_size;
+                                                                  int size = string($1->label) == "struct" ? $3->size : $3->max_size;
                                                                   insert_type_entry($$->nodetype, string($1->label), size, level, level_id[level]);
                                                                 }
   | struct_or_union IDENTIFIER                                  {$$ = non_terminal(0, "struct_or_union_specifier", $1, terminal($2));
@@ -926,7 +927,6 @@ direct_declarator
                                     }
                                       $$->size = get_size($$->nodetype);
                                       $$->expr_type = 15;
-                                    }
                                   } 
 	| direct_declarator '(' empty1 parameter_type_list ')'  {
                                                             $$ = non_terminal(0, "direct_declarator", $1, $4, NULL, NULL, NULL, "()");

@@ -1,4 +1,5 @@
 #include "type_check.h"
+#include "sym_table.h"
 
 // set scope variables in sym table, we dont have to make a nester sym table
 // sym table schema (id, name, size, offsets, init, scope_id, scope_offset)
@@ -186,13 +187,13 @@ string assign_type(string str1, string str2, char* op){
         if (mul_type(str1, str2, op[0]) != "") return string("1");
     }
     else if (!strcmp(op, "+=") || !strcmp(op, "-=")){
-        if (add_type(str1, str2)) return string("1");
+        if (add_type(str1, str2) != "") return string("1");
     }
     else if (!strcmp(op, ">>=") || !strcmp(op, "<<=")){
-        if (shift_type(str1, str2)) return string("1");
+        if (shift_type(str1, str2) != "") return string("1");
     }
     else if (!strcmp(op, "&=") || !strcmp(op, "^=") || !strcmp(op, "|=")){
-        if (bit_type(str1, str2)) return string("1");
+        if (bit_type(str1, str2) != "") return string("1");
     }
     return ret_type;
 }
