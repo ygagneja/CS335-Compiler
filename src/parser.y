@@ -64,9 +64,9 @@ FILE *ast;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1);
-                                    string type = id_type($1);
+                                    string type = id_type(string($1), level, level_id[level]);
                                     if (type != ""){
-                                      $$->init = lookup($1, level, level_id)->init;
+                                      $$->init = lookup(string($1), level, level_id[level])->init;
                                       $$->nodetype = type;
                                       $$->symbol = string($1);
                                       $$->expr_type = 3;
@@ -251,7 +251,7 @@ unary_expression
                                     $$->nodetype = type;
                                     if (type == ""){
                                       error_throw = true;
-                                      fprintf(stderr, "Type inconsistent with %s operator", ($1->label).c_str());
+                                      fprintf(stderr, "Type inconsistent with %s operator", $1->label);
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -365,15 +365,18 @@ additive_expression
                                                           if (type != ""){
                                                             if (type == string("int")){
                                                               $$->nodetype = string("long long");
-                                                              $$ = non_terminal(0, "+ " + type, $1, $3);
+                                                              char* label; string tmp = "+ " + type; label = &tmp[0];
+                                                              $$ = non_terminal(0, label, $1, $3);
                                                             }
                                                             else if (type == string("float")){
                                                               $$->nodetype = string("long double");
-                                                              $$ = non_terminal(0, "+ " + type, $1, $3);
+                                                              char* label; string tmp = "+ " + type; label = &tmp[0];
+                                                              $$ = non_terminal(0, label, $1, $3);
                                                             }
                                                             else {
                                                               $$->nodetype = type;
-                                                              $$ = non_terminal(0, "+ " + type, $1, $3);
+                                                              char* label; string tmp = "+ " + type; label = &tmp[0];
+                                                              $$ = non_terminal(0, label, $1, $3);
                                                             }
                                                           }
                                                           else {
@@ -388,15 +391,18 @@ additive_expression
                                                           if (type != ""){
                                                             if (type == string("int")){
                                                               $$->nodetype = string("long long");
-                                                              $$ = non_terminal(0, "- " + type, $1, $3);
+                                                              char* label; string tmp = "- " + type; label = &tmp[0];
+                                                              $$ = non_terminal(0, label, $1, $3);
                                                             }
                                                             else if (type == string("float")){
                                                               $$->nodetype = string("long double");
-                                                              $$ = non_terminal(0, "- " + type, $1, $3);
+                                                              char* label; string tmp = "- " + type; label = &tmp[0];
+                                                              $$ = non_terminal(0, label, $1, $3);
                                                             }
                                                             else {
                                                               $$->nodetype = type;
-                                                              $$ = non_terminal(0, "- " + type, $1, $3);
+                                                              char* label; string tmp = "- " + type; label = &tmp[0];
+                                                              $$ = non_terminal(0, label, $1, $3);
                                                             }
                                                           }
                                                           else {
@@ -441,7 +447,8 @@ relational_expression
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
-                                                      $$ = non_terminal(0, "< " + type, $1, $3);
+                                                      char* label; string tmp = "< " + type; label = &tmp[0];
+                                                      $$ = non_terminal(0, label, $1, $3);
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -458,7 +465,8 @@ relational_expression
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
-                                                      $$ = non_terminal(0, "> " + type, $1, $3);
+                                                      char* label; string tmp = "> " + type; label = &tmp[0];
+                                                      $$ = non_terminal(0, label, $1, $3);
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -475,7 +483,8 @@ relational_expression
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
-                                                      $$ = non_terminal(0, "<= " + type, $1, $3);
+                                                      char* label; string tmp = "<= " + type; label = &tmp[0];
+                                                      $$ = non_terminal(0, label, $1, $3);
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -492,7 +501,8 @@ relational_expression
                                                         type = string("*");
                                                       }
                                                       $$->nodetype = string("bool");
-                                                      $$ = non_terminal(0, ">= " + type, $1, $3);
+                                                      char* label; string tmp = ">= " + type; label = &tmp[0];
+                                                      $$ = non_terminal(0, label, $1, $3);
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -513,7 +523,8 @@ equality_expression
                                                         type = string("*");
                                                       }
                                                         $$->nodetype = string("bool");
-                                                        $$ = non_terminal(0, "== " + type, $1, $3);
+                                                        char* label; string tmp = "== " + type; label = &tmp[0];
+                                                        $$ = non_terminal(0, label, $1, $3);
                                                       }
                                                       else {
                                                         error_throw = true;
@@ -530,7 +541,8 @@ equality_expression
                                                         type = string("*");
                                                       }
                                                         $$->nodetype = string("bool");
-                                                        $$ = non_terminal(0, "!= " + type, $1, $3);
+                                                        char* label; string tmp = "!= " + type; label = &tmp[0];
+                                                        $$ = non_terminal(0, label, $1, $3);
                                                       }
                                                       else {
                                                         error_throw = true;
@@ -544,7 +556,7 @@ equality_expression
 and_expression
   : equality_expression                     {$$ = $1;}
   | and_expression '&' equality_expression  {if ($1->init && $3->init) $$->init = true;
-                                              string type = bit_type($1->nodetype, $3>nodetype);
+                                              string type = bit_type($1->nodetype, $3->nodetype);
                                               if (type != ""){
                                                 if (type == string("int")){
                                                   $$ = non_terminal(0, "& int", $1, $3);
@@ -567,7 +579,7 @@ and_expression
 exclusive_or_expression
   : and_expression                              {$$ = $1;}
   | exclusive_or_expression '^' and_expression  {if ($1->init && $3->init) $$->init = true;
-                                                  string type = bit_type($1->nodetype, $3>nodetype);
+                                                  string type = bit_type($1->nodetype, $3->nodetype);
                                                   if (type != ""){
                                                     if (type == string("int")){
                                                       $$ = non_terminal(0, "^ int", $1, $3);
@@ -590,7 +602,7 @@ exclusive_or_expression
 inclusive_or_expression
   : exclusive_or_expression                              {$$ = $1;}
   | inclusive_or_expression '|' exclusive_or_expression  {if ($1->init && $3->init) $$->init = true;
-                                                          string type = bit_type($1->nodetype, $3>nodetype);
+                                                          string type = bit_type($1->nodetype, $3->nodetype);
                                                           if (type != ""){
                                                             if (type == string("int")){
                                                               $$ = non_terminal(0, "| int", $1, $3);
@@ -718,7 +730,7 @@ init_declarator
   : declarator                  {$$ = $1;
                                   if ($1->expr_type == 1){
                                     string type = $1->nodetype;
-                                    if (lookup($1->symbol, level, level_id[level][level])){
+                                    if (lookup($1->symbol, level, level_id[level])){
                                       error_throw = true;
                                       fprintf(stderr, "Error : Redeclaration of symbol %s", ($1->symbol).c_str());
                                     }
@@ -806,7 +818,7 @@ struct_or_union_specifier
                                                                   else {
                                                                     $$->nodetype = "";
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "Error : Struct/Union %s not defined", $2->label);
+                                                                    fprintf(stderr, "Error : Struct/Union %s not defined", $2);
                                                                   }
                                                                 }
   ;
@@ -1043,7 +1055,7 @@ initializer_list
                                         $$->nodetype = $1->nodetype;
                                         string chk = is_valid($1->nodetype, $3->nodetype);
                                         if(chk == string("0")){
-                                          fprintf(stderr, "Warning : Assignment with incompatible pointer types")
+                                          fprintf(stderr, "Warning : Assignment with incompatible pointer types");
                                         }
                                         else if (chk == ""){
                                           error_throw = true;

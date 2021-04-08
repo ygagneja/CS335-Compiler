@@ -13,7 +13,7 @@ typedef struct {
     unsigned long long level_id;
 }sym_tab_entry;
 
-typedef unordered_map<tuple<string, unsigned long long, unsigned long long>, sym_tab_entry*> sym_tab;
+typedef map<tuple<string, unsigned long long, unsigned long long>, sym_tab_entry*> sym_tab;
 
 typedef struct {
     string type_name;
@@ -23,7 +23,7 @@ typedef struct {
     unsigned long long level_id;
 }type_tab_entry;
 
-typedef unordered_map<tuple<string, unsigned long long, unsigned long long>, type_tab_entry*> type_tab;
+typedef map<tuple<string, unsigned long long, unsigned long long>, type_tab_entry*> type_tab;
 
 void tab_init();
 void set_current_sym_tab(string func_name);

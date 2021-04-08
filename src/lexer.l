@@ -18,6 +18,7 @@ using namespace std;
 void comment();
 void count(char* token);
 void yyerror(char* s);
+int is_type();
 
 int column = 1;
 int line = 1;
