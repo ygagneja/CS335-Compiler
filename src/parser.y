@@ -25,6 +25,8 @@ int level = 0;
 int yylex(void);
 void yyerror(char *s);
 FILE *ast;
+
+extern int line;
 %}
 
 
@@ -74,7 +76,7 @@ primary_expression
                                     else {
                                       error_throw = true;
                                       $$->nodetype = &type[0];
-                                      fprintf(stderr, "Error : %s is not declared in this scope\n", $1);
+                                      fprintf(stderr, "%d |\t Error : %s is not declared in this scope\n", line, $1);
                                     }
                                   }
   | CONSTANT                      {$$ = terminal("CONSTANT");
@@ -102,7 +104,7 @@ postfix_expression
                                               else {
                                                 error_throw = true;
                                                 $$->nodetype = &type[0];
-                                                fprintf(stderr,"Error : Array indexed with more indices than its dimension\n");
+                                                fprintf(stderr, "%d |\t Error : Array \"%s\"indexed with more indices than its dimension\n", line, ($1->symbol).c_str());
                                               }
                                              }
   | postfix_expression '(' ')'               {$$ = $1;
@@ -114,13 +116,13 @@ postfix_expression
                                                   string args = get_func_args($1->symbol);
                                                   if (args != "null"){
                                                     error_throw = true;
-                                                    fprintf(stderr, "Error : %s function requires arguments to be passed\n", ($1->symbol).c_str());
+                                                    fprintf(stderr, "%d |\t Error : %s function requires some arguments to be passed\n", line, ($1->symbol).c_str());
                                                   }
                                                 }
                                               }
                                               else {
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Invalid function call\n");
+                                                fprintf(stderr, "%d |\t Error : Invalid function call for the function \"%s\"\n", line, ($1->symbol).c_str());
                                               }
                                               curr_args_types = "";
                                              }
@@ -135,19 +137,19 @@ postfix_expression
                                                                 string temp2 = args == "null" ? "" : args;
                                                                 string typeA, typeB;
                                                                 string delim = string(",");
-                                                                unsigned f1 = 1;
-                                                                unsigned f2 = 1;
+                                                                size_t f1 = 1;
+                                                                size_t f2 = 1;
                                                                 int arg_num = 0;
-                                                                while(f1 != -1 && f2 != -1){
+                                                                while(f1 != string::npos && f2 != string::npos){
                                                                   f1 = temp1.find_first_of(delim);
                                                                   f2 = temp2.find_first_of(delim);
                                                                   arg_num++;
-                                                                  if (f1 == -1) typeA = temp1; 
+                                                                  if (f1 == string::npos) typeA = temp1; 
                                                                   else { 
                                                                     typeA = temp1.substr(0,f1); 
                                                                     temp1 = temp1.substr(f1+1);
                                                                   }
-                                                                  if (f2 == -1) typeB = temp2; 
+                                                                  if (f2 == string::npos) typeB = temp2; 
                                                                   else { 
                                                                     typeB = temp2.substr(0,f2); 
                                                                     temp2 = temp2.substr(f2+1); 
@@ -155,25 +157,25 @@ postfix_expression
                                                                   if (typeB == string("...")) break;
                                                                   string chk = is_valid(typeA, typeB);
                                                                   if (chk == string("0")){
-                                                                    fprintf(stderr, "Warning : Passing argument %d of %s from incompatible pointer type. Note : expected %s but argument is of type %s\n", arg_num, ($1->symbol).c_str(), typeB.c_str(), typeA.c_str());
+                                                                    fprintf(stderr, "%d |\t Warning : Passing argument %d of %s from incompatible pointer type. Note : expected %s but argument is of type %s\n", line,  arg_num, ($1->symbol).c_str(), typeB.c_str(), typeA.c_str());
                                                                   }
                                                                   else if (chk == "null"){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "Error : Incompatible type for argument %d of %s. Note : expected %s but argument is of type %s\n", arg_num, ($1->symbol).c_str(), typeB.c_str(), typeA.c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Incompatible type for argument %d of %s. Note : expected %s but argument is of type %s\n", line, arg_num, ($1->symbol).c_str(), typeB.c_str(), typeA.c_str());
                                                                   }
-                                                                  if ((f1 != -1) && (f2 != -1)){
+                                                                  if ((f1 != string::npos) && (f2 != string::npos)){
                                                                     continue;
                                                                   }
-                                                                  else if (f2 != -1){
+                                                                  else if (f2 != string::npos){
                                                                     if(!(temp2==string("..."))){
                                                                       error_throw = true;
-                                                                      fprintf(stderr, "Error : Too few arguments for the function %s\n", ($1->symbol).c_str());
+                                                                      fprintf(stderr, "%d |\t Error : Too few arguments for the function %s\n", line, ($1->symbol).c_str());
                                                                     } 
                                                                     break;
                                                                   }
-                                                                  else if (f1 != -1){
+                                                                  else if (f1 != string::npos){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "Error : Too many arguments for the function %s\n", ($1->symbol).c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Too many arguments for the function %s\n", line, ($1->symbol).c_str());
                                                                     break;
                                                                   }
                                                                   else break;
@@ -182,7 +184,7 @@ postfix_expression
                                                             }
                                                             else {
                                                               error_throw = true;
-                                                              fprintf(stderr, "Error : Invalid function call %s", ($1->symbol).c_str());
+                                                              fprintf(stderr, "%d |\t Error : Invalid function call %s\n", line, ($1->symbol).c_str());
                                                             }
                                                             curr_args_types = "";
                                                           }
@@ -198,7 +200,7 @@ postfix_expression
                                               $$->nodetype = &type[0];
                                               if (type == "null"){
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Increment used with incompatible type\n");
+                                                fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
@@ -207,7 +209,7 @@ postfix_expression
                                               $$->nodetype = &type[0];
                                               if (type == "null"){
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Decrement used with incompatible type\n");
+                                                fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
                                              }
   ;
@@ -221,7 +223,7 @@ argument_expression_list
                                                           string type = args_type($1->nodetype, $3->nodetype);
                                                           $$->nodetype = &type[0];
                                                           if ($1->init && $3->init) $$->init = true;
-                                                          curr_args_types = curr_args_types + string(",") + $3->nodetype;
+                                                          curr_args_types = curr_args_types + "," + $3->nodetype;
                                                           }
   ;
 
@@ -233,7 +235,7 @@ unary_expression
                                     $$->nodetype = &type[0];
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Increment used with incompatible type\n");
+                                      fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
                                   }
 
@@ -243,7 +245,7 @@ unary_expression
                                     $$->nodetype = &type[0];
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Decrement used with incompatible type\n");
+                                      fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
@@ -252,7 +254,7 @@ unary_expression
                                     $$->nodetype = &type[0];
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Type inconsistent with %s operator\n", $1->label);
+                                      fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -261,7 +263,7 @@ unary_expression
                                     string type = $2->nodetype;
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : sizeof cannot be defined for given identifiers\n");
+                                      fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); 
@@ -270,7 +272,7 @@ unary_expression
                                     string type = $3->nodetype;
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : sizeof cannot be defined for given identifiers\n");
+                                      fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
                                   }
   ;
@@ -289,16 +291,16 @@ cast_expression
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); 
                                         string type = cast_type($2->nodetype, $4->nodetype);
                                         $$->nodetype = &type[0];
-                                        if (type == string("0")){
+                                        if (type == "0"){
                                           $$->nodetype = $2->nodetype;
-                                          fprintf(stderr, "Warning : Incompatible pointer typecasting\n");
+                                          fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
                                         }
-                                        else if (type == string("1")){
+                                        else if (type == "1"){
                                           $$->nodetype = $2->nodetype;
                                         }
                                         else {
                                           error_throw = true;
-                                          fprintf(stderr, "Error : Cannot typecast given expression to %s\n", ($2->nodetype).c_str());
+                                          fprintf(stderr, "%d |\t Error : Cannot typecast given expression to %s\n", line, ($2->nodetype).c_str());
                                         }
                                         if ($4->init) $$->init = true;
                                       }
@@ -309,18 +311,18 @@ multiplicative_expression
   | multiplicative_expression '*' cast_expression       { if ($1->init && $3->init) $$->init = true;
                                                           string type = mul_type($1->nodetype, $3->nodetype, '*');
                                                           if (type != "null"){
-                                                            if (type == string("int")){
+                                                            if (type == "int"){
                                                               $$ = non_terminal(0, "* int", $1, $3);
                                                               $$->nodetype = "long long";
                                                             }
-                                                            else if (type == string("float")){
+                                                            else if (type == "float"){
                                                               $$ = non_terminal(0, "* float", $1, $3);
                                                               $$->nodetype = "long double";
                                                             }
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "Error : Incompatible type for * operator\n");
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for * operator\n", line);
                                                             $$ = non_terminal(0, "*", $1, $3);
                                                             $$->nodetype = "null"; 
                                                           }
@@ -328,18 +330,18 @@ multiplicative_expression
   | multiplicative_expression '/' cast_expression       {if ($1->init && $3->init) $$->init = true;
                                                           string type = mul_type($1->nodetype, $3->nodetype, '/');
                                                           if (type != "null"){
-                                                            if (type == string("int")){
+                                                            if (type == "int"){
                                                               $$ = non_terminal(0, "/ int", $1, $3);
                                                               $$->nodetype = "long long";
                                                             }
-                                                            else if (type == string("float")){
+                                                            else if (type == "float"){
                                                               $$ = non_terminal(0, "/ float", $1, $3);
                                                               $$->nodetype = "long double";
                                                             }
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "Error : Incompatible type for / operator\n");
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for / operator\n", line);
                                                             $$ = non_terminal(0, "/", $1, $3);
                                                             $$->nodetype = "null"; 
                                                           } 
@@ -352,7 +354,7 @@ multiplicative_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "Error : Incompatible type for % operator\n");
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for % operator\n", line);
                                                             $$ = non_terminal(0, "%", $1, $3);
                                                             $$->nodetype = "null"; 
                                                           } 
@@ -364,12 +366,12 @@ additive_expression
   | additive_expression '+' multiplicative_expression   {if ($1->init && $3->init) $$->init = true;
                                                           string type = add_type($1->nodetype, $3->nodetype);
                                                           if (type != "null"){
-                                                            if (type == string("int")){
+                                                            if (type == "int"){
                                                               $$->nodetype = "long long";
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                             }
-                                                            else if (type == string("float")){
+                                                            else if (type == "float"){
                                                               $$->nodetype = "long double";
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
@@ -382,7 +384,7 @@ additive_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "Error : Incompatible type for + operator\n");
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for + operator\n", line);
                                                             $$ = non_terminal(0, "+", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -390,12 +392,12 @@ additive_expression
   | additive_expression '-' multiplicative_expression   {if ($1->init && $3->init) $$->init = true;
                                                           string type = add_type($1->nodetype, $3->nodetype);
                                                           if (type != "null"){
-                                                            if (type == string("int")){
+                                                            if (type == "int"){
                                                               $$->nodetype = "long long";
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                             }
-                                                            else if (type == string("float")){
+                                                            else if (type == "float"){
                                                               $$->nodetype = "long double";
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
@@ -408,7 +410,7 @@ additive_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "Error : Incompatible type for - operator\n");
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for - operator\n", line);
                                                             $$ = non_terminal(0, "-", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -424,7 +426,7 @@ shift_expression
                                                     $$->nodetype = &type[0];
                                                     if (type == "null"){
                                                       error_throw = true;
-                                                      fprintf(stderr, "Error : Invalid operand(s) with <<\n");
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
                                                     }
                                                   }
   | shift_expression RIGHT_OP additive_expression {$$ = non_terminal(0, $2, $1, $3); 
@@ -433,7 +435,7 @@ shift_expression
                                                     $$->nodetype = &type[0];
                                                     if (type == "null"){
                                                       error_throw = true;
-                                                      fprintf(stderr, "Error : Invalid operand(s) with >>\n");
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
                                                     }
                                                   }
   ;
@@ -443,9 +445,9 @@ relational_expression
   | relational_expression '<' shift_expression    {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
-                                                      if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s\n", ($1->nodetype).c_str(), ($3->nodetype).c_str());
-                                                        type = string("*");
+                                                      if (type == "*warning"){
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        type = "*";
                                                       }
                                                       $$->nodetype = "bool";
                                                       char* label; string tmp = "< " + type; label = &tmp[0];
@@ -453,7 +455,7 @@ relational_expression
                                                     }
                                                     else {
                                                       error_throw = true;
-                                                      fprintf(stderr, "Error : Invalid operand(s) with <\n");
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with <\n", line);
                                                       $$->nodetype = &type[0];
                                                       $$ = non_terminal(0, $2, $1, $3);
                                                     }
@@ -461,9 +463,9 @@ relational_expression
   | relational_expression '>' shift_expression    {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
-                                                      if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s\n", ($1->nodetype).c_str(), ($3->nodetype).c_str());
-                                                        type = string("*");
+                                                      if (type == "*warning"){
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        type = "*";
                                                       }
                                                       $$->nodetype = "bool";
                                                       char* label; string tmp = "> " + type; label = &tmp[0];
@@ -471,7 +473,7 @@ relational_expression
                                                     }
                                                     else {
                                                       error_throw = true;
-                                                      fprintf(stderr, "Error : Invalid operand(s) with >\n");
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with >\n", line);
                                                       $$->nodetype = &type[0];
                                                       $$ = non_terminal(0, $2, $1, $3);
                                                     } 
@@ -479,9 +481,9 @@ relational_expression
   | relational_expression LE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
-                                                      if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s\n", ($1->nodetype).c_str(), ($3->nodetype).c_str());
-                                                        type = string("*");
+                                                      if (type == "*warning"){
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        type = "*";
                                                       }
                                                       $$->nodetype = "bool";
                                                       char* label; string tmp = "<= " + type; label = &tmp[0];
@@ -489,7 +491,7 @@ relational_expression
                                                     }
                                                     else {
                                                       error_throw = true;
-                                                      fprintf(stderr, "Error : Invalid operand(s) with <=\n");
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with <=\n", line);
                                                       $$->nodetype = &type[0];
                                                       $$ = non_terminal(0, $2, $1, $3);
                                                     }
@@ -497,9 +499,9 @@ relational_expression
   | relational_expression GE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
-                                                      if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s\n", ($1->nodetype).c_str(), ($3->nodetype).c_str());
-                                                        type = string("*");
+                                                      if (type == "*warning"){
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        type = "*";
                                                       }
                                                       $$->nodetype = "bool";
                                                       char* label; string tmp = ">= " + type; label = &tmp[0];
@@ -507,7 +509,7 @@ relational_expression
                                                     }
                                                     else {
                                                       error_throw = true;
-                                                      fprintf(stderr, "Error : Invalid operand(s) with >=\n");
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with >=\n", line);
                                                       $$->nodetype = &type[0];
                                                       $$ = non_terminal(0, $2, $1, $3);
                                                     }
@@ -519,17 +521,17 @@ equality_expression
   | equality_expression EQ_OP relational_expression {if ($1->init && $3->init) $$->init = true;
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != "null"){
-                                                        if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s\n", ($1->nodetype).c_str(), ($3->nodetype).c_str());
-                                                        type = string("*");
-                                                      }
+                                                        if (type == "*warning"){
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                          type = "*";
+                                                        }
                                                         $$->nodetype = "bool";
                                                         char* label; string tmp = "== " + type; label = &tmp[0];
                                                         $$ = non_terminal(0, label, $1, $3);
                                                       }
                                                       else {
                                                         error_throw = true;
-                                                        fprintf(stderr, "Error : Invalid operand(s) with ==\n");
+                                                        fprintf(stderr, "%d |\t Error : Invalid operand(s) with ==\n", line);
                                                         $$->nodetype = &type[0];
                                                         $$ = non_terminal(0, $2, $1, $3);
                                                       } 
@@ -537,17 +539,17 @@ equality_expression
   | equality_expression NE_OP relational_expression {if ($1->init && $3->init) $$->init = true;
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != "null"){
-                                                        if (type == string("*warning")){
-                                                        fprintf(stderr, "Warning : Comparison between %s and %s\n", ($1->nodetype).c_str(), ($3->nodetype).c_str());
-                                                        type = string("*");
-                                                      }
+                                                        if (type == "*warning"){
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                          type = "*";
+                                                        }
                                                         $$->nodetype = "bool";
                                                         char* label; string tmp = "!= " + type; label = &tmp[0];
                                                         $$ = non_terminal(0, label, $1, $3);
                                                       }
                                                       else {
                                                         error_throw = true;
-                                                        fprintf(stderr, "Error : Invalid operand(s) with !=\n");
+                                                        fprintf(stderr, "%d |\t Error : Invalid operand(s) with !=\n", line);
                                                         $$->nodetype = &type[0];
                                                         $$ = non_terminal(0, $2, $1, $3);
                                                       } 
@@ -559,7 +561,7 @@ and_expression
   | and_expression '&' equality_expression  {if ($1->init && $3->init) $$->init = true;
                                               string type = bit_type($1->nodetype, $3->nodetype);
                                               if (type != "null"){
-                                                if (type == string("int")){
+                                                if (type == "int"){
                                                   $$ = non_terminal(0, "& int", $1, $3);
                                                   $$->nodetype = "long long";
                                                 }
@@ -570,7 +572,7 @@ and_expression
                                               }
                                               else {
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Invalid operand(s) with &\n");
+                                                fprintf(stderr, "%d |\t Error : Invalid operand(s) with &\n", line);
                                                 $$->nodetype = &type[0];
                                                 $$ = non_terminal(0, $2, $1, $3);
                                               }
@@ -582,7 +584,7 @@ exclusive_or_expression
   | exclusive_or_expression '^' and_expression  {if ($1->init && $3->init) $$->init = true;
                                                   string type = bit_type($1->nodetype, $3->nodetype);
                                                   if (type != "null"){
-                                                    if (type == string("int")){
+                                                    if (type == "int"){
                                                       $$ = non_terminal(0, "^ int", $1, $3);
                                                       $$->nodetype = "long long";
                                                     }
@@ -593,7 +595,7 @@ exclusive_or_expression
                                                   }
                                                   else {
                                                     error_throw = true;
-                                                    fprintf(stderr, "Error : Invalid operand(s) with ^\n");
+                                                    fprintf(stderr, "%d |\t Error : Invalid operand(s) with ^\n", line);
                                                     $$->nodetype = &type[0];
                                                     $$ = non_terminal(0, $2, $1, $3);
                                                   } 
@@ -605,7 +607,7 @@ inclusive_or_expression
   | inclusive_or_expression '|' exclusive_or_expression  {if ($1->init && $3->init) $$->init = true;
                                                           string type = bit_type($1->nodetype, $3->nodetype);
                                                           if (type != "null"){
-                                                            if (type == string("int")){
+                                                            if (type == "int"){
                                                               $$ = non_terminal(0, "| int", $1, $3);
                                                               $$->nodetype = "long long";
                                                             }
@@ -616,10 +618,11 @@ inclusive_or_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "Error : Invalid operand(s) with |\n");
+                                                            fprintf(stderr, "%d |\t Error : Invalid operand(s) with |\n", line);
                                                             $$->nodetype = &type[0];
                                                             $$ = non_terminal(0, $2, $1, $3);
-                                                          } }
+                                                          }
+                                                          }
   ;
 
 logical_and_expression
@@ -648,7 +651,7 @@ conditional_expression
                                                                       else {
                                                                         error_throw = true;
                                                                         $$->nodetype = &type[0];
-                                                                        fprintf(stderr, "Error : Type mismatch in ternary expression\n");
+                                                                        fprintf(stderr, "%d |\t Error : Type mismatch in ternary expression\n", line);
                                                                       }
                                                                       if ($1->init && $3->init && $5->init) $$->init = true;
                                                                      }
@@ -658,17 +661,17 @@ assignment_expression
   : conditional_expression                                      {$$ = $1;}
   | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(3, "assignment_expression", $1, $2, $3);
                                                                   string type = assign_type($1->nodetype, $3->nodetype, $2->label);
-                                                                  if (type == string("0")){
+                                                                  if (type == "0"){
                                                                     $$->nodetype = $1->nodetype;
-                                                                    fprintf(stderr, "Warning : Incompatible pointer type assignment\n");
+                                                                    fprintf(stderr, "%d |\t Warning : Incompatible pointer type assignment\n", line);
                                                                   }
-                                                                  else if (type == string("1")){
+                                                                  else if (type == "1"){
                                                                     $$->nodetype = $1->nodetype;
                                                                   }
                                                                   else {
                                                                     error_throw = true;
                                                                     $$->nodetype = &type[0];
-                                                                    fprintf(stderr, "Error : Incompatible type conversion from %s to %s\n", ($3->nodetype).c_str(), ($1->nodetype).c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype).c_str(), ($1->nodetype).c_str());
                                                                   }
                                                                 }
   ;
@@ -704,21 +707,21 @@ declaration
 declaration_specifiers
   : storage_class_specifier                           {$$ = $1;
                                                         error_throw = true;
-                                                        fprintf(stderr, "Error : Storage class specifier not implemented yet\n");
+                                                        fprintf(stderr, "%d |\t Error : Storage class specifier not implemented yet\n", line);
                                                       }
   | storage_class_specifier declaration_specifiers    {$$ = non_terminal(0, "declaration_specifiers", $1, $2);
                                                         error_throw = true;
-                                                        fprintf(stderr, "Error : Storage class specifier not implemented yet\n");
+                                                        fprintf(stderr, "%d |\t Error : Storage class specifier not implemented yet\n", line);
                                                       }  
   | type_specifier                                    {$$ = $1;}
   | type_specifier declaration_specifiers             {$$ = non_terminal(0, "declaration_specifiers", $1, $2);}
   | type_qualifier                                    {$$ = $1;
                                                         error_throw = true;
-                                                        fprintf(stderr, "Error : Type qualifier not implemented yet\n");
+                                                        fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
                                                       }
   | type_qualifier declaration_specifiers             {$$ = non_terminal(0, "declaration_specifiers", $1, $2);
                                                         error_throw = true;
-                                                        fprintf(stderr, "Error : Type qualifier not implemented yet\n");
+                                                        fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
                                                       }
   ;
 
@@ -733,11 +736,11 @@ init_declarator
                                     string type = $1->nodetype;
                                     if (lookup($1->symbol, level, level_id[level])){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Redeclaration of symbol %s\n", ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol).c_str());
                                     }
                                     else if ($1->nodetype == "void"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Variable or field %s declared as type void\n", ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
                                     }
                                     else {
                                       insert_entry($1->symbol, $1->nodetype, $1->size, 0, false, level, level_id[level]);
@@ -749,11 +752,11 @@ init_declarator
                                     string type = $1->nodetype;
                                     if (lookup($1->symbol, level, level_id[level])){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Redeclaration of symbol %s\n", ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol).c_str());
                                     }
                                     else if ($1->nodetype == "void"){
                                       error_throw = true;
-                                      fprintf(stderr, "Error : Variable or field %s declared as type void\n", ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
                                     }
                                     else {
                                       if ($1->expr_type == 15){
@@ -786,7 +789,7 @@ type_specifier
   | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? $1->nodetype : t_name+" "+$1->nodetype;}
   | enum_specifier  {$$ = $1; 
                     error_throw = true;
-                    fprintf(stderr, "Error : Enum not implemented yet\n"); 
+                    fprintf(stderr, "%d |\t Error : Enum not implemented yet\n", line); 
                     }
   | TYPE_NAME       {$$ = terminal($1);
                       t_name = (t_name=="") ? $1 : t_name+" "+$1;
@@ -798,28 +801,31 @@ struct_or_union_specifier
                                                                   if (lookup_type($1->label + string(" ") + $2)){
                                                                     $$->nodetype = "null";
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "Error : Struct/Union %s is already defined\n", $2);
+                                                                    fprintf(stderr, "%d |\t Error : Struct/Union %s is already defined\n", line, $2);
                                                                   }
                                                                   else {
-                                                                    $$->nodetype = $1->label + string(" ") + $2;
+                                                                    string temp = $1->label + string(" ") + $2;
+                                                                    $$->nodetype = &temp[0];
                                                                     int size = $1->label == "struct" ? $4->size : $4->max_size;
                                                                     insert_type_entry($$->nodetype, $1->label, size, level, level_id[level]);
                                                                   }
                                                                 }
   | struct_or_union '{' struct_declaration_list '}'             {$$ = non_terminal(0, "struct_or_union_specifier", $1, $3);
                                                                   struct_id++;
-                                                                  $$->nodetype = $1->label + string(" ") + to_string(struct_id);
+                                                                  string temp = $1->label + string(" ") + to_string(struct_id);
+                                                                  $$->nodetype = &temp[0];
                                                                   int size = $1->label == "struct" ? $3->size : $3->max_size;
                                                                   insert_type_entry($$->nodetype, $1->label, size, level, level_id[level]);
                                                                 }
   | struct_or_union IDENTIFIER                                  {$$ = non_terminal(0, "struct_or_union_specifier", $1, terminal($2));
                                                                   if (lookup_type($1->label + string(" ") + $2)){
-                                                                    $$->nodetype = $1->label + string(" ") + $2;
+                                                                    string temp = $1->label + string(" ") + $2;
+                                                                    $$->nodetype = &temp[0];
                                                                   }
                                                                   else {
                                                                     $$->nodetype = "null";
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "Error : Struct/Union %s not defined\n", $2);
+                                                                    fprintf(stderr, "%d |\t Error : Struct/Union %s not defined\n", line, $2);
                                                                   }
                                                                 }
   ;
@@ -849,11 +855,11 @@ specifier_qualifier_list
 	| type_specifier                            {$$ = $1;}
 	| type_qualifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Type qualifier not implemented yet\n");
+                                                fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
                                               }
 	| type_qualifier                            {$$ = $1;
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Type qualifier not implemented yet\n");
+                                                fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
                                               }
 	;
 
@@ -895,7 +901,8 @@ declarator
 	: pointer direct_declarator {
                                 $$ = non_terminal(0, "declarator", $1, $2);
                                 if($2->expr_type == 1){
-                                  $$->nodetype = $2->nodetype+$1->nodetype;
+                                  string temp = $2->nodetype+$1->nodetype;
+                                  $$->nodetype = &temp[0];
                                   $$->symbol = $2->symbol;
                                   $$->expr_type = 1;
                                 }
@@ -936,7 +943,8 @@ direct_declarator
                                     if($1->expr_type == 1){
                                       $$->expr_type = 1;
                                       $$->symbol = $1->symbol;
-                                      $$->nodetype = $1->nodetype+"*";
+                                      string temp = $1->nodetype+"*";
+                                      $$->nodetype = &temp[0];
                                     }
                                       $$->size = get_size($$->nodetype);
                                       $$->expr_type = 15;
@@ -949,7 +957,7 @@ direct_declarator
                                                               $$->nodetype = $1->nodetype;
                                                               if (make_symbol_table($$->symbol)){
                                                                 error_throw = true;
-                                                                fprintf(stderr, "Error : Redeclaration of function %s\n", ($$->symbol).c_str());
+                                                                fprintf(stderr, "%d |\t Error : Redeclaration of function %s\n", line, ($$->symbol).c_str());
                                                               }
                                                               else {
                                                                 insert_entry($1->symbol, "func " + $$->nodetype, 0, 0, false, level, level_id[level]);
@@ -971,7 +979,7 @@ direct_declarator
                                                               $$->symbol = $1->symbol;
                                                               if (make_symbol_table($$->symbol)){
                                                                 error_throw = true;
-                                                                fprintf(stderr, "Error : Redeclaration of function %s\n", ($$->symbol).c_str());
+                                                                fprintf(stderr, "%d |\t Error : Redeclaration of function %s\n", line, ($$->symbol).c_str());
                                                               }
                                                               else {
                                                                 insert_entry($1->symbol, "func " + $$->nodetype, 0, 0, false, level, level_id[level]);
@@ -994,10 +1002,10 @@ empty1
 
 
 pointer
-  : '*'                             {$$ = terminal($1); $$->nodetype="*";}
-  | '*' type_qualifier_list         {$$ = non_terminal(0, $1, $2); $$->nodetype="*";}
-  | '*' pointer                     {$$ = non_terminal(0, $1, $2); $$->nodetype="*"+$2->nodetype;}
-  | '*' type_qualifier_list pointer {$$ = non_terminal(0, $1, $2, $3); $$->nodetype="*"+$3->nodetype;}
+  : '*'                             {$$ = terminal($1); string temp = "*"; $$->nodetype=&temp[0];}
+  | '*' type_qualifier_list         {$$ = non_terminal(0, $1, $2); string temp = "*"; $$->nodetype=&temp[0];}
+  | '*' pointer                     {$$ = non_terminal(0, $1, $2); string temp = "*" + $2->nodetype; $$->nodetype=&temp[0];}
+  | '*' type_qualifier_list pointer {$$ = non_terminal(0, $1, $2, $3); string temp = "*" + $3->nodetype; $$->nodetype=&temp[0];}
   ;
 
 
@@ -1023,7 +1031,7 @@ parameter_declaration
                                             if($2->expr_type == 1){
                                               if(lookup($2->symbol, level, level_id[level])){
                                                 error_throw = true;
-                                                fprintf(stderr, "Error : Redeclaration of %s\n", $2->symbol);
+                                                fprintf(stderr, "%d |\t Error : Redeclaration of %s\n", $2->symbol, line);
                                               } 
                                               else insert_entry($2->symbol, $2->nodetype, $2->size, 0, true, level, level_id[level]);
                                               func_args = (func_args == "") ?  $2->nodetype : func_args+","+$2->nodetype;
@@ -1045,8 +1053,12 @@ type_name
 
 initializer
 	: assignment_expression         {$$ = $1; }
-	| '{' initializer_list '}'      {$$ = $2; $$->nodetype = $2->nodetype+"*";}
-	| '{' initializer_list ',' '}'  {$$ = non_terminal(0, "initializer", $2, NULL, NULL, NULL, NULL, $3); $$->nodetype = $2->nodetype+"*"; $$->expr_type = $2->expr_type; }
+	| '{' initializer_list '}'      {$$ = $2; string temp = $2->nodetype + "*"; $$->nodetype = &temp[0];}
+	| '{' initializer_list ',' '}'  {$$ = non_terminal(0, "initializer", $2, NULL, NULL, NULL, NULL, $3);
+                                  string temp = $2->nodetype + "*";
+                                  $$->nodetype = &temp[0]; 
+                                  $$->expr_type = $2->expr_type;
+                                  }
 	;
 
 initializer_list
@@ -1055,12 +1067,12 @@ initializer_list
                                         $$ = non_terminal(0, "initializer_list", $1, $3); 
                                         $$->nodetype = $1->nodetype;
                                         string chk = is_valid($1->nodetype, $3->nodetype);
-                                        if(chk == string("0")){
-                                          fprintf(stderr, "Warning : Assignment with incompatible pointer types\n");
+                                        if(chk == "0"){
+                                          fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
                                         }
                                         else if (chk == "null"){
                                           error_throw = true;
-                                          fprintf(stderr, "Error : Incompatible types when initializing type %s to %s\n", $1->nodetype, $3->nodetype);
+                                          fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, $1->nodetype, $3->nodetype);
                                         }
                                         $$->expr_type = $1->expr_type+1;
                                       }
