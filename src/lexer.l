@@ -13,6 +13,7 @@ IS			(u|U|l|L)*
 #include "sym_table.h"
 #include "parser.tab.h"
 
+#define MAX_LEVELS 1024
 using namespace std;
 
 void comment();
@@ -20,6 +21,8 @@ void count(char* token);
 void yyerror(char* s);
 int is_type();
 
+extern unsigned long long level;
+extern unsigned long long level_id[MAX_LEVELS];
 int column = 1;
 int line = 1;
 %}
@@ -164,12 +167,15 @@ void count(char* token){
 }
 
 int is_type(){
-    yylval.str=strdup(yytext);
     count("IDENTIFIER");
-    if (lookup_type(string(yytext))){
+    type_tab_entry* entry = lookup_type_use(yytext, level, level_id);
+    if (entry){
+        string s = entry->type + string(" ") + yytext;
+        yylval.str = &s[0];
         return TYPE_NAME;
     }
     else {
+        yylval.str=strdup(yytext);
         return IDENTIFIER;
     }
 }

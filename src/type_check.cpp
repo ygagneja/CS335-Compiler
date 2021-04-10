@@ -21,8 +21,6 @@ bool is_type_int(string str){
 
 bool is_type_float(string str){
     if (str == string("float") || str == string("double") || str == string("long double")) return true;
-    if (str == string("unsigned float") || str == string("unsigned double") || str == string("unsigned long double")) return true;
-    if (str == string("signed float") || str == string("signed double") || str == string("signed long double")) return true;
     return false;
 }
 
@@ -41,8 +39,8 @@ string is_valid(string str1, string str2){
     return string("null");
 }
 
-string id_type(string str, int level, int level_id){
-    sym_tab_entry* entry = lookup(str, level, level_id);
+string id_type(string str, unsigned long long level, unsigned long long* level_id){
+    sym_tab_entry* entry = lookup_use(str, level, level_id);
     if (entry) return entry->type;
     return string("null");
 }
