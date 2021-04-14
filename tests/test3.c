@@ -1,3 +1,6 @@
+void printf(char* str, ...);
+void scanf(char* str, ...);
+
 long int multiplyNumbers(int n);
 int main() {
     int n;

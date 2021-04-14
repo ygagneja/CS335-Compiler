@@ -11,6 +11,7 @@ typedef struct {
     bool bool_val;
     bool init = false;
     string symbol;
+    string curr_args_types;
     int expr_type;
     unsigned long long size;
     unsigned long long max_size = 0;

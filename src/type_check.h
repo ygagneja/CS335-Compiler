@@ -17,4 +17,4 @@ string shift_type(string str1, string str2);
 string relat_type(string str1, string str2);
 string bit_type(string str1, string str2);
 string cond_type(string str1, string str2);
-string assign_type(string str1, string str2, char* op);
+string assign_type(string str1, string str2, string op);

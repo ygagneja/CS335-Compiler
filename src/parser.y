@@ -14,7 +14,6 @@ using namespace std;
 unordered_set<string> decl_track;
 bool error_throw = false;
 extern sym_tab* curr;
-string curr_args_types;
 string func_name;
 string func_args;
 string func_symbols;
@@ -51,11 +50,11 @@ extern int line;
 
 %start translation_unit 
 
-%type <str> empty1 empty2 op_brace cl_brace
+%type <str> empty1 empty2 op_brace cl_brace assignment_operator
 %type <ptr> multiplicative_expression additive_expression cast_expression primary_expression expression
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
-%type <ptr> logical_or_expression logical_and_expression conditional_expression assignment_operator declaration constant_expression declaration_specifiers
+%type <ptr> logical_or_expression logical_and_expression conditional_expression declaration constant_expression declaration_specifiers
 %type <ptr> init_declarator_list storage_class_specifier type_specifier type_qualifier 
 %type <ptr> declarator initializer struct_or_union_specifier enum_specifier struct_or_union struct_declaration_list
 %type <ptr> struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enumerator pointer
@@ -145,7 +144,6 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Invalid function call for the function \"%s\"\n", line, ($1->symbol).c_str());
                                               }
-                                              curr_args_types = "";
                                              }
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
                                                             if ($3->init) $$->init = true;
@@ -154,13 +152,14 @@ postfix_expression
                                                             if (type != "null"){
                                                               if ($1->expr_type == 3){
                                                                 string args = get_func_args($1->symbol);
-                                                                string temp1 = curr_args_types;
+                                                                string temp1 = $3->curr_args_types;
                                                                 string temp2 = args == "null" ? "" : args;
                                                                 string typeA, typeB;
                                                                 string delim = string(",");
                                                                 size_t f1 = 1;
                                                                 size_t f2 = 1;
                                                                 int arg_num = 0;
+                                                                // cout << temp1 << endl;
                                                                 while(f1 != string::npos && f2 != string::npos){
                                                                   f1 = temp1.find_first_of(delim);
                                                                   f2 = temp2.find_first_of(delim);
@@ -207,7 +206,6 @@ postfix_expression
                                                               error_throw = true;
                                                               fprintf(stderr, "%d |\t Error : Invalid function call %s\n", line, ($1->symbol).c_str());
                                                             }
-                                                            curr_args_types = "";
                                                           }
   | postfix_expression '.' IDENTIFIER        {$$ = non_terminal(0, "postfix_expression.IDENTIFIER", $1, terminal($3));
                                               // what is this
@@ -237,14 +235,15 @@ postfix_expression
 
 argument_expression_list
   : assignment_expression            {$$ = $1; 
-                                      curr_args_types = $$->nodetype == "null" ? "" : $$->nodetype;
+                                      $$->curr_args_types = $$->nodetype;
                                       if ($$->nodetype != "null") $$->nodetype = "void";
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
                                                           string type = args_type($1->nodetype, $3->nodetype);
                                                           $$->nodetype = &type[0];
                                                           if ($1->init && $3->init) $$->init = true;
-                                                          curr_args_types = curr_args_types + "," + $3->nodetype;
+                                                          string append = $1->curr_args_types + "," + $3->nodetype;
+                                                          $$->curr_args_types = &append[0];
                                                           }
   ;
 
@@ -680,8 +679,9 @@ conditional_expression
 
 assignment_expression
   : conditional_expression                                      {$$ = $1;}
-  | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(3, "assignment_expression", $1, $2, $3);
-                                                                  string type = assign_type($1->nodetype, $3->nodetype, $2->label);
+  | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(0, $2, $1, $3);
+                                                                  string label = string($2);
+                                                                  string type = assign_type($1->nodetype, $3->nodetype, label);
                                                                   if (type == "0"){
                                                                     $$->nodetype = $1->nodetype;
                                                                     fprintf(stderr, "%d |\t Warning : Incompatible pointer type assignment\n", line);
@@ -698,17 +698,17 @@ assignment_expression
   ;
 
 assignment_operator
-  : '='         {$$ = terminal($1);}
-  | MUL_ASSIGN  {$$ = terminal($1);}
-  | DIV_ASSIGN  {$$ = terminal($1);}
-  | MOD_ASSIGN  {$$ = terminal($1);}
-  | ADD_ASSIGN  {$$ = terminal($1);}
-  | SUB_ASSIGN  {$$ = terminal($1);}
-  | LEFT_ASSIGN {$$ = terminal($1);}
-  | RIGHT_ASSIGN{$$ = terminal($1);}
-  | AND_ASSIGN  {$$ = terminal($1);}
-  | XOR_ASSIGN  {$$ = terminal($1);}
-  | OR_ASSIGN   {$$ = terminal($1);}
+  : '='         {$$ = "=";}
+  | MUL_ASSIGN  {$$ = "*=";}
+  | DIV_ASSIGN  {$$ = "/=";}
+  | MOD_ASSIGN  {$$ = "%=";}
+  | ADD_ASSIGN  {$$ = "+=";}
+  | SUB_ASSIGN  {$$ = "-=";}
+  | LEFT_ASSIGN {$$ = "<<=";}
+  | RIGHT_ASSIGN{$$ = ">>=";}
+  | AND_ASSIGN  {$$ = "&=";}
+  | XOR_ASSIGN  {$$ = "^=";}
+  | OR_ASSIGN   {$$ = "|=";}
   ;
 
 expression
@@ -970,7 +970,6 @@ declarator
                                   string temp = $2->nodetype+$1->nodetype;
                                   $$->nodetype = &temp[0];
                                   func_name = $2->symbol;
-                                  // cout << get_func_ret_type(func_name) << " " << $$->nodetype << endl;
                                   if (decl_track.find(func_name) != decl_track.end() && $$->nodetype != get_func_ret_type(func_name)){
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($2->symbol).c_str());
@@ -986,7 +985,6 @@ declarator
                                 $$ = $1;
                                 if($1->expr_type == 2){
                                   func_name = $1->symbol;
-                                  // cout << get_func_ret_type(func_name) << " " << $$->nodetype << endl;
                                   if (decl_track.find(func_name) != decl_track.end() && $$->nodetype != get_func_ret_type(func_name)){
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol).c_str());
@@ -1043,7 +1041,8 @@ direct_declarator
                                                                     fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
                                                                   }
                                                                   else {
-                                                                    if (!is_consistent(func_name, func_args)){
+                                                                    // cout << $1->symbol << " : " << func_args << endl;
+                                                                    if (!is_consistent($1->symbol, func_args)){
                                                                       error_throw = true;
                                                                       fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
                                                                     }
@@ -1055,6 +1054,7 @@ direct_declarator
                                                                 }
                                                               }
                                                               else {
+                                                                // cout << "reached here for " << $$->symbol << "  " << func_args << "  " << func_symbols << "  " << level << "  " << level_id[level] << endl; 
                                                                 if (args_to_scope($$->symbol, func_args, func_symbols, level, level_id)){
                                                                   insert_entry($1->symbol, "func " + $$->nodetype, 0, 0, false, level, level_id[level]);
                                                                   insert_func_args($1->symbol, func_args);
@@ -1084,7 +1084,7 @@ direct_declarator
                                                                     fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of symbol %s\n", line, ($$->symbol).c_str());
                                                                   }
                                                                   else {
-                                                                    if (!is_consistent(func_name, func_args)){
+                                                                    if (!is_consistent($1->symbol, func_args)){
                                                                       error_throw = true;
                                                                       fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
                                                                     }
@@ -1380,7 +1380,7 @@ int main (int argc, char* argv[]){
     graph_end();
     if (error_throw){
       // remove ast
-      exit(0);
+      // exit(0);
     }
     dump_tables();
     fclose (yyin);

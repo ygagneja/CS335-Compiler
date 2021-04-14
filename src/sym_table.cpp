@@ -152,13 +152,15 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
     string delim = ",";
     size_t f1 = 1;
     size_t f2 = 1;
+    string temp1 = func_args;
+    string temp2 = func_symbols;
     while(f1 != string::npos && f2 != string::npos){
-        f1 = func_args.find_first_of(delim);
-        f2 = func_symbols.find_first_of(delim);
-        string type = func_args.substr(0, f1);
-        func_args = func_args.substr(f1+1);
-        string symbol = func_symbols.substr(0, f2);
-        func_symbols = func_symbols.substr(f2+1);
+        f1 = temp1.find_first_of(delim);
+        f2 = temp2.find_first_of(delim);
+        string type = temp1.substr(0, f1);
+        temp1 = temp1.substr(f1+1);
+        string symbol = temp2.substr(0, f2);
+        temp2 = temp2.substr(f2+1);
         
         if (lookup_decl(symbol, level, level_id[level])){
             set_current_sym_tab("#");
@@ -174,11 +176,13 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
 
 bool is_consistent(string func_name, string args){
     if (args == "") args = "null";
+    // cout << "is cons : " << func_name << " : " << func_args_map[func_name] << endl;
     if (func_args_map[func_name] == args) return true;
     return false;
 }
 
 void insert_func_args(string func_name, string arg_types){
+    // cout << "insert : " << func_name << " : " << arg_types << endl;
     func_args_map[func_name] = arg_types;
 }
 

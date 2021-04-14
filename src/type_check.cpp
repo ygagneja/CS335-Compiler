@@ -180,22 +180,21 @@ string cond_type(string str1, string str2){
     return string("null");
 }
 
-string assign_type(string str1, string str2, char* op){
-    string ret_type = string("null");
-    if (!strcmp(op, "=")){
+string assign_type(string str1, string str2, string op){
+    if (op == "="){
         return is_valid(str1, str2);
     }
-    else if (!strcmp(op, "*=") || !strcmp(op, "/=") || !strcmp(op, "%=")){
+    else if (op == "*=" || op == "/=" || op == "%="){
         if (mul_type(str1, str2, op[0]) != "null") return string("1");
     }
-    else if (!strcmp(op, "+=") || !strcmp(op, "-=")){
+    else if (op == "+=" || op == "-="){
         if (add_type(str1, str2) != "null") return string("1");
     }
-    else if (!strcmp(op, ">>=") || !strcmp(op, "<<=")){
+    else if (op == ">>=" || op == "<<="){
         if (shift_type(str1, str2) != "null") return string("1");
     }
-    else if (!strcmp(op, "&=") || !strcmp(op, "^=") || !strcmp(op, "|=")){
+    else if (op == "&=" || op == "^=" || op == "|="){
         if (bit_type(str1, str2) != "null") return string("1");
     }
-    return ret_type;
+    return "null";
 }
