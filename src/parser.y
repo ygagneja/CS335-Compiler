@@ -11,6 +11,7 @@
 #define MAX_LEVELS 1024
 using namespace std;
 
+unordered_set<string> decl_track;
 bool error_throw = false;
 extern sym_tab* curr;
 string curr_args_types;
@@ -33,6 +34,7 @@ extern int line;
 %union {
   char* str;      /* node label */
   node* ptr;     /* node pointer */
+  number* constant; /* constant pointer */
 };
 
 %token <str> IDENTIFIER STRING_LITERAL SIZEOF
@@ -41,11 +43,11 @@ extern int line;
 %token <str> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
 %token <str> XOR_ASSIGN OR_ASSIGN TYPE_NAME
 %token <str> TYPEDEF EXTERN STATIC AUTO REGISTER
-%token <str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
+%token <str> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token <str> STRUCT UNION ENUM ELLIPSIS
-%token <str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+%token <str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN TRUE FALSE
 %token <str> '>' '<' '&' '|' '^' '=' '*' ',' ';'
-%token <str> CONSTANT
+%token <constant> INT_C FLOAT_C
 
 %start translation_unit 
 
@@ -79,10 +81,29 @@ primary_expression
                                       fprintf(stderr, "%d |\t Error : %s is not declared in this scope\n", line, $1);
                                     }
                                   }
-  | CONSTANT                      {$$ = terminal("CONSTANT");
+  | INT_C                        {$$ = terminal("INT_C");
                                     $$->init = true;
-                                    $$->nodetype = "long double";
+                                    string type = const_type($1->type);
+                                    $$->nodetype = &type[0];
                                     $$->expr_type = 5;
+                                    $$->int_val = $1->int_val;
+                                  }
+  | FLOAT_C                      {$$ = terminal("FLOAT_C");
+                                    $$->init = true;
+                                    string type = const_type($1->type);
+                                    $$->nodetype = &type[0];
+                                    $$->expr_type = 5;
+                                    $$->float_val = $1->float_val;
+                                  }
+  | TRUE                          {$$ = terminal("TRUE");
+                                    $$->nodetype = "bool";
+                                    $$->init = true;
+                                    $$->bool_val = true;
+                                  }
+  | FALSE                         {$$ = terminal("FALSE");
+                                    $$->nodetype = "bool";
+                                    $$->init = true;
+                                    $$->bool_val = false;
                                   }
   | STRING_LITERAL                {$$ = terminal("STRING_LITERAL");
                                     $$->nodetype = "char*";
@@ -706,10 +727,12 @@ declaration
   | declaration_specifiers init_declarator_list ';'   {$$ = non_terminal(0, "declaration", $1, $2);
                                                         t_name = "";
                                                         if ($2->expr_type == 2){
-                                                          sym_tab_entry* entry = lookup_decl($1->symbol, level, level_id[level]);
-                                                          if (entry){
+                                                          if (decl_track.find($2->symbol) != decl_track.end()){
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($1->symbol).c_str());
+                                                            fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($2->symbol).c_str());
+                                                          }
+                                                          else {
+                                                            decl_track.insert($2->symbol);
                                                           }
                                                         }
                                                       }
@@ -760,6 +783,7 @@ init_declarator
                                 }
   | declarator '=' initializer  {$$ = non_terminal(0, $2, $1, $3);
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
+                                    string chk = is_valid($1->nodetype, $3->nodetype);
                                     string type = $1->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
                                       error_throw = true;
@@ -773,7 +797,12 @@ init_declarator
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Variable or field %s assigned expression of type void\n", line, ($1->symbol).c_str());
                                     }
+                                    else if (chk == "null"){
+                                      error_throw = true;
+                                      fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                    }
                                     else {
+                                      if (chk == "0") fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
                                       if ($1->expr_type == 15){
                                         // idk
                                       }
@@ -793,6 +822,7 @@ storage_class_specifier
 
 type_specifier
   : VOID     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
+  | BOOL     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | CHAR     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | SHORT    {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | INT      {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
@@ -997,6 +1027,12 @@ direct_declarator
                                                                   error_throw = true;
                                                                   fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
                                                                 }
+                                                                else {
+                                                                  if (!is_consistent(func_name, func_args)){
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Conflicting types for function %s\n", line, ($$->symbol).c_str());
+                                                                  }
+                                                                }
                                                               }
                                                               else {
                                                                 if (args_to_scope($$->symbol, func_args, func_symbols, level, level_id)){
@@ -1026,7 +1062,10 @@ direct_declarator
                                                                   fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
                                                                 }
                                                                 else {
-
+                                                                  if (!is_consistent(func_name, func_args)){
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Conflicting types for function %s\n", line, ($$->symbol).c_str());
+                                                                  }
                                                                 }
                                                               }
                                                               else {
@@ -1062,7 +1101,6 @@ pointer
                                     }
   ;
 
-
 type_qualifier_list
 	: type_qualifier                      {$$=$1;}
 	| type_qualifier_list type_qualifier  {$$=non_terminal(0, "type_qualifier_list", $1, $2);}
@@ -1070,6 +1108,9 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list                {$$ = $1;}
+	| parameter_list ',' ELLIPSIS   {$$ = non_terminal(0, "parameter_type_list", $1, terminal($3));
+                                    func_args += ",...";
+                                  }
 	;
 
 parameter_list
@@ -1299,13 +1340,10 @@ int main (int argc, char* argv[]){
 }
 // exhaustive code review
 
-// ellipsis not done
-// bool implement
-// storage specifiers and type qualifier implement
 // incomplete and buggy structs implementation
 // var sizes and offset
-// handle constants
 
 // init errors ??
 // normal syntax errors ??
 // aggressive error propagation
+// add more warnings

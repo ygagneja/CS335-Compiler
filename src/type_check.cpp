@@ -45,10 +45,14 @@ string id_type(string str, unsigned long long level, unsigned long long* level_i
     return string("null");
 }
 
-// string const_type(string str){
-//     write this function to check if a constant belongs to :
-//     int, long, long long, float, double, long double
-// }
+string const_type(int label){
+    if (label == 0) return "int";
+    else if (label == 1) return "long";
+    else if (label == 2) return "long long";
+    else if (label == 3) return "float";
+    else if (label == 4) return "double";
+    else if (label == 5) return "long double";
+}
 
 string postfix_type(string str, int label){
     string ret_type = string(str);

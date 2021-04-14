@@ -37,6 +37,7 @@ type_tab_entry* lookup_type_use(string type_name, unsigned long long level, unsi
 unsigned long long get_size(string type, unsigned long long level, unsigned long long* level_id);
 bool is_valid_type(string type, unsigned long long level, unsigned long long* level_id);
 bool args_to_scope(string func_name, string func_args, string func_symbols, unsigned long long level, unsigned long long* level_id);
+bool is_consistent(string func_name, string args);
 void insert_func_args(string func_name, string arg_types);
 string get_func_args(string func_name);
 void dump_tables();

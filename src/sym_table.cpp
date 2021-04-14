@@ -164,6 +164,12 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
     return true;
 }
 
+bool is_consistent(string func_name, string args){
+    if (args == "") args = "null";
+    if (func_args_map[func_name] == args) return true;
+    return false;
+}
+
 void insert_func_args(string func_name, string arg_types){
     func_args_map[func_name] = arg_types;
 }
