@@ -970,7 +970,13 @@ declarator
                                   string temp = $2->nodetype+$1->nodetype;
                                   $$->nodetype = &temp[0];
                                   func_name = $2->symbol;
-                                  update_func_type(func_name, level, level_id[level], $$->nodetype);
+                                  // cout << get_func_ret_type(func_name) << " " << $$->nodetype << endl;
+                                  if (decl_track.find(func_name) != decl_track.end() && $$->nodetype != get_func_ret_type(func_name)){
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($2->symbol).c_str());
+                                  }
+                                  else update_func_type(func_name, level, level_id[level], $$->nodetype);
+
                                   $$->symbol = $2->symbol;
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
@@ -980,6 +986,11 @@ declarator
                                 $$ = $1;
                                 if($1->expr_type == 2){
                                   func_name = $1->symbol;
+                                  // cout << get_func_ret_type(func_name) << " " << $$->nodetype << endl;
+                                  if (decl_track.find(func_name) != decl_track.end() && $$->nodetype != get_func_ret_type(func_name)){
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol).c_str());
+                                  }
                                 }
                               }
 	;
@@ -1025,15 +1036,22 @@ direct_declarator
                                                               $$->nodetype = $1->nodetype;
                                                               sym_tab_entry* entry = lookup_use($1->symbol, level, level_id);
                                                               if (make_symbol_table($$->symbol)){
-                                                                if (entry->init){
-                                                                  error_throw = true;
-                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
+                                                                string type = entry->type;
+                                                                if (type.substr(0, 5) == "func "){
+                                                                  if (entry->init){
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
+                                                                  }
+                                                                  else {
+                                                                    if (!is_consistent(func_name, func_args)){
+                                                                      error_throw = true;
+                                                                      fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
+                                                                    }
+                                                                  }
                                                                 }
                                                                 else {
-                                                                  if (!is_consistent(func_name, func_args)){
-                                                                    error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Conflicting types for function %s\n", line, ($$->symbol).c_str());
-                                                                  }
+                                                                  error_throw = true;
+                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations of symbol %s\n", line, ($$->symbol).c_str());
                                                                 }
                                                               }
                                                               else {
@@ -1059,15 +1077,22 @@ direct_declarator
                                                               $$->nodetype = $1->nodetype;
                                                               sym_tab_entry* entry = lookup_use($1->symbol, level, level_id);
                                                               if (make_symbol_table($$->symbol)){
-                                                                if (entry->init){
-                                                                  error_throw = true;
-                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
+                                                                string type = entry->type;
+                                                                if (type.substr(0, 5) == "func "){
+                                                                  if (entry->init){
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of symbol %s\n", line, ($$->symbol).c_str());
+                                                                  }
+                                                                  else {
+                                                                    if (!is_consistent(func_name, func_args)){
+                                                                      error_throw = true;
+                                                                      fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
+                                                                    }
+                                                                  }
                                                                 }
                                                                 else {
-                                                                  if (!is_consistent(func_name, func_args)){
-                                                                    error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Conflicting types for function %s\n", line, ($$->symbol).c_str());
-                                                                  }
+                                                                  error_throw = true;
+                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations of symbol %s\n", line, ($$->symbol).c_str());
                                                                 }
                                                               }
                                                               else {
@@ -1230,8 +1255,30 @@ jump_statement
 	: GOTO IDENTIFIER ';'       {$$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); }
 	| CONTINUE ';'              {$$ = terminal($1); }
 	| BREAK ';'                 {$$ = terminal($1); }
-	| RETURN ';'                {$$ = terminal($1); }
-	| RETURN expression ';'     {$$ = non_terminal(0, "jump_stmt", terminal($1), $2); }
+	| RETURN ';'                {$$ = terminal($1); 
+                                string type = get_func_ret_type(func_name);
+                                if (type != "void" && type != "null"){
+                                  error_throw = true;
+                                  fprintf(stderr, "%d |\t Error : Function %s of type non-void is not returning a value\n", line, func_name.c_str());
+                                }
+                              }
+	| RETURN expression ';'     {$$ = non_terminal(0, "jump_stmt", terminal($1), $2); 
+                                string type = get_func_ret_type(func_name);
+                                if (type == "void"){
+                                  error_throw = true;
+                                  fprintf(stderr, "%d |\t Error : Function %s of type void is returning a value\n", line, func_name.c_str());
+                                }
+                                else if (type != "null") {
+                                  string chk = is_valid(type, $2->nodetype);
+                                  if (chk == "null"){
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Returned expression of type %s cannot be typecasted to %s\n", line, ($2->nodetype).c_str(), type.c_str());
+                                  }
+                                  else {
+                                    if (chk == "0") fprintf(stderr, "%d |\t Warning : Returned expression and return type are incompatible pointer types\n", line);
+                                  }
+                                }
+                              }
 	;
 
 translation_unit
@@ -1343,8 +1390,6 @@ int main (int argc, char* argv[]){
 // exhaustive code review
 
 // incomplete and buggy structs implementation
-// var offsets
-// func return type check
 
 // init errors ??
 // normal syntax errors ??

@@ -41,4 +41,5 @@ bool is_consistent(string func_name, string args);
 void insert_func_args(string func_name, string arg_types);
 string get_func_args(string func_name);
 void update_func_type(string func_name, unsigned long long level, unsigned long long level_id, string type);
+string get_func_ret_type(string func_name);
 void dump_tables();

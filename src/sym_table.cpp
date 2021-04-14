@@ -4,12 +4,15 @@
 map<string, sym_tab*> func_sym_tab_map;
 map<string, string> func_args_map; 
 sym_tab global_sym_tab;
+sym_tab waste;
 type_tab global_type_tab;
+map<sym_tab*, long long> offsets;
 sym_tab* curr;
 // total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
 void tab_init(){
     curr = &global_sym_tab;
+    offsets[curr] = 0;
     // add reserved keywords in table so they arent used again
 }
 
@@ -18,16 +21,18 @@ void set_current_sym_tab(string func_name){
         curr = &global_sym_tab;
     }
     else {
-        curr = func_sym_tab_map[func_name];
+        if (func_sym_tab_map.find(func_name) != func_sym_tab_map.end()) curr = func_sym_tab_map[func_name];
+        else curr = &waste;
     }
 }
 
 int make_symbol_table(string func_name){
-    if (func_sym_tab_map.find(func_name) != func_sym_tab_map.end()){
+    if (global_sym_tab.find(make_tuple(func_name, 0, 0)) != global_sym_tab.end()){
         return -1;
     }
     sym_tab* new_tab = new sym_tab;
     func_sym_tab_map[func_name] = new_tab;
+    offsets[new_tab] = 0;
     return 0;
 }
 
@@ -36,7 +41,8 @@ void insert_entry(string sym_name, string type, unsigned long long size, long lo
     entry->sym_name = sym_name;
     entry->type = type;
     entry->size = size;
-    entry->offset = offset;
+    entry->offset = offsets[curr];
+    offsets[curr] += size;
     entry->init = init;
     entry->level = level;
     entry->level_id = level_id;
@@ -181,8 +187,20 @@ string get_func_args(string func_name){
 }
 
 void update_func_type(string func_name, unsigned long long level, unsigned long long level_id, string type){
-    string ins = "func " + type;
-    ((*curr)[make_tuple(func_name, level, level_id)])->type = &ins[0];
+    if (func_sym_tab_map.find(func_name) != func_sym_tab_map.end()){
+        string ins = "func " + type;
+        ((*curr)[make_tuple(func_name, level, level_id)])->type = &ins[0];
+    }
+}
+
+string get_func_ret_type(string func_name){
+    sym_tab_entry* entry = global_sym_tab[make_tuple(func_name, 0, 0)];
+    string type = entry->type;
+    if (type.substr(0, 5) == "func "){
+        type.erase(0, 5);
+        return type;
+    }
+    return "null";
 }
 
 void dump_tables(){
@@ -191,11 +209,13 @@ void dump_tables(){
     for (auto itr : global_sym_tab){
         cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
     }
+    cout << endl;
     for (auto table : func_sym_tab_map){
         string filename = "../" + table.first + "_table.csv";
         ofstream out_file(filename);
         for (auto itr : *(table.second)){
             cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
         }
+        cout << endl;
     }
 }
