@@ -40,4 +40,5 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
 bool is_consistent(string func_name, string args);
 void insert_func_args(string func_name, string arg_types);
 string get_func_args(string func_name);
+void update_func_type(string func_name, unsigned long long level, unsigned long long level_id, string type);
 void dump_tables();

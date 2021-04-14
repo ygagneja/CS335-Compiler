@@ -766,7 +766,7 @@ init_declarator_list
 
 init_declarator
   : declarator                  {$$ = $1;
-                                  if ($1->expr_type == 1){
+                                  if ($1->expr_type == 1 || $1->expr_type == 15){
                                     string type = $1->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
                                       error_throw = true;
@@ -777,7 +777,8 @@ init_declarator
                                       fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
                                     }
                                     else {
-                                      insert_entry($1->symbol, $1->nodetype, $1->size, 0, false, level, level_id[level]);
+                                      unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
+                                      insert_entry($1->symbol, $1->nodetype, size, 0, false, level, level_id[level]);
                                     }
                                   }
                                 }
@@ -803,10 +804,8 @@ init_declarator
                                     }
                                     else {
                                       if (chk == "0") fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
-                                      if ($1->expr_type == 15){
-                                        // idk
-                                      }
-                                      insert_entry($1->symbol, $1->nodetype, $1->size, 0, $3->init, level, level_id[level]);
+                                      unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
+                                      insert_entry($1->symbol, $1->nodetype, size, 0, $3->init, level, level_id[level]);
                                     }
                                   }
                                 }
@@ -952,32 +951,36 @@ type_qualifier
 declarator
 	: pointer direct_declarator {
                                 $$ = non_terminal(0, "declarator", $1, $2);
-                                if($2->expr_type == 1){
+                                if($2->expr_type == 1 || $2->expr_type == 15){
                                   string temp = $2->nodetype+$1->nodetype;
                                   $$->nodetype = &temp[0];
                                   $$->symbol = $2->symbol;
-                                  $$->expr_type = 1;
+                                  if ($2->expr_type == 15){
+                                    unsigned long long size = get_size(t_name, level, level_id);
+                                    if (size){
+                                      $$->size = ($2->size/size) * get_size($$->nodetype, level, level_id);
+                                    }
+                                  }
+                                  else {
+                                    $$->size = get_size($$->nodetype, level, level_id);
+                                  }
+                                  $$->expr_type = $2->expr_type;
                                 }
                                 if($2->expr_type == 2){
+                                  string temp = $2->nodetype+$1->nodetype;
+                                  $$->nodetype = &temp[0];
                                   func_name = $2->symbol;
+                                  update_func_type(func_name, level, level_id[level], $$->nodetype);
                                   $$->symbol = $2->symbol;
-                                  $$->nodetype = $2->nodetype;
                                   $$->expr_type = 2;
+                                  $$->size = get_size($$->nodetype, level, level_id);
                                 }
-                                $$->size = get_size($$->nodetype, level, level_id);
                               }
 	| direct_declarator         {
                                 $$ = $1;
-                                if($1->expr_type == 1){
-                                  if ($1->nodetype == "void"){
-                                    error_throw = true;
-                                    fprintf(stderr, "%d |\t Error : Symbol \'%s\' is of void type\n", line, $1);
-                                  }
-                                }
                                 if($1->expr_type == 2){
                                   func_name = $1->symbol;
                                 }
-                                $$->size = get_size($$->nodetype, level, level_id);
                               }
 	;
 
@@ -996,25 +999,24 @@ direct_declarator
                             }
 														$$->size = get_size(t_name, level, level_id);
 													}
-  | direct_declarator '[' constant_expression ']'   {$$ = non_terminal(0, "direct_declarator", $1, $3, NULL, NULL, NULL, "[]");
-                                                      if($1->expr_type == 1){
-                                                        $$->expr_type = 1;
+  | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
+                                                      if($1->expr_type == 1 || $1->expr_type == 15){
+                                                        $$->expr_type = 15;
                                                         $$->symbol = $1->symbol;
                                                         string temp = $1->nodetype+"*";
                                                         $$->nodetype = &temp[0];
                                                       }
-                                                      $$->size = get_size($$->nodetype, level, level_id);
+                                                      if ($1->expr_type == 1){
+                                                        $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
+                                                      }
+                                                      else if ($1->expr_type == 15){
+                                                        $$->size = $1->size * $3->int_val;
+                                                      }
                                                     }
-	| direct_declarator '[' ']'     {
-                                    $$ = non_terminal(0, "direct_declarator", $1, NULL, NULL, NULL, NULL, "[]");
-                                    if($1->expr_type == 1){
-                                      $$->expr_type = 1;
-                                      $$->symbol = $1->symbol;
-                                      string temp = $1->nodetype+"*";
-                                      $$->nodetype = &temp[0];
-                                    }
-                                    $$->size = get_size($$->nodetype, level, level_id);
-                                  } 
+  | direct_declarator '[' constant_expression ']'    {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
+                                                      error_throw = true;
+                                                      fprintf(stderr, "%d |\t Error : Please provide a constant non-negative int as size to declare array\n");
+                                                    }
 	| direct_declarator '(' empty1 parameter_type_list ')'  {
                                                             $$ = non_terminal(0, "direct_declarator", $1, $4, NULL, NULL, NULL, "()");
                                                             if($1->expr_type == 1){
@@ -1341,7 +1343,8 @@ int main (int argc, char* argv[]){
 // exhaustive code review
 
 // incomplete and buggy structs implementation
-// var sizes and offset
+// var offsets
+// func return type check
 
 // init errors ??
 // normal syntax errors ??

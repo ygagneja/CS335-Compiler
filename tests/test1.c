@@ -1,23 +1,18 @@
-void func(char* x, int y, ...);
+int* func(char* x, int y, ...);
+int func2();
 
 int main(){
-    // int x = printf("a");
-    bool axx = true;
-    char* ab;
-    unsigned int i = 0;
-    int a;
-    int c = a;
-    int x = c & a; // one line comment
-    func("abc", x, c);
-    for (i=a; i<c; i++){
-        if (true);
-            // printf ("hello");
-    }
-    while (a--){
-        break;
-    }
-    x += a - c & i; 
-    /* multi 
-        line comment */
+    int arr[10];
+    char arr2[20][10];
+    void* arr3[1][0][2];
+    bool arr4[1];
+    int x = func("qq", 2);
+    int a = 1;
+    char b;
+    bool c;
+    float d;
+    // void e;
+    // ddd f;
+    // dsd* g;
     return 0;
 }

@@ -124,11 +124,13 @@ unsigned long long get_size(string type, unsigned long long level, unsigned long
 
     if(type == string("bool")) return 1;
 
+    if (type == string("void")) return 1;
+
     if (type[type.size()-1] == '*') return 8;
 
     if (lookup_type_use(type, level, level_id)) return lookup_type_use(type, level, level_id)->size;
 
-    if (type == "null" || type == "void") return 0;
+    if (type == "null") return 0;
 
     return 8;
 }
@@ -176,6 +178,11 @@ void insert_func_args(string func_name, string arg_types){
 
 string get_func_args(string func_name){
     return func_args_map[func_name];
+}
+
+void update_func_type(string func_name, unsigned long long level, unsigned long long level_id, string type){
+    string ins = "func " + type;
+    ((*curr)[make_tuple(func_name, level, level_id)])->type = &ins[0];
 }
 
 void dump_tables(){
