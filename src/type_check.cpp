@@ -21,8 +21,6 @@ bool is_type_int(string str){
 
 bool is_type_float(string str){
     if (str == string("float") || str == string("double") || str == string("long double")) return true;
-    if (str == string("unsigned float") || str == string("unsigned double") || str == string("unsigned long double")) return true;
-    if (str == string("signed float") || str == string("signed double") || str == string("signed long double")) return true;
     return false;
 }
 
@@ -41,16 +39,20 @@ string is_valid(string str1, string str2){
     return string("null");
 }
 
-string id_type(string str, int level, int level_id){
-    sym_tab_entry* entry = lookup(str, level, level_id);
+string id_type(string str, unsigned long long level, unsigned long long* level_id){
+    sym_tab_entry* entry = lookup_use(str, level, level_id);
     if (entry) return entry->type;
     return string("null");
 }
 
-// string const_type(string str){
-//     write this function to check if a constant belongs to :
-//     int, long, long long, float, double, long double
-// }
+string const_type(int label){
+    if (label == 0) return "int";
+    else if (label == 1) return "long";
+    else if (label == 2) return "long long";
+    else if (label == 3) return "float";
+    else if (label == 4) return "double";
+    else if (label == 5) return "long double";
+}
 
 string postfix_type(string str, int label){
     string ret_type = string(str);
@@ -178,22 +180,21 @@ string cond_type(string str1, string str2){
     return string("null");
 }
 
-string assign_type(string str1, string str2, char* op){
-    string ret_type = string("null");
-    if (!strcmp(op, "=")){
+string assign_type(string str1, string str2, string op){
+    if (op == "="){
         return is_valid(str1, str2);
     }
-    else if (!strcmp(op, "*=") || !strcmp(op, "/=") || !strcmp(op, "%=")){
+    else if (op == "*=" || op == "/=" || op == "%="){
         if (mul_type(str1, str2, op[0]) != "null") return string("1");
     }
-    else if (!strcmp(op, "+=") || !strcmp(op, "-=")){
+    else if (op == "+=" || op == "-="){
         if (add_type(str1, str2) != "null") return string("1");
     }
-    else if (!strcmp(op, ">>=") || !strcmp(op, "<<=")){
+    else if (op == ">>=" || op == "<<="){
         if (shift_type(str1, str2) != "null") return string("1");
     }
-    else if (!strcmp(op, "&=") || !strcmp(op, "^=") || !strcmp(op, "|=")){
+    else if (op == "&=" || op == "^=" || op == "|="){
         if (bit_type(str1, str2) != "null") return string("1");
     }
-    return ret_type;
+    return "null";
 }

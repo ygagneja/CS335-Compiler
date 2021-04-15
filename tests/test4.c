@@ -1,5 +1,9 @@
+void printf(char* str, ...);
+void scanf(char* str, ...);
+
 int main() {
     int a[10][10], transpose[10][10], r, c, i, j;
+    int x = 2.5;
     printf("Enter rows and columns: ");
     scanf("%d %d", &r, &c);
 

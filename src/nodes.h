@@ -6,12 +6,23 @@ typedef struct {
     int id;
     char* label;
     string nodetype;
+    long long int int_val;
+    long double float_val;
+    bool bool_val;
     bool init = false;
     string symbol;
+    string curr_args_types;
     int expr_type;
     unsigned long long size;
     unsigned long long max_size = 0;
 } node;
+
+typedef struct {
+    int type; /* 0 int, 1 long, 2 long long, 3 float, 4 double, 5 long double */
+    bool is_unsigned = false;
+    long long int int_val;
+    long double float_val;
+} number;
 
 void graph_init();
 void graph_end();

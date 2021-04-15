@@ -7,7 +7,7 @@ all: ./bin/parser
 
 ./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.* ./src/type_check.* ./src/sym_table.*
 	mkdir -p bin
-	$(CC) -g $^ -o $@ -I ./src
+	$(CC) $^ -o $@ -I ./src
 
 ./src/parser.tab.c : ./src/parser.y
 	$(YACC) -d $^ -o $@

@@ -1,9 +1,12 @@
+void printf(char* str, ...);
+void scanf(char* str, ...);
+
 // Test program to test jump statements in C
 
 //function to calculate factorial of n
 int fact(int n){
     if(n == 0) return 1;
-    return n*fact(n-1);
+    return n*fact(n - 1);
 }
 
 int main(){
@@ -31,6 +34,6 @@ int main(){
         printf("3\n");
 
     // return jump
-    print("%d\n", fact(7));
+    printf("%d\n", fact(7));
     return 0;
 }

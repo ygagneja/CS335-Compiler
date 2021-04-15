@@ -1,4 +1,7 @@
-const int MAX_SIZE = 500;
+void printf(char* str, ...);
+void scanf(char* str, ...);
+
+int MAX_SIZE = 500;
 
 int a[2][2] = {{1, 2}, {3, 5}};
 int b[2][2] = {{1, 4}, {5, 8}};
@@ -36,22 +39,22 @@ void Check(){
 
 }
 
-const int MAX_GIRLFRIENDS = 5;
-struct person {
-    int age;
-    char* name;
-    struct girlfriend_list* gf;
-};
+// int MAX_GIRLFRIENDS = 5;
+// struct person {
+//     int age;
+//     char* name;
+//     struct girlfriend_list* gf;
+// };
 
-struct girlfriend_list {
-    char *name;
-};
+// struct girlfriend_list {
+//     char *name;
+// };
 
 
-int main(){
-    struct person me = {21, "Yuvraj", NULL};
-    int r1 = 2, c1 = 2, r2 = 2, c2 = 2;
-    int res = mul_and_xor(r1, c1, r2, c2);
-    Check();
-    return 0;
-}
+// int main(){
+//     struct person me = {21, "Yuvraj", NULL};
+//     int r1 = 2, c1 = 2, r2 = 2, c2 = 2;
+//     int res = mul_and_xor(r1, c1, r2, c2);
+//     Check();
+//     return 0;
+// }

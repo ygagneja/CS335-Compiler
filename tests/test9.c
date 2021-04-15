@@ -1,3 +1,6 @@
+void printf(char* str, ...);
+void scanf(char* str, ...);
+
 int main(){
 
     //Testing IF ELSE type statements

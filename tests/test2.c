@@ -1,3 +1,6 @@
+void printf(char* str, ...);
+void scanf(char* str, ...);
+
 int main() {
     char operator;
     double n1, n2;
