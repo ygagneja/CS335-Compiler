@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include "3ac.h"
 
 using namespace std;
 
@@ -15,6 +16,11 @@ typedef struct {
     int expr_type;
     unsigned long long size;
     unsigned long long max_size = 0;
+
+    vector<int> nextlist;
+    vector<int> truelist;
+    vector<int> falselist;
+    qid place;
 } node;
 
 typedef struct {
@@ -22,6 +28,7 @@ typedef struct {
     bool is_unsigned = false;
     long long int int_val;
     long double float_val;
+    char* str;
 } number;
 
 void graph_init();

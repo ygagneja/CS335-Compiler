@@ -71,13 +71,13 @@ int line = 1;
 
 {L}({L}|{D})*		{ return is_type(); }
 
-0[xX]{H}+{IS}?		{ sscanf(yytext+2,"%llx", &yylval.constant->int_val); get_int_info(); count("INT_C"); return(INT_C); }
-0{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); get_int_info(); count("INT_C"); return(INT_C); }
-{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); get_int_info(); count("INT_C"); return(INT_C); }
+0[xX]{H}+{IS}?		{ sscanf(yytext+2,"%llx", &yylval.constant->int_val); get_int_info(); yylval.number->str = strdup(yytext); count("INT_C"); return(INT_C); }
+0{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); get_int_info(); yylval.number->str = strdup(yytext); count("INT_C"); return(INT_C); }
+{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); get_int_info(); yylval.number->str = strdup(yytext); count("INT_C"); return(INT_C); }
 
-{D}+{E}{FS}?		{ get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
-{D}*"."{D}+({E})?{FS}?	{ get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
-{D}+"."{D}*({E})?{FS}?	{ get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
+{D}+{E}{FS}?		{ yylval.number->str = strdup(yytext); get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
+{D}*"."{D}+({E})?{FS}?	{ yylval.number->str = strdup(yytext); get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
+{D}+"."{D}*({E})?{FS}?	{ yylval.number->str = strdup(yytext); get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
 
 L?\"(\\.|[^\\"])*\"	{ yylval.str=strdup(yytext); count("STRING_LITERAL"); return(STRING_LITERAL); }
 
