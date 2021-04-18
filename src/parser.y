@@ -936,9 +936,13 @@ declaration
                                                             decl_track.insert($2->symbol);
                                                           }
                                                         }
+                                                        // 3AC Start
+                                                        $$->nextlist = $2->nextlist;
+                                                        // 3AC End
                                                       }
   ;
 
+// No changes needed for 3AC
 declaration_specifiers
   : storage_class_specifier                           {$$ = $1;
                                                         error_throw = true;
@@ -962,9 +966,14 @@ declaration_specifiers
 
 init_declarator_list
   : init_declarator                           {$$ = $1;}
-  | init_declarator_list ',' init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $3);}
+  | init_declarator_list ',' init_declarator  
+  {
+    $$ = non_terminal(0, "init_declarator_list", $1, $3);
+    $$->nextlist = $3->nextlist;
+    }
   ;
 
+// Need Changes
 init_declarator
   : declarator                  {$$ = $1;
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
@@ -1012,6 +1021,7 @@ init_declarator
                                 }
   ;
 
+// No changes needed for 3AC
 storage_class_specifier
   : TYPEDEF       {$$ = terminal($1);}
   | EXTERN        {$$ = terminal($1);}
@@ -1020,6 +1030,7 @@ storage_class_specifier
   | REGISTER      {$$ = terminal($1);}
   ;
 
+// No changes needed for 3AC
 type_specifier
   : VOID     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | BOOL     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
@@ -1041,6 +1052,7 @@ type_specifier
                     } 
   ;
 
+// No changes needed for 3AC
 struct_or_union_specifier
   : struct_or_union IDENTIFIER struct_op_brace struct_declaration_list '}'  {$$ = non_terminal(3, "struct_or_union_specifier", $1, $4, terminal($2));
                                                                               if (lookup_type_decl($1->label + string(" ") + $2, level, level_id[level])){
@@ -1077,6 +1089,8 @@ struct_or_union_specifier
                                                                 }
   ;
 
+// New stuff
+// May need changes
 struct_op_brace
   : '{'   {
             t_name = "";
@@ -1087,6 +1101,7 @@ struct_or_union
   | UNION     {$$ = terminal($1);}
   ;
 
+// No changes needed for 3AC
 struct_declaration_list
   : struct_declaration                          {$$ = $1;}
   | struct_declaration_list struct_declaration  {$$ = non_terminal(0, "struct_declaration_list", $1, $2);
@@ -1095,6 +1110,7 @@ struct_declaration_list
                                                 }
   ;
 
+// No changes needed for 3AC
 struct_declaration
   : specifier_qualifier_list struct_declarator_list ';' {$$ = non_terminal(0, "struct_declaration", $1, $2);
                                                           t_name = "";
@@ -1102,6 +1118,7 @@ struct_declaration
                                                         }
   ;
 
+// No changes needed for 3AC
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);}
 	| type_specifier                            {$$ = $1;}
@@ -1115,17 +1132,20 @@ specifier_qualifier_list
                                               }
 	;
 
+// No changes needed for 3AC
 struct_declarator_list
 	: struct_declarator                             {$$ = $1;}
 	| struct_declarator_list ',' struct_declarator  {$$ = non_terminal(0, "struct_declarator_list", $1, $3);}
 	;
 
+// No changes needed for 3AC
 struct_declarator
   : declarator                          {$$ = $1;} // insert struct types
 	| ':' constant_expression             {$$ = $2;}
 	| declarator ':' constant_expression  {$$ = non_terminal(0, "struct_declarator", $1, $3);} // insert struct types
 	;
 
+// No changes needed for 3AC
 enum_specifier
 	: ENUM '{' enumerator_list '}'              {$$ = non_terminal(0, "enum_specifier", $3, NULL, NULL, NULL, NULL, $1);}
 	| ENUM IDENTIFIER '{' enumerator_list '}'   {$$ = non_terminal(0, "enum_specifier", $4, terminal($2), NULL, NULL, NULL, $1);}
@@ -1134,16 +1154,19 @@ enum_specifier
 
 	;
 
+// No changes needed for 3AC
 enumerator_list
 	: enumerator                      {$$ = $1;}
 	| enumerator_list ',' enumerator  {$$ = non_terminal(0, "enumerator_list", $1, $3);}
 	;
 
+// No changes needed for 3AC
 enumerator	
 	: IDENTIFIER                          {$$ = terminal($1);}
   | IDENTIFIER '=' constant_expression  {$$ = non_terminal(0, $2, terminal($1), $3);}
 	;
 
+// No changes needed for 3AC
 type_qualifier
 	: CONST     {$$ = terminal($1);}
 	| VOLATILE  {$$ = terminal($1);}
@@ -1177,6 +1200,10 @@ declarator
                                   }
                                   else update_func_type(func_name, level, level_id[level], $$->nodetype);
 
+                                  // 3AC Start
+                                  $$->place = {$$->symbol, NULL} ; 
+                                  // 3AC End 
+
                                   $$->symbol = $2->symbol;
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
@@ -1191,6 +1218,10 @@ declarator
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol).c_str());
                                   }
                                 }
+
+                                // 3AC Start
+                                $$->place = {$$->symbol, NULL};
+                                // 3AC End
                               }
 	;
 
@@ -1207,8 +1238,15 @@ direct_declarator
                               error_throw = true;
                               fprintf(stderr, "%d |\t Error : Invalid type for symbol \'%s\'\n", line, $1);
                             }
+
+                            // 3AC Start
+                            $$->place = {$$->symbol, NULL};
+                            // 3AC End
+
 														$$->size = get_size(t_name, level, level_id);
 													}
+
+  // Need Changes
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       if($1->expr_type == 1 || $1->expr_type == 15){
                                                         $$->expr_type = 15;
@@ -1307,6 +1345,8 @@ direct_declarator
                                                           }
 	;
 
+// No match found (E1?)
+// May need changes
 empty1
   : %empty{
           t_name = "";
@@ -1315,7 +1355,7 @@ empty1
         }
   ;
 
-
+// No changes needed for 3AC
 pointer
   : '*'                             {$$ = terminal($1); string temp = "*"; $$->nodetype=&temp[0];}
   | '*' type_qualifier_list         {$$ = non_terminal(0, $1, $2); 
@@ -1329,11 +1369,13 @@ pointer
                                     }
   ;
 
+// No changes needed for 3AC
 type_qualifier_list
 	: type_qualifier                      {$$=$1;}
 	| type_qualifier_list type_qualifier  {$$=non_terminal(0, "type_qualifier_list", $1, $2);}
 	;
 
+// No changes needed for 3AC
 parameter_type_list
 	: parameter_list                {$$ = $1;}
 	| parameter_list ',' ELLIPSIS   {$$ = non_terminal(0, "parameter_type_list", $1, terminal($3));
@@ -1343,9 +1385,16 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration                     {$$ = $1; }
-	| parameter_list ',' parameter_declaration  {$$ = non_terminal(0, "parameter_list", $1, $3); }
+	| parameter_list ',' parameter_declaration  
+  {
+    $$ = non_terminal(0, "parameter_list", $1, $3); 
+    // 3AC Start
+    $$->nextlist=$3->nextlist;
+    // 3AC End
+  }
 	;
 
+// No changes needed for 3AC
 parameter_declaration
 	: declaration_specifiers declarator     {
                                             $$ = non_terminal(0, "parameter_declaration", $1, $2);
@@ -1357,6 +1406,7 @@ parameter_declaration
                                           }
 	;
 
+// No changes needed for 3AC
 type_name
 	: specifier_qualifier_list                      {$$ = $1; }
 	;
@@ -1368,6 +1418,10 @@ initializer
                                   string temp = $2->nodetype + "*";
                                   $$->nodetype = &temp[0]; 
                                   $$->expr_type = $2->expr_type;
+                                  // 3AC Start
+                                  $$->place = $2->place;
+                                  $$->nextlist = $2->nextlist;
+                                  // 3AC End
                                   }
 	;
 
@@ -1385,9 +1439,13 @@ initializer_list
                                           fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, $1->nodetype, $3->nodetype);
                                         }
                                         $$->expr_type = $1->expr_type+1;
+                                        // 3AC Start
+                                        $$->nextlist = $3->nextlist;
+                                        // 3AC End
                                       }
 	;
 
+// No changes needed for 3AC
 statement
 	: labeled_statement     {$$ = $1; }
 	| compound_statement    {$$ = $1; }
@@ -1397,12 +1455,42 @@ statement
 	| jump_statement        {$$ = $1; }
 	;
 
+// Check Please
+// Have already added 3AC Code
 labeled_statement
-	: IDENTIFIER ':' statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); }
-	| CASE constant_expression ':' statement    {$$ = non_terminal(3, "labeled_statement", terminal($1), $2, $4); }
-	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); }
+	: IDENTIFIER ':' statement                  
+  {
+    $$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
+    // 3AC Start
+    $$->nextlist = $3->nextlist;
+    $$->caselist = $3->caselist;
+    $$->continuelist = $3->continuelist;
+    $$->breaklist = $3->breaklist;
+    // 3AC End
+  }
+	| CASE constant_expression ':' statement    
+  {
+    $$ = non_terminal(3, "labeled_statement", terminal($1), $2, $4); 
+    // 3AC Start
+    $4->nextlist.merge($2->falselist);
+    $$->breaklist = $4->breaklist;
+    $$->nextlist = $4->nextlist;
+    $$->caselist = $2->caselist;
+    $$->continuelist=$4->continuelist;
+    // 3AC End
+  }
+	| DEFAULT ':' statement                     
+  {
+    $$ = non_terminal(0, "labeled_statement", terminal($1), $3);
+    // 3AC Start 
+    $$->breaklist= $3->breaklist;
+    $$->nextlist = $3->nextlist;
+    $$->continuelist=$3->continuelist;
+    // 3AC End
+  }
 	;
 
+// No changes needed for 3AC
 compound_statement
 	: op_brace cl_brace                                   {$$ = terminal("{}");}
 	| op_brace statement_list cl_brace                    {$$ = $2; }
@@ -1410,6 +1498,8 @@ compound_statement
 	| op_brace declaration_list statement_list cl_brace   {$$ = non_terminal(0, "compound_statement", $2, $3); }
 	;
 
+// No match found
+// May need changes
 op_brace
   : '{'       {
                 level++;
@@ -1417,6 +1507,8 @@ op_brace
               }
   ;
 
+// No match found
+// May need changes
 cl_brace
   : '}'       {
                 level--;
@@ -1426,32 +1518,110 @@ cl_brace
 
 declaration_list
 	: declaration                   {$$ = $1; }
-	| declaration_list declaration  {$$ = non_terminal(0, "declaration_list", $1, $2);}
+	| declaration_list declaration  
+  {
+    $$ = non_terminal(0, "declaration_list", $1, $2);
+    // 3AC Start
+    $$->nextlist = $2->nextlist;
+    // 3AC End
+  }
 	;
 
+// No matches found
+// May need changes
 statement_list
 	: statement                 {$$ = $1; }
 	| statement_list statement  {$$ = non_terminal(0, "statement_list", $1, $2);}
 	;
 
+// No changes needed for 3AC
 expression_statement
 	: ';'               {$$ = terminal($1); }
 	| expression ';'    {$$ = $1; }
 	;
 
+// Need to implement SetListId1
+// Also Check Changes
 selection_statement
-	: IF '(' expression ')' statement                  {$$ = non_terminal(0, "IF (expr) stmt", $3, $5); }
-	| IF '(' expression ')' statement ELSE statement   {$$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $5, $7); }
+	: IF '(' expression ')' statement                  
+  {
+    $$ = non_terminal(0, "IF (expr) stmt", $3, $5);
+    // 3AC Start 
+    Backpatch($1->truelist, $3);
+    $3->nextlist.merge($1->falselist);
+    $$->nextlist= $5->nextlist;
+    $$->continuelist = $5->continuelist;
+    $$->breaklist = $5->breaklist;
+    // 3AC End
+  }
+  // Need changes
+	| IF '(' expression ')' statement ELSE statement   
+  {
+    $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $5, $7); 
+  }
+
+  // Set List ID needed
 	| SWITCH '(' expression ')' statement              {$$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5); }
 	;
 
+// Need a full check
+// Our grammar doesn't have M, M6, M7
 iteration_statement
-	: WHILE '(' expression ')' statement                                            {$$ = non_terminal(0, "WHILE (expr) stmt", $3, $5);}
-	| DO statement WHILE '(' expression ')' ';'                                     {$$ = non_terminal(0, "DO stmt WHILE (expr)", $2, $5);}
-	| FOR '(' expression_statement expression_statement ')' statement               {$$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $4, $6);}
-	| FOR '(' expression_statement expression_statement expression ')' statement    {$$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $4, $5, $7);}
+	: WHILE '(' expression ')' statement                                            
+  {
+      $$ = non_terminal(0, "WHILE (expr) stmt", $3, $5);
+      // 3AC Start
+      Backpatch($4->truelist, $6);
+      $7->continuelist.push_back($8);
+      Backpatch($7->continuelist, $3);
+      Backpatch($7->nextlist, $3);
+      $$->nextlist = $4->falselist;
+      $$->nextlist.merge($7->breaklist);
+      // 3AC End
+  }
+	| DO statement WHILE '(' expression ')' ';'                                     
+  { 
+    $$ = non_terminal(0, "DO stmt WHILE (expr)", $2, $5);
+    // 3AC Start
+    Backpatch($7->truelist, $2); 
+    Backpatch($3->continuelist, $6);
+    Backpatch($3->nextlist, $6);
+    $7->falselist.merge($3->breaklist);
+    $$->nextlist = $7->falselist; 
+    // 3AC End
+  }
+	| FOR '(' expression_statement expression_statement ')' statement               
+  {
+    $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $4, $6);
+    // 3AC Start
+    Backpatch($3->nextlist, $4);
+    Backpatch($5->truelist, $7);
+    $5->falselist.merge($8->breaklist);
+    $$->nextlist = $5->falselist;
+    $8->nextlist.merge($8->continuelist);
+    $8->nextlist.push_back($9);
+    Backpatch($8->nextlist, $4 );
+    // 3AC End
+  }
+	| FOR '(' expression_statement expression_statement expression ')' statement    
+  {
+    $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $4, $5, $7);
+    // 3AC Start
+    backPatch($3->nextlist, $4);
+    backPatch($5->truelist, $10);
+    $5->falselist.merge($11->breaklist);
+    $$->nextlist = $5->falselist;
+    $11->nextlist.merge($11->continuelist);
+    $11->nextlist.push_back($12);
+    backPatch($11->nextlist, $6 );
+    $7->nextlist.push_back($8);
+    backPatch($7->nextlist, $4);
+    // 3AC End
+  }
 	;
 
+// Need function gotoIndexPatch
+// Need changes
 jump_statement
 	: GOTO IDENTIFIER ';'       {$$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); }
 	| CONTINUE ';'              {$$ = terminal($1); }
@@ -1484,9 +1654,15 @@ jump_statement
 
 translation_unit
 	: external_declaration                  {$$ = $1; }
-	| translation_unit external_declaration {$$ = non_terminal(0, "translation_unit", $1, $2); }
+	| translation_unit external_declaration {$$ = non_terminal(0, "translation_unit", $1, $2); 
+                                          // 3AC Start
+                                          $$->nextlist = $2->nextlist;
+                                          // 3AC End                                          
+                                          }
 	;
 
+
+// No changes needed for 3AC
 external_declaration
 	: function_definition   {$$ = $1; t_name="";}
 	| declaration           {$$ = $1; t_name="";}
@@ -1500,6 +1676,12 @@ function_definition
                                                                                             entry->init = true;
                                                                                           }
                                                                                           t_name = "";
+
+                                                                                          // 3AC Start
+                                                                                          string sem = "func end";
+                                                                                          emit({em, NULL}, {"",NULL}, {"",NULL}, {"",NULL});
+                                                                                          // 3AC End
+
                                                                                           }
 	| declaration_specifiers declarator empty2 compound_statement empty3            {
                                                                                     $$ = non_terminal(3, "function_definition", $1, $2, $4);
@@ -1508,9 +1690,17 @@ function_definition
                                                                                       entry->init = true;
                                                                                     }
                                                                                     t_name = "";
+
+                                                                                    // 3AC Start
+                                                                                    string sem = "func end";
+                                                                                    emit({em, NULL}, {"",NULL}, {"",NULL}, {"",NULL});
+                                                                                    // 3AC End
+
                                                                                   }
 	;
 
+// No matchh found (E2?)
+// May need changes
 empty2
   : %empty{
           set_current_sym_tab(func_name);
@@ -1518,6 +1708,8 @@ empty2
         }
   ;
 
+// No match found(E3?)
+// May need changes
 empty3
   :  %empty{
           set_current_sym_tab("#");
