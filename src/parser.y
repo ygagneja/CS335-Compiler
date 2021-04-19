@@ -75,7 +75,7 @@ primary_expression
                                       $$->symbol = $1;
                                       $$->expr_type = 3;
 
-                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id[level])};
+                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id)}; // level_id / level_id[level]
                                     }
                                     else {
                                       error_throw = true;
@@ -90,7 +90,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
-                                    if(!error_throw) $$->place = {$1->str, NULL};
+                                    if(!error_throw) $$->place = {$1 -> str, NULL};
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
@@ -99,7 +99,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
                                     
-                                    if(!error_throw) $$->place = {$1->str, NULL};
+                                    if(!error_throw) $$->place = {$1 -> str, NULL};
                                   }
   | TRUE                          {$$ = terminal("TRUE");
                                     $$->nodetype = "bool";
@@ -108,7 +108,7 @@ primary_expression
 
                                     if(!error_throw){
                                       $$->place = newtmp($$->nodetype, level, level_id);
-                                      // emit($$->place = '1') //TODO
+                                     // emit($$->place = '1') //TODO
                                     }
                                   }
   | FALSE                         {$$ = terminal("FALSE");
@@ -127,18 +127,22 @@ primary_expression
 
                                     if(!error_throw) $$->place = {$1, NULL};
                                   }
-  | '(' expression ')'            {$$ = $2; }
+  | '(' expression ')'            {$$ = $2; } 
   ;
 
 postfix_expression
   : primary_expression                       {$$ = $1; }
-  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
+  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3); // Doubt in this
                                               if ($1->init && $3->init){
                                                 $$->init = true;
                                               }
                                               string type = postfix_type($1->nodetype, 1);
                                               if (type != "null"){
                                                 $$->nodetype = &type[0];
+                                                // Emit only if error throw is false
+                                                if(!error_throw){
+                                                  $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                  // emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);                                                }
                                               }
                                               else {
                                                 error_throw = true;
@@ -158,6 +162,11 @@ postfix_expression
                                                     fprintf(stderr, "%d |\t Error : %s function requires some arguments to be passed\n", line, ($1->symbol).c_str());
                                                   }
                                                 }
+                                                if(!error_throw){
+                                                  $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                  emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
+                                                  emit({"call", NULL}, $1 -> place, {"1", NULL}, $$ -> place);
+                                                }
                                               }
                                               else {
                                                 error_throw = true;
@@ -171,7 +180,7 @@ postfix_expression
                                                             if (type != "null"){
                                                               if ($1->expr_type == 3){
                                                                 string args = get_func_args($1->symbol);
-                                                                string temp1 = $3->curr_args_types;
+                                                                string temp1 = $3->curr_args_types; // This denotes the current args
                                                                 string temp2 = args == "null" ? "" : args;
                                                                 string typeA, typeB;
                                                                 string delim = string(",");
@@ -220,6 +229,20 @@ postfix_expression
                                                                   else break;
                                                                 } 
                                                               }
+                                                              if(!error_throw){
+                                                                string arguments = $3 -> curr_args_types, tmp = arguments;
+                                                                int curr_args = 0; // Should be initialised to 0 rather than 1
+                                                                size_t f = 1;
+                                                                while(f != string :: npos){
+                                                                    curr_args++;
+                                                                    f = arguments.find_first_of(delim);
+                                                                    if(f == string :: npos) tmp = arguments;
+                                                                    else tmp = arguments.substr(0, f), arguments = arguments.substr(f + 1);
+                                                                }
+                                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                                emit({"params, NULL}, {"", NULL}, {"", NULL}, $$ -> place);
+                                                                emit({"call", NULL}, $1 -> place, {to_string(curr_args), "NULL"}, $$ -> place);
+                                                              }
                                                             }
                                                             else {
                                                               error_throw = true;
@@ -240,6 +263,10 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
+                                              if(!error_throw){
+                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                emit({"++R", lookup_use("++", level, level_id)}, $1 -> place, {"", NULL}, $$ -> place);
+                                              }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
@@ -249,13 +276,18 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
+                                              if(!error_throw){
+                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                emit({"--R", lookup_use("--", level, level_id)}, $1 -> place, {"", NULL}, $$ -> place);
+                                              }
                                              }
   ;
 
 argument_expression_list
-  : assignment_expression            {$$ = $1; 
+  : assignment_expression            {$$ = $1;  // Doubt in this(statement no field should be used or not?)
                                       $$->curr_args_types = $$->nodetype;
                                       if ($$->nodetype != "null") $$->nodetype = "void";
+                                      if(!error_throw) emit({"params", NULL}, $$ -> place, {"", NULL}, {"", NULL});
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
                                                           string type = args_type($1->nodetype, $3->nodetype);
@@ -263,6 +295,8 @@ argument_expression_list
                                                           if ($1->init && $3->init) $$->init = true;
                                                           string append = $1->curr_args_types + "," + $3->nodetype;
                                                           $$->curr_args_types = &append[0];
+
+                                                          if(!error_throw) emit({"params, NULL"}, $3 -> place, {"", NULL}, {"", NULL});
                                                           }
   ;
 
@@ -276,6 +310,10 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
+                                    if(!error_throw){
+                                        $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                        emit({"++R", lookup_use("++", level, level_id)}, $2 -> place, {"", NULL},  $$ -> place);
+                                    }
                                   }
 
   | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -286,6 +324,10 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
+                                    if(!error_throw){
+                                        $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                        emit({"--R", lookup_use("--", level, level_id)}, $2 -> place, {"", NULL},  $$ -> place);
+                                    }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
                                     if ($2->init) $$->init = true;
@@ -294,6 +336,10 @@ unary_expression
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
+                                    }
+                                    if(!error_throw){
+                                      $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                      emit($1 -> place, $2 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -304,6 +350,10 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
+                                    if(!error_throw){
+                                      $$ -> place = newtmp;
+                                      emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $2 -> place, {"", NULL}, $$ -> place);
+                                    }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); 
                                     if ($3->init) $$->init = true;
@@ -312,6 +362,10 @@ unary_expression
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
+                                    }
+                                    if(!error_throw){
+                                      $$ -> place = newtmp;
+                                      emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $3 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   ;
@@ -936,13 +990,9 @@ declaration
                                                             decl_track.insert($2->symbol);
                                                           }
                                                         }
-                                                        // 3AC Start
-                                                        $$->nextlist = $2->nextlist;
-                                                        // 3AC End
                                                       }
   ;
 
-// No changes needed for 3AC
 declaration_specifiers
   : storage_class_specifier                           {$$ = $1;
                                                         error_throw = true;
@@ -966,14 +1016,9 @@ declaration_specifiers
 
 init_declarator_list
   : init_declarator                           {$$ = $1;}
-  | init_declarator_list ',' init_declarator  
-  {
-    $$ = non_terminal(0, "init_declarator_list", $1, $3);
-    $$->nextlist = $3->nextlist;
-    }
+  | init_declarator_list ',' init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $3);}
   ;
 
-// Need Changes
 init_declarator
   : declarator                  {$$ = $1;
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
@@ -1021,7 +1066,6 @@ init_declarator
                                 }
   ;
 
-// No changes needed for 3AC
 storage_class_specifier
   : TYPEDEF       {$$ = terminal($1);}
   | EXTERN        {$$ = terminal($1);}
@@ -1030,7 +1074,6 @@ storage_class_specifier
   | REGISTER      {$$ = terminal($1);}
   ;
 
-// No changes needed for 3AC
 type_specifier
   : VOID     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | BOOL     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
@@ -1052,7 +1095,6 @@ type_specifier
                     } 
   ;
 
-// No changes needed for 3AC
 struct_or_union_specifier
   : struct_or_union IDENTIFIER struct_op_brace struct_declaration_list '}'  {$$ = non_terminal(3, "struct_or_union_specifier", $1, $4, terminal($2));
                                                                               if (lookup_type_decl($1->label + string(" ") + $2, level, level_id[level])){
@@ -1089,8 +1131,6 @@ struct_or_union_specifier
                                                                 }
   ;
 
-// New stuff
-// May need changes
 struct_op_brace
   : '{'   {
             t_name = "";
@@ -1101,7 +1141,6 @@ struct_or_union
   | UNION     {$$ = terminal($1);}
   ;
 
-// No changes needed for 3AC
 struct_declaration_list
   : struct_declaration                          {$$ = $1;}
   | struct_declaration_list struct_declaration  {$$ = non_terminal(0, "struct_declaration_list", $1, $2);
@@ -1110,7 +1149,6 @@ struct_declaration_list
                                                 }
   ;
 
-// No changes needed for 3AC
 struct_declaration
   : specifier_qualifier_list struct_declarator_list ';' {$$ = non_terminal(0, "struct_declaration", $1, $2);
                                                           t_name = "";
@@ -1118,7 +1156,6 @@ struct_declaration
                                                         }
   ;
 
-// No changes needed for 3AC
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);}
 	| type_specifier                            {$$ = $1;}
@@ -1132,20 +1169,17 @@ specifier_qualifier_list
                                               }
 	;
 
-// No changes needed for 3AC
 struct_declarator_list
 	: struct_declarator                             {$$ = $1;}
 	| struct_declarator_list ',' struct_declarator  {$$ = non_terminal(0, "struct_declarator_list", $1, $3);}
 	;
 
-// No changes needed for 3AC
 struct_declarator
   : declarator                          {$$ = $1;} // insert struct types
 	| ':' constant_expression             {$$ = $2;}
 	| declarator ':' constant_expression  {$$ = non_terminal(0, "struct_declarator", $1, $3);} // insert struct types
 	;
 
-// No changes needed for 3AC
 enum_specifier
 	: ENUM '{' enumerator_list '}'              {$$ = non_terminal(0, "enum_specifier", $3, NULL, NULL, NULL, NULL, $1);}
 	| ENUM IDENTIFIER '{' enumerator_list '}'   {$$ = non_terminal(0, "enum_specifier", $4, terminal($2), NULL, NULL, NULL, $1);}
@@ -1154,19 +1188,16 @@ enum_specifier
 
 	;
 
-// No changes needed for 3AC
 enumerator_list
 	: enumerator                      {$$ = $1;}
 	| enumerator_list ',' enumerator  {$$ = non_terminal(0, "enumerator_list", $1, $3);}
 	;
 
-// No changes needed for 3AC
 enumerator	
 	: IDENTIFIER                          {$$ = terminal($1);}
   | IDENTIFIER '=' constant_expression  {$$ = non_terminal(0, $2, terminal($1), $3);}
 	;
 
-// No changes needed for 3AC
 type_qualifier
 	: CONST     {$$ = terminal($1);}
 	| VOLATILE  {$$ = terminal($1);}
@@ -1200,10 +1231,6 @@ declarator
                                   }
                                   else update_func_type(func_name, level, level_id[level], $$->nodetype);
 
-                                  // 3AC Start
-                                  $$->place = {$$->symbol, NULL} ; 
-                                  // 3AC End 
-
                                   $$->symbol = $2->symbol;
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
@@ -1218,10 +1245,6 @@ declarator
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol).c_str());
                                   }
                                 }
-
-                                // 3AC Start
-                                $$->place = {$$->symbol, NULL};
-                                // 3AC End
                               }
 	;
 
@@ -1238,15 +1261,8 @@ direct_declarator
                               error_throw = true;
                               fprintf(stderr, "%d |\t Error : Invalid type for symbol \'%s\'\n", line, $1);
                             }
-
-                            // 3AC Start
-                            $$->place = {$$->symbol, NULL};
-                            // 3AC End
-
 														$$->size = get_size(t_name, level, level_id);
 													}
-
-  // Need Changes
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       if($1->expr_type == 1 || $1->expr_type == 15){
                                                         $$->expr_type = 15;
@@ -1345,8 +1361,6 @@ direct_declarator
                                                           }
 	;
 
-// No match found (E1?)
-// May need changes
 empty1
   : %empty{
           t_name = "";
@@ -1355,7 +1369,7 @@ empty1
         }
   ;
 
-// No changes needed for 3AC
+
 pointer
   : '*'                             {$$ = terminal($1); string temp = "*"; $$->nodetype=&temp[0];}
   | '*' type_qualifier_list         {$$ = non_terminal(0, $1, $2); 
@@ -1369,13 +1383,11 @@ pointer
                                     }
   ;
 
-// No changes needed for 3AC
 type_qualifier_list
 	: type_qualifier                      {$$=$1;}
 	| type_qualifier_list type_qualifier  {$$=non_terminal(0, "type_qualifier_list", $1, $2);}
 	;
 
-// No changes needed for 3AC
 parameter_type_list
 	: parameter_list                {$$ = $1;}
 	| parameter_list ',' ELLIPSIS   {$$ = non_terminal(0, "parameter_type_list", $1, terminal($3));
@@ -1385,16 +1397,9 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration                     {$$ = $1; }
-	| parameter_list ',' parameter_declaration  
-  {
-    $$ = non_terminal(0, "parameter_list", $1, $3); 
-    // 3AC Start
-    $$->nextlist=$3->nextlist;
-    // 3AC End
-  }
+	| parameter_list ',' parameter_declaration  {$$ = non_terminal(0, "parameter_list", $1, $3); }
 	;
 
-// No changes needed for 3AC
 parameter_declaration
 	: declaration_specifiers declarator     {
                                             $$ = non_terminal(0, "parameter_declaration", $1, $2);
@@ -1406,7 +1411,6 @@ parameter_declaration
                                           }
 	;
 
-// No changes needed for 3AC
 type_name
 	: specifier_qualifier_list                      {$$ = $1; }
 	;
@@ -1418,10 +1422,6 @@ initializer
                                   string temp = $2->nodetype + "*";
                                   $$->nodetype = &temp[0]; 
                                   $$->expr_type = $2->expr_type;
-                                  // 3AC Start
-                                  $$->place = $2->place;
-                                  $$->nextlist = $2->nextlist;
-                                  // 3AC End
                                   }
 	;
 
@@ -1439,13 +1439,9 @@ initializer_list
                                           fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, $1->nodetype, $3->nodetype);
                                         }
                                         $$->expr_type = $1->expr_type+1;
-                                        // 3AC Start
-                                        $$->nextlist = $3->nextlist;
-                                        // 3AC End
                                       }
 	;
 
-// No changes needed for 3AC
 statement
 	: labeled_statement     {$$ = $1; }
 	| compound_statement    {$$ = $1; }
@@ -1455,42 +1451,12 @@ statement
 	| jump_statement        {$$ = $1; }
 	;
 
-// Check Please
-// Have already added 3AC Code
 labeled_statement
-	: IDENTIFIER ':' statement                  
-  {
-    $$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
-    // 3AC Start
-    $$->nextlist = $3->nextlist;
-    $$->caselist = $3->caselist;
-    $$->continuelist = $3->continuelist;
-    $$->breaklist = $3->breaklist;
-    // 3AC End
-  }
-	| CASE constant_expression ':' statement    
-  {
-    $$ = non_terminal(3, "labeled_statement", terminal($1), $2, $4); 
-    // 3AC Start
-    $4->nextlist.merge($2->falselist);
-    $$->breaklist = $4->breaklist;
-    $$->nextlist = $4->nextlist;
-    $$->caselist = $2->caselist;
-    $$->continuelist=$4->continuelist;
-    // 3AC End
-  }
-	| DEFAULT ':' statement                     
-  {
-    $$ = non_terminal(0, "labeled_statement", terminal($1), $3);
-    // 3AC Start 
-    $$->breaklist= $3->breaklist;
-    $$->nextlist = $3->nextlist;
-    $$->continuelist=$3->continuelist;
-    // 3AC End
-  }
+	: IDENTIFIER ':' statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); }
+	| CASE constant_expression ':' statement    {$$ = non_terminal(3, "labeled_statement", terminal($1), $2, $4); }
+	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); }
 	;
 
-// No changes needed for 3AC
 compound_statement
 	: op_brace cl_brace                                   {$$ = terminal("{}");}
 	| op_brace statement_list cl_brace                    {$$ = $2; }
@@ -1498,8 +1464,6 @@ compound_statement
 	| op_brace declaration_list statement_list cl_brace   {$$ = non_terminal(0, "compound_statement", $2, $3); }
 	;
 
-// No match found
-// May need changes
 op_brace
   : '{'       {
                 level++;
@@ -1507,8 +1471,6 @@ op_brace
               }
   ;
 
-// No match found
-// May need changes
 cl_brace
   : '}'       {
                 level--;
@@ -1518,110 +1480,32 @@ cl_brace
 
 declaration_list
 	: declaration                   {$$ = $1; }
-	| declaration_list declaration  
-  {
-    $$ = non_terminal(0, "declaration_list", $1, $2);
-    // 3AC Start
-    $$->nextlist = $2->nextlist;
-    // 3AC End
-  }
+	| declaration_list declaration  {$$ = non_terminal(0, "declaration_list", $1, $2);}
 	;
 
-// No matches found
-// May need changes
 statement_list
 	: statement                 {$$ = $1; }
 	| statement_list statement  {$$ = non_terminal(0, "statement_list", $1, $2);}
 	;
 
-// No changes needed for 3AC
 expression_statement
 	: ';'               {$$ = terminal($1); }
 	| expression ';'    {$$ = $1; }
 	;
 
-// Need to implement SetListId1
-// Also Check Changes
 selection_statement
-	: IF '(' expression ')' statement                  
-  {
-    $$ = non_terminal(0, "IF (expr) stmt", $3, $5);
-    // 3AC Start 
-    Backpatch($1->truelist, $3);
-    $3->nextlist.merge($1->falselist);
-    $$->nextlist= $5->nextlist;
-    $$->continuelist = $5->continuelist;
-    $$->breaklist = $5->breaklist;
-    // 3AC End
-  }
-  // Need changes
-	| IF '(' expression ')' statement ELSE statement   
-  {
-    $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $5, $7); 
-  }
-
-  // Set List ID needed
+	: IF '(' expression ')' statement                  {$$ = non_terminal(0, "IF (expr) stmt", $3, $5); }
+	| IF '(' expression ')' statement ELSE statement   {$$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $5, $7); }
 	| SWITCH '(' expression ')' statement              {$$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5); }
 	;
 
-// Need a full check
-// Our grammar doesn't have M, M6, M7
 iteration_statement
-	: WHILE '(' expression ')' statement                                            
-  {
-      $$ = non_terminal(0, "WHILE (expr) stmt", $3, $5);
-      // 3AC Start
-      Backpatch($4->truelist, $6);
-      $7->continuelist.push_back($8);
-      Backpatch($7->continuelist, $3);
-      Backpatch($7->nextlist, $3);
-      $$->nextlist = $4->falselist;
-      $$->nextlist.merge($7->breaklist);
-      // 3AC End
-  }
-	| DO statement WHILE '(' expression ')' ';'                                     
-  { 
-    $$ = non_terminal(0, "DO stmt WHILE (expr)", $2, $5);
-    // 3AC Start
-    Backpatch($7->truelist, $2); 
-    Backpatch($3->continuelist, $6);
-    Backpatch($3->nextlist, $6);
-    $7->falselist.merge($3->breaklist);
-    $$->nextlist = $7->falselist; 
-    // 3AC End
-  }
-	| FOR '(' expression_statement expression_statement ')' statement               
-  {
-    $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $4, $6);
-    // 3AC Start
-    Backpatch($3->nextlist, $4);
-    Backpatch($5->truelist, $7);
-    $5->falselist.merge($8->breaklist);
-    $$->nextlist = $5->falselist;
-    $8->nextlist.merge($8->continuelist);
-    $8->nextlist.push_back($9);
-    Backpatch($8->nextlist, $4 );
-    // 3AC End
-  }
-	| FOR '(' expression_statement expression_statement expression ')' statement    
-  {
-    $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $4, $5, $7);
-    // 3AC Start
-    backPatch($3->nextlist, $4);
-    backPatch($5->truelist, $10);
-    $5->falselist.merge($11->breaklist);
-    $$->nextlist = $5->falselist;
-    $11->nextlist.merge($11->continuelist);
-    $11->nextlist.push_back($12);
-    backPatch($11->nextlist, $6 );
-    $7->nextlist.push_back($8);
-    backPatch($7->nextlist, $4);
-    // 3AC End
-  }
+	: WHILE '(' expression ')' statement                                            {$$ = non_terminal(0, "WHILE (expr) stmt", $3, $5);}
+	| DO statement WHILE '(' expression ')' ';'                                     {$$ = non_terminal(0, "DO stmt WHILE (expr)", $2, $5);}
+	| FOR '(' expression_statement expression_statement ')' statement               {$$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $4, $6);}
+	| FOR '(' expression_statement expression_statement expression ')' statement    {$$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $4, $5, $7);}
 	;
 
-// Need function gotoIndexPatch
-// Need changes
 jump_statement
 	: GOTO IDENTIFIER ';'       {$$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); }
 	| CONTINUE ';'              {$$ = terminal($1); }
@@ -1654,15 +1538,9 @@ jump_statement
 
 translation_unit
 	: external_declaration                  {$$ = $1; }
-	| translation_unit external_declaration {$$ = non_terminal(0, "translation_unit", $1, $2); 
-                                          // 3AC Start
-                                          $$->nextlist = $2->nextlist;
-                                          // 3AC End                                          
-                                          }
+	| translation_unit external_declaration {$$ = non_terminal(0, "translation_unit", $1, $2); }
 	;
 
-
-// No changes needed for 3AC
 external_declaration
 	: function_definition   {$$ = $1; t_name="";}
 	| declaration           {$$ = $1; t_name="";}
@@ -1676,12 +1554,6 @@ function_definition
                                                                                             entry->init = true;
                                                                                           }
                                                                                           t_name = "";
-
-                                                                                          // 3AC Start
-                                                                                          string sem = "func end";
-                                                                                          emit({em, NULL}, {"",NULL}, {"",NULL}, {"",NULL});
-                                                                                          // 3AC End
-
                                                                                           }
 	| declaration_specifiers declarator empty2 compound_statement empty3            {
                                                                                     $$ = non_terminal(3, "function_definition", $1, $2, $4);
@@ -1690,17 +1562,9 @@ function_definition
                                                                                       entry->init = true;
                                                                                     }
                                                                                     t_name = "";
-
-                                                                                    // 3AC Start
-                                                                                    string sem = "func end";
-                                                                                    emit({em, NULL}, {"",NULL}, {"",NULL}, {"",NULL});
-                                                                                    // 3AC End
-
                                                                                   }
 	;
 
-// No matchh found (E2?)
-// May need changes
 empty2
   : %empty{
           set_current_sym_tab(func_name);
@@ -1708,8 +1572,6 @@ empty2
         }
   ;
 
-// No match found(E3?)
-// May need changes
 empty3
   :  %empty{
           set_current_sym_tab("#");
