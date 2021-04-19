@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "nodes.h"
-#include "sym_table.h"
 #include "type_check.h"
-#include "3ac.h"
 
 #define MAX_LEVELS 1024
 using namespace std;
@@ -57,6 +55,7 @@ extern int line;
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
 %type <ptr> logical_or_expression logical_and_expression conditional_expression declaration constant_expression declaration_specifiers
+%type <ptr> expr_marker exprstmt_marker
 %type <ptr> init_declarator_list storage_class_specifier type_specifier type_qualifier 
 %type <ptr> declarator initializer struct_or_union_specifier enum_specifier struct_or_union struct_declaration_list
 %type <ptr> struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enumerator pointer
@@ -64,7 +63,7 @@ extern int line;
 %type <ptr> labeled_statement compound_statement expression_statement declaration_list
 %type <ptr> selection_statement iteration_statement jump_statement external_declaration translation_unit function_definition statement
 %type <ptr> relational_expression init_declarator statement_list enumerator_list
-%type <val> M
+%type <val> M N 
 
 %%
 
@@ -132,17 +131,18 @@ primary_expression
 
 postfix_expression
   : primary_expression                       {$$ = $1; }
-  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3); // Doubt in this
+  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
                                               if ($1->init && $3->init){
                                                 $$->init = true;
                                               }
                                               string type = postfix_type($1->nodetype, 1);
                                               if (type != "null"){
                                                 $$->nodetype = &type[0];
-                                                // Emit only if error throw is false
+
                                                 if(!error_throw){
                                                   $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                  // emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);   // backpatching should not be used as done in kdabi commit                                          }
+                                                  emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);
+                                                }
                                               }
                                               else {
                                                 error_throw = true;
@@ -165,7 +165,7 @@ postfix_expression
                                                 if(!error_throw){
                                                   $$ -> place = newtmp($$ -> nodetype, level, level_id);
                                                   emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
-                                                  emit({"call", NULL}, $1 -> place, {"1", NULL}, $$ -> place); // why 1 ? 
+                                                  emit({"call", NULL}, $1 -> place, {"", NULL}, $$ -> place);
                                                 }
                                               }
                                               else {
@@ -233,15 +233,16 @@ postfix_expression
                                                                 string arguments = $3 -> curr_args_types, tmp = arguments;
                                                                 int curr_args = 0; // Should be initialised to 0 rather than 1
                                                                 size_t f = 1;
-                                                                while(f != string :: npos){
+                                                                string delim = string(",");
+                                                                while(f != string::npos){
                                                                     curr_args++;
                                                                     f = arguments.find_first_of(delim);
-                                                                    if(f == string :: npos) tmp = arguments;
+                                                                    if(f == string::npos) tmp = arguments;
                                                                     else tmp = arguments.substr(0, f), arguments = arguments.substr(f + 1);
                                                                 }
                                                                 $$ -> place = newtmp($$ -> nodetype, level, level_id);
                                                                 emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
-                                                                emit({"call", NULL}, $1 -> place, {to_string(curr_args), "NULL"}, $$ -> place);
+                                                                emit({"call", NULL}, $1 -> place, {to_string(curr_args), NULL}, $$ -> place);
                                                               }
                                                             }
                                                             else {
@@ -296,7 +297,7 @@ argument_expression_list
                                                           string append = $1->curr_args_types + "," + $3->nodetype;
                                                           $$->curr_args_types = &append[0];
 
-                                                          if(!error_throw) emit({"params, NULL"}, $3 -> place, {"", NULL}, {"", NULL});
+                                                          if(!error_throw) emit({"params", NULL}, $3 -> place, {"", NULL}, {"", NULL});
                                                           }
   ;
 
@@ -351,7 +352,7 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
                                     if(!error_throw){
-                                      $$ -> place = newtmp;
+                                      $$ -> place = newtmp($$->nodetype, level, level_id);
                                       emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $2 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
@@ -364,7 +365,7 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
                                     if(!error_throw){
-                                      $$ -> place = newtmp;
+                                      $$ -> place = newtmp($$->nodetype, level, level_id);
                                       emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $3 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
@@ -1525,12 +1526,40 @@ expression_statement
 
 M
   : %empty {$$ = nextinstr();}
+  ;
 
 N
   : %empty { $$ = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL}); }
+  ;
+
+expr_marker
+  : expression    {
+                    $$ = $1;
+                    if(($1->truelist).size() == 0){
+                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                      ($$->truelist).push_back(tmp1);
+                      ($$->falselist).push_back(tmp2);
+                    }
+                  }
+
+  ;
+
+exprstmt_marker
+  : expression_statement    {
+                              $$ = $1;
+                              if(($1->truelist).size() == 0){
+                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                ($$->truelist).push_back(tmp1);
+                                ($$->falselist).push_back(tmp2);
+                              }
+                            }
+
+  ;
 
 selection_statement
-	: IF '(' expression ')' M statement                  
+	: IF '(' expr_marker ')' M statement                  
           {
             $$ = non_terminal(0, "IF (expr) stmt", $3, $6);
             // 3AC Start
@@ -1542,7 +1571,7 @@ selection_statement
             }
             // 3AC End
           }
-	| IF '(' expression ')' M statement N ELSE M statement   
+	| IF '(' expr_marker ')' M statement N ELSE M statement   
           {
             $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $6, $10);
 
@@ -1558,7 +1587,7 @@ selection_statement
             }
           }
 
-	| SWITCH '(' expression ')' statement             
+	| SWITCH '(' expr_marker ')' statement             
           {
             $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
 
@@ -1568,7 +1597,7 @@ selection_statement
 
 
 iteration_statement
-	: WHILE '(' M expression ')' M statement                                        
+	: WHILE '(' M expr_marker ')' M statement                                        
         {
           $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
 
@@ -1581,7 +1610,7 @@ iteration_statement
             $$->nextlist = merge($4->falselist, $7->breaklist);
           }
         }
-	| DO M statement WHILE '(' M expression ')' ';'                                     
+	| DO M statement WHILE '(' M expr_marker ')' ';'                                     
         {
           $$ = non_terminal(0, "DO stmt WHILE (expr)", $3, $7);
           if(!error_throw){
@@ -1591,7 +1620,7 @@ iteration_statement
             $$->nextlist = merge($3->breaklist, $7->falselist);
           }
         }
-	| FOR '(' expression_statement M expression_statement ')' M statement               
+	| FOR '(' expression_statement M exprstmt_marker ')' M statement               
         {
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
           if(!error_throw){
@@ -1604,7 +1633,7 @@ iteration_statement
             $$->nextlist = merge($5->falselist, $8->breaklist);
           }
         }
-	| FOR '(' expression_statement M expression_statement M expression N ')' M statement
+	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M statement
         {
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
 
@@ -1623,7 +1652,13 @@ iteration_statement
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'       {$$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); }
+	: GOTO IDENTIFIER ';'       {
+                                $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); 
+                                if(!error_throw){
+                                  int tmp = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                  patch_user_goto($2, tmp);
+                                }
+                              }
 	| CONTINUE ';'
         {
           $$ = terminal($1);
@@ -1669,7 +1704,7 @@ jump_statement
                                 }
 
                                 if(!error_throw){
-                                  //Check for type-casting
+                                  //Check for type-casting ?
                                   int k = emit({"RETURN", lookup_use("return", level, level_id)}, $2->place, {"", NULL}, {"", NULL});
                                 }
                               }

@@ -3,7 +3,7 @@
 long long counter = 0;
 
 vector<quad> code_arr;
-
+map<string, int> user_goto;
 // Function to return new symbol
 string new_symbol(){
     counter++;
@@ -43,4 +43,8 @@ void backpatch(vector<int> li, int tmp){
     for(int i: li){
         code_arr[i].goto_label = tmp;
     }
+}
+
+void patch_user_goto(string label, int addr){
+    user_goto[label] = addr;
 }
