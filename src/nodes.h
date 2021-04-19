@@ -20,6 +20,9 @@ typedef struct {
     vector<int> nextlist;
     vector<int> truelist;
     vector<int> falselist;
+    vector<int> breaklist;
+    vector<int> continuelist;
+    vector<int> caselist;
     qid place;
 } node;
 

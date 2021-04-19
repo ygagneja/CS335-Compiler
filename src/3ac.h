@@ -10,8 +10,12 @@ typedef struct{
     qid arg1;
     qid arg2;
     qid res;
+    int goto_label;
 } quad;
 
 string new_symbol();
 qid newtmp(string type, int level, int level_id);
 int emit(qid op, qid op1, qid op2, qid res);
+int nextinstr();
+vector<int> merge(vector<int> l1, vector<int> l2);
+void backpatch(vector<int> li, int tmp);
