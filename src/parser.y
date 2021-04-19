@@ -75,7 +75,7 @@ primary_expression
                                       $$->symbol = $1;
                                       $$->expr_type = 3;
 
-                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id)}; // level_id / level_id[level]
+                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id)};
                                     }
                                     else {
                                       error_throw = true;
@@ -142,7 +142,7 @@ postfix_expression
                                                 // Emit only if error throw is false
                                                 if(!error_throw){
                                                   $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                  // emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);                                                }
+                                                  // emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);   // Backpatching should not be used as done in kdabi commit                                          }
                                               }
                                               else {
                                                 error_throw = true;
@@ -165,7 +165,7 @@ postfix_expression
                                                 if(!error_throw){
                                                   $$ -> place = newtmp($$ -> nodetype, level, level_id);
                                                   emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
-                                                  emit({"call", NULL}, $1 -> place, {"1", NULL}, $$ -> place);
+                                                  emit({"call", NULL}, $1 -> place, {"1", NULL}, $$ -> place); // why 1 ? 
                                                 }
                                               }
                                               else {
