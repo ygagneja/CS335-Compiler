@@ -266,7 +266,7 @@ postfix_expression
                                               }
                                               if(!error_throw){
                                                 $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                emit({"++R", NULL}, $1 -> place, {"", NULL}, $$ -> place);
+                                                emit({"R++", NULL}, $1 -> place, {"", NULL}, $$ -> place);
                                               }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
@@ -279,7 +279,7 @@ postfix_expression
                                               }
                                               if(!error_throw){
                                                 $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                emit({"--R", NULL}, $1 -> place, {"", NULL}, $$ -> place);
+                                                emit({"R--", NULL}, $1 -> place, {"", NULL}, $$ -> place);
                                               }
                                              }
   ;
@@ -716,7 +716,7 @@ shift_expression
                                                           arg2 = newtmp($$->nodetype, level, level_id);
                                                           emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                         }
-                                                        emit({"LEFT_OP", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                        emit({"<<", NULL}, arg1, arg2, $$->place); // why lookup?
                                                       }
                                                     }
                                                   }
@@ -740,7 +740,7 @@ shift_expression
                                                           arg2 = newtmp($$->nodetype, level, level_id);
                                                           emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                         }
-                                                        emit({"RIGHT_OP", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                        emit({">>", NULL}, arg1, arg2, $$->place); // why lookup?
                                                       }
                                                     }
                                                   }
@@ -807,7 +807,7 @@ relational_expression
 
                                                       if(!error_throw){
                                                         $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"LE_OP", NULL}, $1->place, $3->place, $$->place);
+                                                        emit({"<=", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -830,7 +830,7 @@ relational_expression
 
                                                       if(!error_throw){
                                                         $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"GE_OP", NULL}, $1->place, $3->place, $$->place);
+                                                        emit({">=", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -857,7 +857,7 @@ equality_expression
 
                                                         if(!error_throw){
                                                           $$->place = newtmp($$->nodetype, level, level_id);
-                                                          emit({"EQ_OP", NULL}, $1->place, $3->place, $$->place);
+                                                          emit({"==", NULL}, $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else {
@@ -880,7 +880,7 @@ equality_expression
                                                         
                                                         if(!error_throw){
                                                           $$->place = newtmp($$->nodetype, level, level_id);
-                                                          emit({"NE_OP", NULL}, $1->place, $3->place, $$->place);
+                                                          emit({"!=", NULL}, $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else {
