@@ -1608,16 +1608,14 @@ statement
 
 switch_case_marker
   : CASE constant_expression ':'                {
-                                                  $$ = $1;
-                                                  if(($2->truelist).size() == 0){
-                                                    qid res = newtmp("bool", level, level_id);
-                                                    int tmp = emit({"==", NULL}, {"", NULL}, $2->place, res); 
-                                                    int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, res, {"", NULL});
-                                                    int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
-                                                    ($$->caselist).push_back(tmp);
-                                                    ($$->truelist).push_back(tmp1);
-                                                    ($$->falselist).push_back(tmp2);
-                                                  }
+                                                  $$ = $2;
+                                                  qid res = newtmp("bool", level, level_id);
+                                                  int tmp = emit(pair<string, sEntry*>("EQ_OP", lookup("\=\=")),pair<string, sEntry*>("", NULL), $2->place, res); 
+                                                  int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, res, {"", NULL});
+                                                  int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                  ($$->caselist).push_back(tmp);
+                                                  ($$->truelist).push_back(tmp1);
+                                                  ($$->falselist).push_back(tmp2);
                                                 }
 
 labeled_statement
