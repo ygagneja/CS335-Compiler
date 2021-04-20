@@ -3,7 +3,7 @@
 long long counter = 0;
 
 vector<quad> code_arr;
-
+map<string, int> user_goto;
 // Function to return new symbol
 string new_symbol(){
     counter++;
@@ -25,5 +25,26 @@ int emit(qid op, qid arg1, qid arg2, qid res){
     tmp.arg2 = arg2;
     tmp.res = res;
     code_arr.push_back(tmp);
-    return 0; // Will modify if required
+    return code_arr.size()-1;
+}
+
+int nextinstr(){
+    return code_arr.size();
+}
+
+vector<int> merge(vector<int> l1, vector<int> l2){
+    vector<int> tmp;
+    for(int i: l1) tmp.push_back(i);
+    for(int i: l2) tmp.push_back(i);
+    return tmp;
+}
+
+void backpatch(vector<int> li, int tmp){
+    for(int i: li){
+        code_arr[i].goto_label = tmp;
+    }
+}
+
+void patch_user_goto(string label, int addr){
+    user_goto[label] = addr;
 }
