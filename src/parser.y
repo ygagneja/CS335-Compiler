@@ -647,7 +647,7 @@ additive_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"-int", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"-int", lookup_use("-", level, level_id)}, arg1, arg2, $$->place); // why lookup?
                                                               }
                                                             }
                                                             else if (type == "float"){
