@@ -124,7 +124,7 @@ postfix_expression
                                               else {
                                                 error_throw = true;
                                                 $$->nodetype = &type[0];
-                                                fprintf(stderr, "%d |\t Error : Array \"%s\"indexed with more indices than its dimension\n", line, ($1->symbol).c_str());
+                                                fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension\n", line, ($1->symbol).c_str());
                                               }
                                              }
   | postfix_expression '(' ')'               {$$ = $1;
@@ -689,6 +689,10 @@ assignment_expression
                                                                   else if (type == "1"){
                                                                     $$->nodetype = $1->nodetype;
                                                                   }
+                                                                  else if ($1->nodetype == "void"){
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Variable or field %s of type void is being assigned a value\n", line, ($1->symbol).c_str());
+                                                                  }
                                                                   else {
                                                                     error_throw = true;
                                                                     $$->nodetype = &type[0];
@@ -1016,6 +1020,10 @@ direct_declarator
                                                         $$->nodetype = &temp[0];
                                                       }
                                                       if ($1->expr_type == 1){
+                                                        if ($1->nodetype == "void"){
+                                                          error_throw = true;
+                                                          fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
+                                                        }
                                                         $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
                                                       }
                                                       else if ($1->expr_type == 15){
@@ -1024,7 +1032,7 @@ direct_declarator
                                                     }
   | direct_declarator '[' constant_expression ']'    {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       error_throw = true;
-                                                      fprintf(stderr, "%d |\t Error : Please provide a constant non-negative int as size to declare array\n");
+                                                      fprintf(stderr, "%d |\t Error : Please provide a constant non-negative int as size to declare array\n", line);
                                                     }
 	| direct_declarator '(' empty1 parameter_type_list ')'  {
                                                             $$ = non_terminal(0, "direct_declarator", $1, $4, NULL, NULL, NULL, "()");
@@ -1395,3 +1403,4 @@ int main (int argc, char* argv[]){
 // normal syntax errors ??
 // aggressive error propagation
 // add more warnings
+// propagate symbol names
