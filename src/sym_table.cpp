@@ -208,18 +208,20 @@ string get_func_ret_type(string func_name){
 }
 
 void dump_tables(){
-    string glob = "../global_sym_table.csv";
+    string glob = "global_sym_table.csv";
     ofstream out_file(glob);
+    out_file << "sym_name,type,size,offset,init,level,level_id\n";
     for (auto itr : global_sym_tab){
-        cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
+        out_file << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
     }
-    cout << endl;
+    // out_file << endl;
     for (auto table : func_sym_tab_map){
-        string filename = "../" + table.first + "_table.csv";
+        string filename = table.first + "_table.csv";
         ofstream out_file(filename);
+        out_file << "sym_name,type,size,offset,init,level,level_id\n";
         for (auto itr : *(table.second)){
-            cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
+            out_file << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
         }
-        cout << endl;
+        // cout << endl;
     }
 }

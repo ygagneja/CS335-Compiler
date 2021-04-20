@@ -7,6 +7,7 @@
 #include "nodes.h"
 #include "sym_table.h"
 #include "type_check.h"
+#include "3ac.h"
 
 #define MAX_LEVELS 1024
 using namespace std;
@@ -73,6 +74,8 @@ primary_expression
                                       $$->nodetype = &type[0];
                                       $$->symbol = $1;
                                       $$->expr_type = 3;
+
+                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id[level])};
                                     }
                                     else {
                                       error_throw = true;
@@ -86,6 +89,8 @@ primary_expression
                                     $$->nodetype = &type[0];
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
+
+                                    if(!error_throw) $$->place = {$1->str, NULL};
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
@@ -93,20 +98,34 @@ primary_expression
                                     $$->nodetype = &type[0];
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
+                                    
+                                    if(!error_throw) $$->place = {$1->str, NULL};
                                   }
   | TRUE                          {$$ = terminal("TRUE");
                                     $$->nodetype = "bool";
                                     $$->init = true;
                                     $$->bool_val = true;
+
+                                    if(!error_throw){
+                                      $$->place = newtmp($$->nodetype, level, level_id);
+                                      // emit($$->place = '1') //TODO
+                                    }
                                   }
   | FALSE                         {$$ = terminal("FALSE");
                                     $$->nodetype = "bool";
                                     $$->init = true;
                                     $$->bool_val = false;
+
+                                    if(!error_throw){
+                                      $$->place = newtmp($$->nodetype, level, level_id);
+                                      // emit($$->place = '0') //TODO
+                                    }
                                   }
   | STRING_LITERAL                {$$ = terminal("STRING_LITERAL");
                                     $$->nodetype = "char*";
                                     $$->init = true;
+
+                                    if(!error_throw) $$->place = {$1, NULL};
                                   }
   | '(' expression ')'            {$$ = $2; }
   ;
@@ -311,12 +330,25 @@ cast_expression
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); 
                                         string type = cast_type($2->nodetype, $4->nodetype);
                                         $$->nodetype = &type[0];
+
+                                        string tmp = $4->nodetype + "to" + $2->nodetype;
+                                        
                                         if (type == "0"){
                                           $$->nodetype = $2->nodetype;
                                           fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
+
+                                          if(!error_throw){
+                                            $$->place = newtmp($2->nodetype, level, level_id);
+                                            emit({tmp, NULL}, $4->place, {" ", NULL}, $$->place);
+                                          }
                                         }
                                         else if (type == "1"){
                                           $$->nodetype = $2->nodetype;
+                                          
+                                          if(!error_throw){
+                                            $$->place = newtmp($2->nodetype, level, level_id);
+                                            emit({tmp, NULL}, $4->place, {" ", NULL}, $$->place);
+                                          }
                                         }
                                         else {
                                           error_throw = true;
@@ -334,10 +366,50 @@ multiplicative_expression
                                                             if (type == "int"){
                                                               $$ = non_terminal(0, "* int", $1, $3);
                                                               $$->nodetype = "long long";
+
+                                                              
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"*int", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
+
+                                                              
                                                             }
                                                             else if (type == "float"){
                                                               $$ = non_terminal(0, "* float", $1, $3);
                                                               $$->nodetype = "long double";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }else if(is_type_int($1->nodetype)){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }else if(is_type_int($3->nodetype)){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"*float", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
+
                                                             }
                                                           }
                                                           else {
@@ -353,10 +425,48 @@ multiplicative_expression
                                                             if (type == "int"){
                                                               $$ = non_terminal(0, "/ int", $1, $3);
                                                               $$->nodetype = "long long";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"/int", lookup_use("/", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
+
                                                             }
                                                             else if (type == "float"){
                                                               $$ = non_terminal(0, "/ float", $1, $3);
                                                               $$->nodetype = "long double";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }else if(is_type_int($1->nodetype)){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }else if(is_type_int($3->nodetype)){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"/float", lookup_use("/", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
+
                                                             }
                                                           }
                                                           else {
@@ -371,6 +481,21 @@ multiplicative_expression
                                                           if (type != "null"){
                                                             $$ = non_terminal(0, "% int", $1, $3);
                                                             $$->nodetype = "long long";
+
+                                                            if(!error_throw){
+                                                              $$->place = newtmp($$->nodetype, level, level_id);
+                                                              qid arg1 = $1->place;
+                                                              qid arg2 = $3->place;
+                                                              if($1->nodetype == string("char")){
+                                                                arg1 = newtmp($$->nodetype, level, level_id);
+                                                                emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                              }
+                                                              if($3->nodetype == string("char")){
+                                                                arg2 = newtmp($$->nodetype, level, level_id);
+                                                                emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                              }
+                                                              emit({"%", lookup_use("%", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                            }
                                                           }
                                                           else {
                                                             error_throw = true;
@@ -390,16 +515,54 @@ additive_expression
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long long";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"+int", lookup_use("+", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
                                                             }
                                                             else if (type == "float"){
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long double";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }else if(is_type_int($1->nodetype)){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }else if(is_type_int($3->nodetype)){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"+float", lookup_use("+", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
                                                             }
                                                             else {
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = &type[0];
+
+                                                              // 3AC TODO
                                                             }
                                                           }
                                                           else {
@@ -416,16 +579,54 @@ additive_expression
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long long";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"-int", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
                                                             }
                                                             else if (type == "float"){
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long double";
+
+                                                              if(!error_throw){
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                qid arg1 = $1->place;
+                                                                qid arg2 = $3->place;
+                                                                if($1->nodetype == string("char")){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }else if(is_type_int($1->nodetype)){
+                                                                  arg1 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                }
+                                                                if($3->nodetype == string("char")){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }else if(is_type_int($3->nodetype)){
+                                                                  arg2 = newtmp($$->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                }
+                                                                emit({"-float", lookup_use("-", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              }
                                                             }
                                                             else {
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = &type[0];
+
+                                                              //3AC TODO
                                                             }
                                                           }
                                                           else {
