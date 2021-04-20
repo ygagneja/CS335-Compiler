@@ -266,7 +266,7 @@ postfix_expression
                                               }
                                               if(!error_throw){
                                                 $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                emit({"++R", lookup_use("++", level, level_id)}, $1 -> place, {"", NULL}, $$ -> place);
+                                                emit({"++R", NULL}, $1 -> place, {"", NULL}, $$ -> place);
                                               }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
@@ -279,7 +279,7 @@ postfix_expression
                                               }
                                               if(!error_throw){
                                                 $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                emit({"--R", lookup_use("--", level, level_id)}, $1 -> place, {"", NULL}, $$ -> place);
+                                                emit({"--R", NULL}, $1 -> place, {"", NULL}, $$ -> place);
                                               }
                                              }
   ;
@@ -313,7 +313,7 @@ unary_expression
                                     }
                                     if(!error_throw){
                                         $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                        emit({"++R", lookup_use("++", level, level_id)}, $2 -> place, {"", NULL},  $$ -> place);
+                                        emit({"++R", NULL}, $2 -> place, {"", NULL},  $$ -> place);
                                     }
                                   }
 
@@ -327,7 +327,7 @@ unary_expression
                                     }
                                     if(!error_throw){
                                         $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                        emit({"--R", lookup_use("--", level, level_id)}, $2 -> place, {"", NULL},  $$ -> place);
+                                        emit({"--R", NULL}, $2 -> place, {"", NULL},  $$ -> place);
                                     }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
@@ -353,7 +353,7 @@ unary_expression
                                     }
                                     if(!error_throw){
                                       $$ -> place = newtmp($$->nodetype, level, level_id);
-                                      emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $2 -> place, {"", NULL}, $$ -> place);
+                                      emit({"SIZEOF", NULL}, $2 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); 
@@ -366,7 +366,7 @@ unary_expression
                                     }
                                     if(!error_throw){
                                       $$ -> place = newtmp($$->nodetype, level, level_id);
-                                      emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $3 -> place, {"", NULL}, $$ -> place);
+                                      emit({"SIZEOF", NULL}, $3 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   ;
@@ -435,7 +435,7 @@ multiplicative_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"*int", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"*int", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
 
                                                               
@@ -462,7 +462,7 @@ multiplicative_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"*float", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"*float", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
 
                                                             }
@@ -493,7 +493,7 @@ multiplicative_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"/int", lookup_use("/", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"/int", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
 
                                                             }
@@ -519,7 +519,7 @@ multiplicative_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"/float", lookup_use("/", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"/float", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
 
                                                             }
@@ -549,7 +549,7 @@ multiplicative_expression
                                                                 arg2 = newtmp($$->nodetype, level, level_id);
                                                                 emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                               }
-                                                              emit({"%", lookup_use("%", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                              emit({"%", NULL}, arg1, arg2, $$->place); // why lookup?
                                                             }
                                                           }
                                                           else {
@@ -583,7 +583,7 @@ additive_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"+int", lookup_use("+", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"+int", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
                                                             }
                                                             else if (type == "float"){
@@ -609,7 +609,7 @@ additive_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"+float", lookup_use("+", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"+float", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
                                                             }
                                                             else {
@@ -647,7 +647,7 @@ additive_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"-int", lookup_use("-", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"-int", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
                                                             }
                                                             else if (type == "float"){
@@ -673,7 +673,7 @@ additive_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"-float", lookup_use("-", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"-float", NULL}, arg1, arg2, $$->place); // why lookup?
                                                               }
                                                             }
                                                             else {
@@ -716,7 +716,7 @@ shift_expression
                                                           arg2 = newtmp($$->nodetype, level, level_id);
                                                           emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                         }
-                                                        emit({"LEFT_OP", lookup_use("<<", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                        emit({"LEFT_OP", NULL}, arg1, arg2, $$->place); // why lookup?
                                                       }
                                                     }
                                                   }
@@ -740,7 +740,7 @@ shift_expression
                                                           arg2 = newtmp($$->nodetype, level, level_id);
                                                           emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                         }
-                                                        emit({"RIGHT_OP", lookup_use(">>", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                        emit({"RIGHT_OP", NULL}, arg1, arg2, $$->place); // why lookup?
                                                       }
                                                     }
                                                   }
@@ -761,7 +761,7 @@ relational_expression
 
                                                       if(!error_throw){
                                                         $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"<", lookup_use("<", level, level_id)}, $1->place, $3->place, $$->place);
+                                                        emit({"<", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -784,7 +784,7 @@ relational_expression
 
                                                       if(!error_throw){
                                                         $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({">", lookup_use(">", level, level_id)}, $1->place, $3->place, $$->place);
+                                                        emit({">", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -807,7 +807,7 @@ relational_expression
 
                                                       if(!error_throw){
                                                         $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"LE_OP", lookup_use("<=", level, level_id)}, $1->place, $3->place, $$->place);
+                                                        emit({"LE_OP", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -830,7 +830,7 @@ relational_expression
 
                                                       if(!error_throw){
                                                         $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"GE_OP", lookup_use(">=", level, level_id)}, $1->place, $3->place, $$->place);
+                                                        emit({"GE_OP", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -857,7 +857,7 @@ equality_expression
 
                                                         if(!error_throw){
                                                           $$->place = newtmp($$->nodetype, level, level_id);
-                                                          emit({"EQ_OP", lookup_use("==", level, level_id)}, $1->place, $3->place, $$->place);
+                                                          emit({"EQ_OP", NULL}, $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else {
@@ -880,7 +880,7 @@ equality_expression
                                                         
                                                         if(!error_throw){
                                                           $$->place = newtmp($$->nodetype, level, level_id);
-                                                          emit({"NE_OP", lookup_use("!=", level, level_id)}, $1->place, $3->place, $$->place);
+                                                          emit({"NE_OP", NULL}, $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else {
@@ -902,7 +902,7 @@ and_expression
 
                                                 if(!error_throw){
                                                   $$->place = newtmp($$->nodetype, level, level_id);
-                                                  emit({"&",lookup_use("&", level, level_id)}, $1->place, $3->place, $$->place);
+                                                  emit({"&", NULL}, $1->place, $3->place, $$->place);
                                                 }
                                               }
                                               else {
@@ -924,7 +924,7 @@ exclusive_or_expression
 
                                                     if(!error_throw){
                                                       $$->place = newtmp($$->nodetype, level, level_id);
-                                                      emit({"&",lookup_use("^", level, level_id)}, $1->place, $3->place, $$->place);
+                                                      emit({"&",NULL}, $1->place, $3->place, $$->place);
                                                     }
                                                   }
                                                   else {
@@ -946,7 +946,7 @@ inclusive_or_expression
 
                                                             if(!error_throw){
                                                               $$->place = newtmp($$->nodetype, level, level_id);
-                                                              emit({"|",lookup_use("|", level, level_id)}, $1->place, $3->place, $$->place);
+                                                              emit({"|", NULL}, $1->place, $3->place, $$->place);
                                                             }
                                                           }
                                                           else {
@@ -962,8 +962,8 @@ marker1
   : logical_and_expression AND_OP {
                                     $$ = $1;
                                     if(($1->truelist).size() == 0){
-                                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
-                                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                      int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $1->place, {"", NULL});
+                                      int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                       ($$->truelist).push_back(tmp1);
                                       ($$->falselist).push_back(tmp2);
                                     }
@@ -977,8 +977,8 @@ logical_and_expression
                                           $$->nodetype = "bool";
 
                                           if(($3->truelist).size() == 0){
-                                            int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $3->place, {"", NULL});
-                                            int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                            int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $3->place, {"", NULL});
+                                            int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                             ($3->truelist).push_back(tmp1);
                                             ($3->falselist).push_back(tmp2);
                                           }
@@ -992,8 +992,8 @@ marker2
   : logical_or_expression OR_OP {
                                     $$ = $1;
                                     if(($1->truelist).size() == 0){
-                                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
-                                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                      int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $1->place, {"", NULL});
+                                      int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                       ($$->truelist).push_back(tmp1);
                                       ($$->falselist).push_back(tmp2);
                                     }
@@ -1006,8 +1006,8 @@ logical_or_expression
                                         if ($1->init && $3->init) $$->init = true;
                                         $$->nodetype = "bool";
                                         if(($3->truelist).size() == 0){
-                                          int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $3->place, {"", NULL});
-                                          int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                          int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $3->place, {"", NULL});
+                                          int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                           ($3->truelist).push_back(tmp1);
                                           ($3->falselist).push_back(tmp2);
                                         }
@@ -1095,6 +1095,9 @@ declaration
                                                             decl_track.insert($2->symbol);
                                                           }
                                                         }
+                                                        if (!error_throw){
+                                                          $$->nextlist = $2->nextlist;
+                                                        }
                                                       }
   ;
 
@@ -1121,7 +1124,12 @@ declaration_specifiers
 
 init_declarator_list
   : init_declarator                           {$$ = $1;}
-  | init_declarator_list ',' init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $3);}
+  | init_declarator_list ',' M init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $4);
+                                                  if (!error_throw){
+                                                    backpatch($1->nextlist, $3);
+                                                    $$->nextlist = $4->nextlist;
+                                                  }
+                                                }
   ;
 
 init_declarator
@@ -1139,6 +1147,9 @@ init_declarator
                                     else {
                                       unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
                                       insert_entry($1->symbol, $1->nodetype, size, 0, false, level, level_id[level]);
+                                    }
+                                    if (!error_throw){
+                                      $$->place = {$$->symbol, lookup_use($$->symbol, level, level_id)};
                                     }
                                   }
                                 }
@@ -1166,6 +1177,16 @@ init_declarator
                                       if (chk == "0") fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
                                       unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
                                       insert_entry($1->symbol, $1->nodetype, size, 0, $3->init, level, level_id[level]);
+                                    }
+                                  }
+                                  if (!error_throw){
+                                    $$->place = {$$->symbol, lookup_use($$->symbol, level, level_id)};
+                                    if ($1->expr_type == 15){
+                                      fprintf(stderr, "%d |\t Warning : Array initialization not allowed this way, proceeding without initialization\n", line);
+                                      lookup_use($1->symbol, level, level_id)->init = false;
+                                    }
+                                    else {
+                                      emit_assignment($1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
                                     }
                                   }
                                 }
@@ -1339,6 +1360,9 @@ declarator
                                   $$->symbol = $2->symbol;
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
+                                  if (!error_throw){
+                                    $$->place = {$$->symbol, NULL};
+                                  }
                                 }
                               }
 	| direct_declarator         {
@@ -1367,6 +1391,9 @@ direct_declarator
                               fprintf(stderr, "%d |\t Error : Invalid type for symbol \'%s\'\n", line, $1);
                             }
 														$$->size = get_size(t_name, level, level_id);
+                            if (!error_throw){
+                              $$->place = {$$->symbol, NULL};
+                            }
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       if($1->expr_type == 1 || $1->expr_type == 15){
@@ -1384,6 +1411,9 @@ direct_declarator
                                                       }
                                                       else if ($1->expr_type == 15){
                                                         $$->size = $1->size * $3->int_val;
+                                                      }
+                                                      if (!error_throw){
+                                                        $$->place = {$$->symbol, NULL};
                                                       }
                                                     }
   | direct_declarator '[' constant_expression ']'    {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
@@ -1431,6 +1461,11 @@ direct_declarator
                                                               func_args = "";
                                                               func_symbols = "";
                                                               $$->size = get_size($$->nodetype, level, level_id);
+                                                              if (!error_throw){
+                                                                $$->place = {$$->symbol, NULL};
+                                                                string start = "*function start*\t(" + $$->symbol + ")";
+                                                                emit(start, {"", NULL}, {"", NULL}, {"", NULL});
+                                                              }
                                                             }
                                                           }
 	| direct_declarator '(' empty1 ')'                      {
@@ -1467,6 +1502,11 @@ direct_declarator
                                                               func_symbols = "";
                                                             }
                                                             $$->size = get_size($$->nodetype, level, level_id);
+                                                            if (!error_throw){
+                                                              $$->place = {$$->symbol, NULL};
+                                                              string start = "*function start*\t(" + $$->symbol + ")";
+                                                              emit(start, {"", NULL}, {"", NULL}, {"", NULL});
+                                                            }
                                                           }
 	;
 
@@ -1531,23 +1571,29 @@ initializer
                                   string temp = $2->nodetype + "*";
                                   $$->nodetype = &temp[0]; 
                                   $$->expr_type = $2->expr_type;
+                                  if (!error_throw){
+                                    $$->place = $2->place;
+                                    $$->nextlist = $2->nextlist;
+                                  }
                                   }
 	;
 
 initializer_list
 	: initializer                       {$$ = $1; $$->expr_type = 1;}
-	| initializer_list ',' initializer  {
-                                        $$ = non_terminal(0, "initializer_list", $1, $3); 
+	| initializer_list ',' M initializer  {
+                                        $$ = non_terminal(0, "initializer_list", $1, $4); 
                                         $$->nodetype = $1->nodetype;
-                                        string chk = is_valid($1->nodetype, $3->nodetype);
+                                        string chk = is_valid($1->nodetype, $4->nodetype);
                                         if(chk == "0"){
                                           fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
                                         }
                                         else if (chk == "null"){
                                           error_throw = true;
-                                          fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, $1->nodetype, $3->nodetype);
+                                          fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, $1->nodetype, $4->nodetype);
                                         }
                                         $$->expr_type = $1->expr_type+1;
+                                        backpatch($1->nextlist, $3);
+                                        $$->nextlist = $4->nextlist;
                                       }
 	;
 
@@ -1565,9 +1611,9 @@ switch_case_marker
                                                   $$ = $1;
                                                   if(($2->truelist).size() == 0){
                                                     qid res = newtmp("bool", level, level_id);
-                                                    int tmp = emit(pair<string, sEntry*>("EQ_OP", lookup("\=\=")),pair<string, sEntry*>("", NULL), $2->place, res); 
-                                                    int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, res, {"", NULL});
-                                                    int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                    int tmp = emit({"==", NULL}, {"", NULL}, $2->place, res); 
+                                                    int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, res, {"", NULL});
+                                                    int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                                     ($$->caselist).push_back(tmp);
                                                     ($$->truelist).push_back(tmp1);
                                                     ($$->falselist).push_back(tmp2);
@@ -1660,8 +1706,8 @@ if_expression
   : IF '(' expression ')'    {
                               $$ = $3;
                               if(($3->truelist).size() == 0){
-                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $3->place, {"", NULL});
-                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $3->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                 ($$->truelist).push_back(tmp1);
                                 ($$->falselist).push_back(tmp2);
                               }
@@ -1711,8 +1757,8 @@ expr_marker
   : expression    {
                               $$ = $1;
                               if(($1->truelist).size() == 0){
-                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
-                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $1->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                 ($$->truelist).push_back(tmp1);
                                 ($$->falselist).push_back(tmp2);
                               }
@@ -1724,8 +1770,8 @@ exprstmt_marker
   : expression_statement    {
                               $$ = $1;
                               if(($1->truelist).size() == 0){
-                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
-                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $1->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                 ($$->truelist).push_back(tmp1);
                                 ($$->falselist).push_back(tmp2);
                               }
@@ -1738,7 +1784,7 @@ iteration_statement
         {
           $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
           if(!error_throw){
-            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            int k = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
             ($7->nextlist).push_back(k);
             backpatch($7->nextlist, $3);
             backpatch($7->continuelist, $3);
@@ -1760,7 +1806,7 @@ iteration_statement
         {
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
           if(!error_throw){
-            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            int k = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
             ($8->nextlist).push_back(k);
             backpatch($5->truelist, $7);
             backpatch($3->nextlist, $4);
@@ -1773,7 +1819,7 @@ iteration_statement
         {
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
           if(!error_throw){
-            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            int k = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
             ($11->nextlist).push_back(k);
             backpatch($11->nextlist, $6);
             backpatch($11->continuelist, $6);
@@ -1789,7 +1835,7 @@ jump_statement
 	: GOTO IDENTIFIER ';'       {
                                 $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); 
                                 if(!error_throw){
-                                  int tmp = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                  int tmp = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                   if (!patch_user_goto($2, tmp)){
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Statement with label \'%s\' not found before goto is called\n", line, $2);
@@ -1800,7 +1846,7 @@ jump_statement
         {
           $$ = terminal($1);
           if(!error_throw){
-            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            int k = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
             ($$->continuelist).push_back(k);
           }
         }
@@ -1808,7 +1854,7 @@ jump_statement
         {
           $$ = terminal($1);
           if(!error_throw){
-            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            int k = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
             ($$->breaklist).push_back(k);
           }
         }
@@ -1819,7 +1865,7 @@ jump_statement
                                   fprintf(stderr, "%d |\t Error : Function %s of type non-void is not returning a value\n", line, func_name.c_str());
                                 }else{
                                   if(!error_throw){
-                                    emit({"RETURN", lookup_use("return", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                    emit({"RETURN", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                   }
                                 }
                               }
@@ -1841,7 +1887,9 @@ jump_statement
                                 }
 
                                 if(!error_throw){
-                                  int k = emit({"RETURN", lookup_use("return", level, level_id)}, $2->place, {"", NULL}, {"", NULL});
+                                  qid tmp = newtmp(type, level, level_id);
+                                  emit_assignment(type, $2->nodetype, tmp, $2->place, level, level_id);
+                                  int k = emit({"RETURN", NULL}, tmp, {"", NULL}, {"", NULL});
                                 }
                               }
 	;
@@ -1868,7 +1916,8 @@ function_definition
                                                                                             }
                                                                                             t_name = "";
                                                                                             if (!error_throw){
-                                                                                              int k = emit({"end", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                                                              string end = "*function end*\t(" + $2->symbol + ")";
+                                                                                              int k = emit({end, NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                                                                             }
                                                                                           }
 	| declaration_specifiers declarator empty2 compound_statement empty3            {
@@ -1879,7 +1928,8 @@ function_definition
                                                                                     }
                                                                                     t_name = "";
                                                                                     if (!error_throw){
-                                                                                      int k = emit({"end", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                                                      string end = "*function end*\t(" + $2->symbol + ")";
+                                                                                      int k = emit({end, NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                                                                     }
                                                                                   }
 	;
@@ -1903,7 +1953,7 @@ M
   ;
 
 N
-  : %empty  { $$ = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL}); 
+  : %empty  { $$ = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL}); 
               ($$->nextlist).push_back($$);
             }
   ;
@@ -1975,7 +2025,7 @@ int main (int argc, char* argv[]){
 // exhaustive code review
 
 // incomplete and buggy structs implementation (semantics + 3ac)
-// initializer stuff (semantics)
+// initializer stuff (semantics + 3ac)
 
 // overflow handle
 // correct bool type checks

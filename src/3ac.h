@@ -22,3 +22,4 @@ void backpatch(vector<int> li, int tmp);
 bool insert_user_label(string label, int addr);
 bool patch_user_goto(string label, int addr);
 void patch_caselist(vector<int> li, qid arg1);
+void emit_assignment(string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id);
