@@ -55,7 +55,7 @@ extern int line;
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
 %type <ptr> logical_or_expression logical_and_expression conditional_expression declaration constant_expression declaration_specifiers
-%type <ptr> expr_marker exprstmt_marker
+%type <ptr> expr_marker exprstmt_marker marker1 marker2
 %type <ptr> init_declarator_list storage_class_specifier type_specifier type_qualifier 
 %type <ptr> declarator initializer struct_or_union_specifier enum_specifier struct_or_union struct_declaration_list
 %type <ptr> struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enumerator pointer
@@ -647,7 +647,7 @@ additive_expression
                                                                   arg2 = newtmp($$->nodetype, level, level_id);
                                                                   emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
                                                                 }
-                                                                emit({"-int", lookup_use("*", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                                emit({"-int", lookup_use("-", level, level_id)}, arg1, arg2, $$->place); // why lookup?
                                                               }
                                                             }
                                                             else if (type == "float"){
@@ -758,6 +758,11 @@ relational_expression
                                                       char* label; string tmp = "< " + type; label = &tmp[0];
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
+
+                                                      if(!error_throw){
+                                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                                        emit({"<", lookup_use("<", level, level_id)}, $1->place, $3->place, $$->place);
+                                                      }
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -776,6 +781,11 @@ relational_expression
                                                       char* label; string tmp = "> " + type; label = &tmp[0];
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
+
+                                                      if(!error_throw){
+                                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                                        emit({">", lookup_use(">", level, level_id)}, $1->place, $3->place, $$->place);
+                                                      }
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -794,6 +804,11 @@ relational_expression
                                                       char* label; string tmp = "<= " + type; label = &tmp[0];
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
+
+                                                      if(!error_throw){
+                                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                                        emit({"LE_OP", lookup_use("<=", level, level_id)}, $1->place, $3->place, $$->place);
+                                                      }
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -812,6 +827,11 @@ relational_expression
                                                       char* label; string tmp = ">= " + type; label = &tmp[0];
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
+
+                                                      if(!error_throw){
+                                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                                        emit({"GE_OP", lookup_use(">=", level, level_id)}, $1->place, $3->place, $$->place);
+                                                      }
                                                     }
                                                     else {
                                                       error_throw = true;
@@ -834,6 +854,11 @@ equality_expression
                                                         char* label; string tmp = "== " + type; label = &tmp[0];
                                                         $$ = non_terminal(0, label, $1, $3);
                                                         $$->nodetype = "bool";
+
+                                                        if(!error_throw){
+                                                          $$->place = newtmp($$->nodetype, level, level_id);
+                                                          emit({"EQ_OP", lookup_use("==", level, level_id)}, $1->place, $3->place, $$->place);
+                                                        }
                                                       }
                                                       else {
                                                         error_throw = true;
@@ -852,6 +877,11 @@ equality_expression
                                                         char* label; string tmp = "!= " + type; label = &tmp[0];
                                                         $$ = non_terminal(0, label, $1, $3);
                                                         $$->nodetype = "bool";
+                                                        
+                                                        if(!error_throw){
+                                                          $$->place = newtmp($$->nodetype, level, level_id);
+                                                          emit({"NE_OP", lookup_use("!=", level, level_id)}, $1->place, $3->place, $$->place);
+                                                        }
                                                       }
                                                       else {
                                                         error_throw = true;
@@ -867,13 +897,12 @@ and_expression
   | and_expression '&' equality_expression  {if ($1->init && $3->init) $$->init = true;
                                               string type = bit_type($1->nodetype, $3->nodetype);
                                               if (type != "null"){
-                                                if (type == "int"){
-                                                  $$ = non_terminal(0, "& int", $1, $3);
-                                                  $$->nodetype = "long long";
-                                                }
-                                                else {
-                                                  $$ = non_terminal(0, "& bool", $1, $3);
-                                                  $$->nodetype = &type[0];
+                                                $$ = non_terminal(0, "& int", $1, $3);
+                                                $$->nodetype = "long long";
+
+                                                if(!error_throw){
+                                                  $$->place = newtmp($$->nodetype, level, level_id);
+                                                  emit({"&",lookup_use("&", level, level_id)}, $1->place, $3->place, $$->place);
                                                 }
                                               }
                                               else {
@@ -890,20 +919,19 @@ exclusive_or_expression
   | exclusive_or_expression '^' and_expression  {if ($1->init && $3->init) $$->init = true;
                                                   string type = bit_type($1->nodetype, $3->nodetype);
                                                   if (type != "null"){
-                                                    if (type == "int"){
-                                                      $$ = non_terminal(0, "^ int", $1, $3);
-                                                      $$->nodetype = "long long";
-                                                    }
-                                                    else {
-                                                      $$ = non_terminal(0, "^ bool", $1, $3);
-                                                      $$->nodetype = &type[0];
+                                                    $$ = non_terminal(0, "^ int", $1, $3);
+                                                    $$->nodetype = "long long";
+
+                                                    if(!error_throw){
+                                                      $$->place = newtmp($$->nodetype, level, level_id);
+                                                      emit({"&",lookup_use("^", level, level_id)}, $1->place, $3->place, $$->place);
                                                     }
                                                   }
                                                   else {
                                                     error_throw = true;
                                                     fprintf(stderr, "%d |\t Error : Invalid operand(s) with ^\n", line);
                                                     $$ = non_terminal(0, $2, $1, $3);
-                                                    $$->nodetype = &type[0];
+                                                    $$->nodetype = ^type[0];
                                                   } 
                                                 }
   ;
@@ -913,13 +941,12 @@ inclusive_or_expression
   | inclusive_or_expression '|' exclusive_or_expression  {if ($1->init && $3->init) $$->init = true;
                                                           string type = bit_type($1->nodetype, $3->nodetype);
                                                           if (type != "null"){
-                                                            if (type == "int"){
-                                                              $$ = non_terminal(0, "| int", $1, $3);
-                                                              $$->nodetype = "long long";
-                                                            }
-                                                            else {
-                                                              $$ = non_terminal(0, "| bool", $1, $3);
-                                                              $$->nodetype = &type[0];
+                                                            $$ = non_terminal(0, "| int", $1, $3);
+                                                            $$->nodetype = "long long";
+
+                                                            if(!error_throw){
+                                                              $$->place = newtmp($$->nodetype, level, level_id);
+                                                              emit({"|",lookup_use("|", level, level_id)}, $1->place, $3->place, $$->place);
                                                             }
                                                           }
                                                           else {
@@ -931,20 +958,63 @@ inclusive_or_expression
                                                           }
   ;
 
+marker1
+  : logical_and_expression AND_OP {
+                                    $$ = $1;
+                                    if(($1->truelist).size() == 0){
+                                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                      ($$->truelist).push_back(tmp1);
+                                      ($$->falselist).push_back(tmp2);
+                                    }
+                                  }
+  ;
+
 logical_and_expression
-  : inclusive_or_expression                              {$$ = $1;}
-  | logical_and_expression AND_OP inclusive_or_expression{$$ = non_terminal(0, $2, $1, $3); 
-                                                          if ($1->init && $3->init) $$->init = true;
-                                                          $$->nodetype = "bool";
-                                                         }
+  : inclusive_or_expression             {$$ = $1;}
+  | marker1 M inclusive_or_expression   {$$ = non_terminal(0, "&&", $1, $3); 
+                                          if ($1->init && $3->init) $$->init = true;
+                                          $$->nodetype = "bool";
+
+                                          if(($3->truelist).size() == 0){
+                                            int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $3->place, {"", NULL});
+                                            int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                            ($3->truelist).push_back(tmp1);
+                                            ($3->falselist).push_back(tmp2);
+                                          }
+                                          backpatch($1->truelist, $2);
+                                          $$->truelist = $3->truelist;
+                                          $$->falselist = merge($1->falselist, $3->falselist);
+                                        }
+  ;
+
+marker2
+  : logical_or_expression OR_OP {
+                                    $$ = $1;
+                                    if(($1->truelist).size() == 0){
+                                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                      ($$->truelist).push_back(tmp1);
+                                      ($$->falselist).push_back(tmp2);
+                                    }
+                                  }
   ;
 
 logical_or_expression
-  : logical_and_expression                               {$$ = $1;}
-  | logical_or_expression OR_OP logical_and_expression   {$$ = non_terminal(0, $2, $1, $3); 
-                                                          if ($1->init && $3->init) $$->init = true;
-                                                          $$->nodetype = "bool";
-                                                         }
+  : logical_and_expression            {$$ = $1;}
+  | marker2 M logical_and_expression  {$$ = non_terminal(0, "||", $1, $3); 
+                                        if ($1->init && $3->init) $$->init = true;
+                                        $$->nodetype = "bool";
+                                        if(($3->truelist).size() == 0){
+                                          int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $3->place, {"", NULL});
+                                          int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                          ($3->truelist).push_back(tmp1);
+                                          ($3->falselist).push_back(tmp2);
+                                        }
+                                        backpatch($1->falselist, $2);
+                                        $$->falselist = $3->falselist;
+                                        $$->truelist = merge($1->truelist, $3->truelist);
+                                      }
   ;
 
 conditional_expression
