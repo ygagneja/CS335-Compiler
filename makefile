@@ -5,7 +5,7 @@ YACC=bison
 
 all: ./bin/parser
 
-./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.* ./src/type_check.* ./src/sym_table.*
+./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.* ./src/type_check.* ./src/sym_table.* ./src/3ac.*
 	mkdir -p bin
 	$(CC) $^ -o $@ -I ./src
 

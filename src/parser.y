@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "nodes.h"
-#include "sym_table.h"
 #include "type_check.h"
-#include "3ac.h"
 
 #define MAX_LEVELS 1024
 using namespace std;
@@ -35,6 +33,7 @@ extern int line;
   char* str;      /* node label */
   node* ptr;     /* node pointer */
   number* constant; /* constant pointer */
+  int val; 
 };
 
 %token <str> IDENTIFIER STRING_LITERAL SIZEOF
@@ -56,6 +55,7 @@ extern int line;
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
 %type <ptr> logical_or_expression logical_and_expression conditional_expression declaration constant_expression declaration_specifiers
+%type <ptr> expr_marker exprstmt_marker
 %type <ptr> init_declarator_list storage_class_specifier type_specifier type_qualifier 
 %type <ptr> declarator initializer struct_or_union_specifier enum_specifier struct_or_union struct_declaration_list
 %type <ptr> struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enumerator pointer
@@ -63,6 +63,7 @@ extern int line;
 %type <ptr> labeled_statement compound_statement expression_statement declaration_list
 %type <ptr> selection_statement iteration_statement jump_statement external_declaration translation_unit function_definition statement
 %type <ptr> relational_expression init_declarator statement_list enumerator_list
+%type <val> M N 
 
 %%
 
@@ -75,7 +76,7 @@ primary_expression
                                       $$->symbol = $1;
                                       $$->expr_type = 3;
 
-                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id[level])};
+                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id)};
                                     }
                                     else {
                                       error_throw = true;
@@ -90,7 +91,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
-                                    if(!error_throw) $$->place = {$1->str, NULL};
+                                    if(!error_throw) $$->place = {$1 -> str, NULL};
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
@@ -99,7 +100,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
                                     
-                                    if(!error_throw) $$->place = {$1->str, NULL};
+                                    if(!error_throw) $$->place = {$1 -> str, NULL};
                                   }
   | TRUE                          {$$ = terminal("TRUE");
                                     $$->nodetype = "bool";
@@ -107,8 +108,7 @@ primary_expression
                                     $$->bool_val = true;
 
                                     if(!error_throw){
-                                      $$->place = newtmp($$->nodetype, level, level_id);
-                                      // emit($$->place = '1') //TODO
+                                      $$->place = {"1", NULL};
                                     }
                                   }
   | FALSE                         {$$ = terminal("FALSE");
@@ -117,8 +117,7 @@ primary_expression
                                     $$->bool_val = false;
 
                                     if(!error_throw){
-                                      $$->place = newtmp($$->nodetype, level, level_id);
-                                      // emit($$->place = '0') //TODO
+                                      $$->place = {"0", NULL};
                                     }
                                   }
   | STRING_LITERAL                {$$ = terminal("STRING_LITERAL");
@@ -127,7 +126,7 @@ primary_expression
 
                                     if(!error_throw) $$->place = {$1, NULL};
                                   }
-  | '(' expression ')'            {$$ = $2; }
+  | '(' expression ')'            {$$ = $2; } 
   ;
 
 postfix_expression
@@ -139,6 +138,11 @@ postfix_expression
                                               string type = postfix_type($1->nodetype, 1);
                                               if (type != "null"){
                                                 $$->nodetype = &type[0];
+
+                                                if(!error_throw){
+                                                  $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                  emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);
+                                                }
                                               }
                                               else {
                                                 error_throw = true;
@@ -158,6 +162,11 @@ postfix_expression
                                                     fprintf(stderr, "%d |\t Error : %s function requires some arguments to be passed\n", line, ($1->symbol).c_str());
                                                   }
                                                 }
+                                                if(!error_throw){
+                                                  $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                  emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
+                                                  emit({"call", NULL}, $1 -> place, {"", NULL}, $$ -> place);
+                                                }
                                               }
                                               else {
                                                 error_throw = true;
@@ -171,7 +180,7 @@ postfix_expression
                                                             if (type != "null"){
                                                               if ($1->expr_type == 3){
                                                                 string args = get_func_args($1->symbol);
-                                                                string temp1 = $3->curr_args_types;
+                                                                string temp1 = $3->curr_args_types; // This denotes the current args
                                                                 string temp2 = args == "null" ? "" : args;
                                                                 string typeA, typeB;
                                                                 string delim = string(",");
@@ -220,6 +229,21 @@ postfix_expression
                                                                   else break;
                                                                 } 
                                                               }
+                                                              if(!error_throw){
+                                                                string arguments = $3 -> curr_args_types, tmp = arguments;
+                                                                int curr_args = 0; // Should be initialised to 0 rather than 1
+                                                                size_t f = 1;
+                                                                string delim = string(",");
+                                                                while(f != string::npos){
+                                                                    curr_args++;
+                                                                    f = arguments.find_first_of(delim);
+                                                                    if(f == string::npos) tmp = arguments;
+                                                                    else tmp = arguments.substr(0, f), arguments = arguments.substr(f + 1);
+                                                                }
+                                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                                emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
+                                                                emit({"call", NULL}, $1 -> place, {to_string(curr_args), NULL}, $$ -> place);
+                                                              }
                                                             }
                                                             else {
                                                               error_throw = true;
@@ -240,6 +264,10 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
+                                              if(!error_throw){
+                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                emit({"++R", lookup_use("++", level, level_id)}, $1 -> place, {"", NULL}, $$ -> place);
+                                              }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
@@ -249,13 +277,18 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
+                                              if(!error_throw){
+                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                                emit({"--R", lookup_use("--", level, level_id)}, $1 -> place, {"", NULL}, $$ -> place);
+                                              }
                                              }
   ;
 
 argument_expression_list
-  : assignment_expression            {$$ = $1; 
+  : assignment_expression            {$$ = $1;  // Doubt in this(statement no field should be used or not?)
                                       $$->curr_args_types = $$->nodetype;
                                       if ($$->nodetype != "null") $$->nodetype = "void";
+                                      if(!error_throw) emit({"params", NULL}, $$ -> place, {"", NULL}, {"", NULL});
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
                                                           string type = args_type($1->nodetype, $3->nodetype);
@@ -263,6 +296,8 @@ argument_expression_list
                                                           if ($1->init && $3->init) $$->init = true;
                                                           string append = $1->curr_args_types + "," + $3->nodetype;
                                                           $$->curr_args_types = &append[0];
+
+                                                          if(!error_throw) emit({"params", NULL}, $3 -> place, {"", NULL}, {"", NULL});
                                                           }
   ;
 
@@ -276,6 +311,10 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
+                                    if(!error_throw){
+                                        $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                        emit({"++R", lookup_use("++", level, level_id)}, $2 -> place, {"", NULL},  $$ -> place);
+                                    }
                                   }
 
   | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -286,6 +325,10 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
+                                    if(!error_throw){
+                                        $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                        emit({"--R", lookup_use("--", level, level_id)}, $2 -> place, {"", NULL},  $$ -> place);
+                                    }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
                                     if ($2->init) $$->init = true;
@@ -294,6 +337,10 @@ unary_expression
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
+                                    }
+                                    if(!error_throw){
+                                      $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                      emit($1 -> place, $2 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -304,6 +351,10 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
+                                    if(!error_throw){
+                                      $$ -> place = newtmp($$->nodetype, level, level_id);
+                                      emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $2 -> place, {"", NULL}, $$ -> place);
+                                    }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); 
                                     if ($3->init) $$->init = true;
@@ -312,6 +363,10 @@ unary_expression
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
+                                    }
+                                    if(!error_throw){
+                                      $$ -> place = newtmp($$->nodetype, level, level_id);
+                                      emit({"SIZEOF", lookup_use("sizeof", level, level_id)}, $3 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   ;
@@ -648,6 +703,21 @@ shift_expression
                                                     if (type == "null"){
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
+                                                    }else{
+                                                      if(!error_throw){
+                                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                                        qid arg1 = $1->place;
+                                                        qid arg2 = $3->place;
+                                                        if($1->nodetype == string("char")){
+                                                          arg1 = newtmp($$->nodetype, level, level_id);
+                                                          emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                        }
+                                                        if($3->nodetype == string("char")){
+                                                          arg2 = newtmp($$->nodetype, level, level_id);
+                                                          emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                        }
+                                                        emit({"LEFT_OP", lookup_use("<<", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                      }
                                                     }
                                                   }
   | shift_expression RIGHT_OP additive_expression {$$ = non_terminal(0, $2, $1, $3); 
@@ -657,6 +727,21 @@ shift_expression
                                                     if (type == "null"){
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
+                                                    }else{
+                                                      if(!error_throw){
+                                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                                        qid arg1 = $1->place;
+                                                        qid arg2 = $3->place;
+                                                        if($1->nodetype == string("char")){
+                                                          arg1 = newtmp($$->nodetype, level, level_id);
+                                                          emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
+                                                        }
+                                                        if($3->nodetype == string("char")){
+                                                          arg2 = newtmp($$->nodetype, level, level_id);
+                                                          emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
+                                                        }
+                                                        emit({"RIGHT_OP", lookup_use(">>", level, level_id)}, arg1, arg2, $$->place); // why lookup?
+                                                      }
                                                     }
                                                   }
   ;
@@ -1447,28 +1532,166 @@ expression_statement
 	| expression ';'    {$$ = $1; }
 	;
 
+M
+  : %empty {$$ = nextinstr();}
+  ;
+
+N
+  : %empty { $$ = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL}); }
+  ;
+
+expr_marker
+  : expression    {
+                    $$ = $1;
+                    if(($1->truelist).size() == 0){
+                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                      ($$->truelist).push_back(tmp1);
+                      ($$->falselist).push_back(tmp2);
+                    }
+                  }
+
+  ;
+
+exprstmt_marker
+  : expression_statement    {
+                              $$ = $1;
+                              if(($1->truelist).size() == 0){
+                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                ($$->truelist).push_back(tmp1);
+                                ($$->falselist).push_back(tmp2);
+                              }
+                            }
+
+  ;
+
 selection_statement
-	: IF '(' expression ')' statement                  {$$ = non_terminal(0, "IF (expr) stmt", $3, $5); }
-	| IF '(' expression ')' statement ELSE statement   {$$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $5, $7); }
-	| SWITCH '(' expression ')' statement              {$$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5); }
+	: IF '(' expr_marker ')' M statement                  
+          {
+            $$ = non_terminal(0, "IF (expr) stmt", $3, $6);
+            // 3AC Start
+            if(!error_throw){
+              backpatch($3->truelist, $5);
+              $$->nextlist = merge($3->falselist, $6->nextlist);
+              $$->continuelist = $6->continuelist;
+              $$->breaklist = $6->breaklist;
+            }
+            // 3AC End
+          }
+	| IF '(' expr_marker ')' M statement N ELSE M statement   
+          {
+            $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $6, $10);
+
+            if(!error_throw){
+              backpatch($3->truelist, $5);
+              backpatch($3->falselist, $9);
+              $$->nextlist = merge($6->nextlist, $10->nextlist);
+              ($$->nextlist).push_back($7);
+              $$->breaklist = merge($6->breaklist, $10->breaklist);
+              ($$->breaklist).push_back($7);
+              $$->continuelist = merge($6->continuelist, $10->continuelist);
+              ($$->continuelist).push_back($7);
+            }
+          }
+
+	| SWITCH '(' expr_marker ')' statement             
+          {
+            $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
+
+            //TODO 3AC
+          }
 	;
 
+
 iteration_statement
-	: WHILE '(' expression ')' statement                                            {$$ = non_terminal(0, "WHILE (expr) stmt", $3, $5);}
-	| DO statement WHILE '(' expression ')' ';'                                     {$$ = non_terminal(0, "DO stmt WHILE (expr)", $2, $5);}
-	| FOR '(' expression_statement expression_statement ')' statement               {$$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $4, $6);}
-	| FOR '(' expression_statement expression_statement expression ')' statement    {$$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $4, $5, $7);}
+	: WHILE '(' M expr_marker ')' M statement                                        
+        {
+          $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
+
+          if(!error_throw){
+            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            ($7->nextlist).push_back(k);
+            backpatch($7->nextlist, $3);
+            backpatch($7->continuelist, $3);
+            backpatch($4->truelist, $6);
+            $$->nextlist = merge($4->falselist, $7->breaklist);
+          }
+        }
+	| DO M statement WHILE '(' M expr_marker ')' ';'                                     
+        {
+          $$ = non_terminal(0, "DO stmt WHILE (expr)", $3, $7);
+          if(!error_throw){
+            backpatch($3->continuelist, $6);
+            backpatch($3->nextlist, $6);
+            backpatch($7->truelist, $2);
+            $$->nextlist = merge($3->breaklist, $7->falselist);
+          }
+        }
+	| FOR '(' expression_statement M exprstmt_marker ')' M statement               
+        {
+          $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
+          if(!error_throw){
+            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            ($8->nextlist).push_back(k);
+            backpatch($5->truelist, $7);
+            backpatch($3->nextlist, $4);
+            backpatch($8->nextlist, $4);
+            backpatch($8->continuelist, $4);
+            $$->nextlist = merge($5->falselist, $8->breaklist);
+          }
+        }
+	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M statement
+        {
+          $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
+
+          if(!error_throw){
+            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            ($11->nextlist).push_back(k);
+            backpatch($11->nextlist, $6);
+            backpatch($11->continuelist, $6);
+            backpatch($5->truelist, $10);
+            backpatch($3->nextlist, $4);
+            $$->nextlist = merge($5->falselist, $11->breaklist);
+            ($7->nextlist).push_back($8);
+            backpatch($7->nextlist, $4);
+          }
+        }
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'       {$$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); }
-	| CONTINUE ';'              {$$ = terminal($1); }
-	| BREAK ';'                 {$$ = terminal($1); }
+	: GOTO IDENTIFIER ';'       {
+                                $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); 
+                                if(!error_throw){
+                                  int tmp = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                  patch_user_goto($2, tmp);
+                                }
+                              }
+	| CONTINUE ';'
+        {
+          $$ = terminal($1);
+          if(!error_throw){
+            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            ($$->continuelist).push_back(k);
+          }
+        }
+	| BREAK ';'
+        {
+          $$ = terminal($1);
+          if(!error_throw){
+            int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+            ($$->breaklist).push_back(k);
+          }
+        }
 	| RETURN ';'                {$$ = terminal($1); 
                                 string type = get_func_ret_type(func_name);
                                 if (type != "void" && type != "null"){
                                   error_throw = true;
                                   fprintf(stderr, "%d |\t Error : Function %s of type non-void is not returning a value\n", line, func_name.c_str());
+                                }else{
+                                  if(!error_throw){
+                                    emit({"RETURN", lookup_use("return", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                  }
                                 }
                               }
 	| RETURN expression ';'     {$$ = non_terminal(0, "jump_stmt", terminal($1), $2); 
@@ -1486,6 +1709,11 @@ jump_statement
                                   else {
                                     if (chk == "0") fprintf(stderr, "%d |\t Warning : Returned expression and return type are incompatible pointer types\n", line);
                                   }
+                                }
+
+                                if(!error_throw){
+                                  //Check for type-casting ?
+                                  int k = emit({"RETURN", lookup_use("return", level, level_id)}, $2->place, {"", NULL}, {"", NULL});
                                 }
                               }
 	;
