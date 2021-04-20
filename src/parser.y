@@ -1490,10 +1490,51 @@ statement
 	| jump_statement        {$$ = $1; }
 	;
 
+switch_case_marker
+  : CASE constant_expression ':'                {
+                                                  $$ = $1;
+                                                  if(($2->truelist).size() == 0){
+                                                    qid res = newtmp("bool", level, level_id);
+                                                    int tmp = emit(pair<string, sEntry*>("EQ_OP", lookup("\=\=")),pair<string, sEntry*>("", NULL), $2->place, res); 
+                                                    int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, res, {"", NULL});
+                                                    int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                    ($$->caselist).push_back(tmp);
+                                                    ($$->truelist).push_back(tmp1);
+                                                    ($$->falselist).push_back(tmp2);
+                                                  }
+                                                }
+
 labeled_statement
-	: IDENTIFIER ':' statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); }
-	| CASE constant_expression ':' statement    {$$ = non_terminal(3, "labeled_statement", terminal($1), $2, $4); }
-	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); }
+	: IDENTIFIER ':' M statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $4);
+                                                  if (!error_throw){
+                                                    if (insert_user_label($1, $3)){
+                                                      $$->nextlist = $4->nextlist;
+                                                      $$->caselist = $4->caselist;
+                                                      $$->continuelist = $4->continuelist;
+                                                      $$->breaklist = $4->breaklist;
+                                                    }
+                                                    else {
+                                                      error_throw = true;
+                                                      fprintf(stderr, "$d |\t Error : Multiple definitions of statement label \'%s\'\n", line, $1);
+                                                    }
+                                                  }
+                                                }
+	| switch_case_marker M statement            {$$ = non_terminal(0, "labeled_statement", $1, $3);
+                                                if (!error_throw){
+                                                  backpatch($1->truelist, $2);
+                                                  $$->breaklist = $3->breaklist;
+                                                  $$->nextlist = merge($3->nextlist, $1->falselist);
+                                                  $$->caselist = $1->caselist;
+                                                  $$->continuelist = $3->continuelist;
+                                                }
+                                              }
+	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
+                                                if (!error_throw)
+                                                  $$->breaklist= $3->breaklist;
+                                                  $$->nextlist = $3->nextlist;
+                                                  $$->continuelist=$3->continuelist;
+                                                }
+                                              }
 	;
 
 compound_statement
@@ -1519,12 +1560,25 @@ cl_brace
 
 declaration_list
 	: declaration                   {$$ = $1; }
-	| declaration_list declaration  {$$ = non_terminal(0, "declaration_list", $1, $2);}
+	| declaration_list M declaration  {$$ = non_terminal(0, "declaration_list", $1, $3);
+                                      if (!error_throw){
+                                        $$->nextlist = $3->nextlist;
+                                        backpatch($1->nextlist, $2);
+                                      }
+                                    }
 	;
 
 statement_list
 	: statement                 {$$ = $1; }
-	| statement_list statement  {$$ = non_terminal(0, "statement_list", $1, $2);}
+	| statement_list M statement  {$$ = non_terminal(0, "statement_list", $1, $3);
+                                  if (!error_throw){
+                                    backpatch($1->nextlist, $2);
+                                    $$->nextlist = $3->nextlist;
+                                    $$->caselist = merge($1->caselist, $3->caselist);
+                                    $$->continuelist = merge($1->continuelist, $3->continuelist;
+                                    $$->breaklist = merge($1->breaklist, $3->breaklist);
+                                  }
+                                }
 	;
 
 expression_statement
@@ -1532,24 +1586,67 @@ expression_statement
 	| expression ';'    {$$ = $1; }
 	;
 
-M
-  : %empty {$$ = nextinstr();}
+if_expression
+  : IF '(' expression ')'    {
+                              $$ = $3;
+                              if(($3->truelist).size() == 0){
+                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $3->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                ($$->truelist).push_back(tmp1);
+                                ($$->falselist).push_back(tmp2);
+                              }
+                            }
+
   ;
 
-N
-  : %empty { $$ = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL}); }
-  ;
+selection_statement
+	: if_expression M statement                  
+          {
+            $$ = non_terminal(0, "IF (expr) stmt", $1, $3);
+            if(!error_throw){
+              backpatch($1->truelist, $2);
+              $$->nextlist = merge($1->falselist, $3->nextlist);
+              $$->continuelist = $3->continuelist;
+              $$->breaklist = $3->breaklist;
+            }
+          }
+	| if_expression M statement N ELSE M statement   
+          {
+            $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $1, $3, $7);
+            if(!error_throw){
+              backpatch($1->truelist, $2);
+              backpatch($1->falselist, $6);
+              $$->nextlist = merge($3->nextlist, $7->nextlist);
+              $$->nextlist = merge($$->nextlist, $4->nextlist);
+              $$->breaklist = merge($3->breaklist, $7->breaklist);
+              $$->continuelist = merge($3->continuelist, $7->continuelist);
+            }
+          }
+
+	| SWITCH '(' expression ')' statement             
+          {
+            $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
+            if (!error_throw){
+              patch_caselist($5->caselist, $3->place);
+              $$->nextlist = merge($5->nextlist, $5->breaklist);
+              if (($5->continuelist).size){
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
+              }
+            }
+          }
+	;
 
 expr_marker
   : expression    {
-                    $$ = $1;
-                    if(($1->truelist).size() == 0){
-                      int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
-                      int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
-                      ($$->truelist).push_back(tmp1);
-                      ($$->falselist).push_back(tmp2);
-                    }
-                  }
+                              $$ = $1;
+                              if(($1->truelist).size() == 0){
+                                int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, $1->place, {"", NULL});
+                                int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                ($$->truelist).push_back(tmp1);
+                                ($$->falselist).push_back(tmp2);
+                              }
+                            }
 
   ;
 
@@ -1566,49 +1663,10 @@ exprstmt_marker
 
   ;
 
-selection_statement
-	: IF '(' expr_marker ')' M statement                  
-          {
-            $$ = non_terminal(0, "IF (expr) stmt", $3, $6);
-            // 3AC Start
-            if(!error_throw){
-              backpatch($3->truelist, $5);
-              $$->nextlist = merge($3->falselist, $6->nextlist);
-              $$->continuelist = $6->continuelist;
-              $$->breaklist = $6->breaklist;
-            }
-            // 3AC End
-          }
-	| IF '(' expr_marker ')' M statement N ELSE M statement   
-          {
-            $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $3, $6, $10);
-
-            if(!error_throw){
-              backpatch($3->truelist, $5);
-              backpatch($3->falselist, $9);
-              $$->nextlist = merge($6->nextlist, $10->nextlist);
-              ($$->nextlist).push_back($7);
-              $$->breaklist = merge($6->breaklist, $10->breaklist);
-              ($$->breaklist).push_back($7);
-              $$->continuelist = merge($6->continuelist, $10->continuelist);
-              ($$->continuelist).push_back($7);
-            }
-          }
-
-	| SWITCH '(' expr_marker ')' statement             
-          {
-            $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
-
-            //TODO 3AC
-          }
-	;
-
-
 iteration_statement
 	: WHILE '(' M expr_marker ')' M statement                                        
         {
           $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
-
           if(!error_throw){
             int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
             ($7->nextlist).push_back(k);
@@ -1644,7 +1702,6 @@ iteration_statement
 	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M statement
         {
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
-
           if(!error_throw){
             int k = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
             ($11->nextlist).push_back(k);
@@ -1653,8 +1710,7 @@ iteration_statement
             backpatch($5->truelist, $10);
             backpatch($3->nextlist, $4);
             $$->nextlist = merge($5->falselist, $11->breaklist);
-            ($7->nextlist).push_back($8);
-            backpatch($7->nextlist, $4);
+            backpatch($8->nextlist, $4);
           }
         }
 	;
@@ -1664,7 +1720,10 @@ jump_statement
                                 $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); 
                                 if(!error_throw){
                                   int tmp = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
-                                  patch_user_goto($2, tmp);
+                                  if (!patch_user_goto($2, tmp)){
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Statement with label \'%s\' not found before goto is called\n", line, $2);
+                                  }
                                 }
                               }
 	| CONTINUE ';'
@@ -1712,7 +1771,6 @@ jump_statement
                                 }
 
                                 if(!error_throw){
-                                  //Check for type-casting ?
                                   int k = emit({"RETURN", lookup_use("return", level, level_id)}, $2->place, {"", NULL}, {"", NULL});
                                 }
                               }
@@ -1720,7 +1778,10 @@ jump_statement
 
 translation_unit
 	: external_declaration                  {$$ = $1; }
-	| translation_unit external_declaration {$$ = non_terminal(0, "translation_unit", $1, $2); }
+	| translation_unit M external_declaration {$$ = non_terminal(0, "translation_unit", $1, $3); 
+                                              backpatch($1->nextlist, $2);
+                                              $$->nextlist = $3->nextlist;
+                                            }
 	;
 
 external_declaration
@@ -1730,12 +1791,15 @@ external_declaration
 
 function_definition
 	: declaration_specifiers declarator empty2 declaration_list compound_statement empty3   {
-                                                                                          $$ = non_terminal(3, "function_definition", $1, $2, $4, $5); 
-                                                                                          sym_tab_entry* entry = lookup_use($2->symbol, level, level_id);
-                                                                                          if (entry){
-                                                                                            entry->init = true;
-                                                                                          }
-                                                                                          t_name = "";
+                                                                                            $$ = non_terminal(3, "function_definition", $1, $2, $4, $5); 
+                                                                                            sym_tab_entry* entry = lookup_use($2->symbol, level, level_id);
+                                                                                            if (entry){
+                                                                                              entry->init = true;
+                                                                                            }
+                                                                                            t_name = "";
+                                                                                            if (!error_throw){
+                                                                                              int k = emit({"end", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                                                            }
                                                                                           }
 	| declaration_specifiers declarator empty2 compound_statement empty3            {
                                                                                     $$ = non_terminal(3, "function_definition", $1, $2, $4);
@@ -1744,6 +1808,9 @@ function_definition
                                                                                       entry->init = true;
                                                                                     }
                                                                                     t_name = "";
+                                                                                    if (!error_throw){
+                                                                                      int k = emit({"end", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                                                    }
                                                                                   }
 	;
 
@@ -1760,6 +1827,17 @@ empty3
           t_name = "";
         }
   ;
+
+M
+  : %empty {$$ = nextinstr();}
+  ;
+
+N
+  : %empty  { $$ = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL}); 
+              ($$->nextlist).push_back($$);
+            }
+  ;
+
 %%
 
 void yyerror(char* s){
@@ -1826,7 +1904,11 @@ int main (int argc, char* argv[]){
 }
 // exhaustive code review
 
-// incomplete and buggy structs implementation
+// incomplete and buggy structs implementation (semantics + 3ac)
+// initializer stuff (semantics)
+
+// overflow handle
+// correct bool type checks
 
 // init errors ??
 // normal syntax errors ??

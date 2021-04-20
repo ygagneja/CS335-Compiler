@@ -3,8 +3,8 @@
 long long counter = 0;
 
 vector<quad> code_arr;
-map<string, int> user_goto;
-// Function to return new symbol
+unordered_map<string, int> user_goto;
+
 string new_symbol(){
     counter++;
     string new_sym = "__T"+to_string(counter)+"__";
@@ -45,6 +45,24 @@ void backpatch(vector<int> li, int tmp){
     }
 }
 
-void patch_user_goto(string label, int addr){
-    user_goto[label] = addr;
+bool insert_user_label(string label, int addr){
+    if (user_goto.find(label) == user_goto.end()){
+        user_goto[label] = addr;
+        return true;
+    }
+    return false;
+}
+
+bool patch_user_goto(string label, int addr){
+    if (user_goto.find(label) == user_goto.end()){
+        return false;
+    }
+    code_arr[addr].goto_label = addr;
+    return true;
+}
+
+void patch_caselist(vector<int> li, qid arg1){
+    for(int i: li){
+        code_arr[i].arg1 = arg1;
+    }
 }

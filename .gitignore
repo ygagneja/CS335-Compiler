@@ -5,7 +5,6 @@ src/type_check.o
 src/sym_table.o
 src/parser.tab.c
 src/parser.tab.h
-readme
 *.dot
 *.ps
 *.csv

@@ -19,4 +19,6 @@ int emit(qid op, qid op1, qid op2, qid res);
 int nextinstr();
 vector<int> merge(vector<int> l1, vector<int> l2);
 void backpatch(vector<int> li, int tmp);
-void patch_user_goto(string label, int addr);
+bool insert_user_label(string label, int addr);
+bool patch_user_goto(string label, int addr);
+void patch_caselist(vector<int> li, qid arg1);
