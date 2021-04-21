@@ -1,5 +1,5 @@
 abstract decl are not a part
-bool is a bool, no typcasting into any other and vice versa (use ternary)
+bool and char are inherently is_type_int
 no block stmts in global scope
 level 0 and 1 have all level_id = 0
 decl and defn must have same types and sym names
@@ -7,3 +7,4 @@ storage specifiers and type qualifiers not implemented
 enum not implemented
 strictness on return types of void and non void
 ahead goto label throws error (label needs to be defined first)
+cannot initialise arrays and structs during declaration itself (can initialise char* strings tho with string literal)

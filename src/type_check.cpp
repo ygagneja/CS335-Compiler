@@ -7,6 +7,7 @@
 // total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
 bool is_type_int(string str){
+    if (str == string("char") || str == string("bool")) return true;
     if (str == string("int") || str == string("long") || str == string("long int")) return true;
     if (str == string("long long") || str == string("long long int")) return true;
     if (str == string("unsigned int") || str == string("unsigned long") || str == string("unsigned long int")) return true;
@@ -26,9 +27,8 @@ bool is_type_float(string str){
 
 string is_valid(string str1, string str2){
     if (str1 == str2) return string("1");
-    if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char") || str1 == string("bool")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char") || str2 == string("bool"))){
-        if (str1 == string("bool") || str2 == string("bool")) return string("null");
-        if (is_type_int(str1) || is_type_float(str1) || str1 == string("char")) return string("1");
+    if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
+        return string("1");
     }
     else if (str1[str1.size()-1] == '*' && (is_type_int(str2) || str2 == string("char"))) return string("0");
     else if (str2[str2.size()-1] == '*' && (is_type_int(str1) || str1 == string("char"))) return string("0");
@@ -90,13 +90,13 @@ string unary_type(char* op, string str){
         return postfix_type(str, 1);
     }
     else if (*op == '+' || *op == '-'){
-        if (is_type_int(str) || is_type_float(str) || str == string("char")) return string(str);
+        if (is_type_int(str) || is_type_float(str)) return string(str);
     }
     else if (*op == '~'){
-        if (is_type_int(str) || str == string("char") || str == string("bool")) return string(str);
+        if (is_type_int(str)) return string(str);
     }
     else if (*op == '!'){
-        if (is_type_int(str) || is_type_float(str) || str == string("char") || str == string("bool")) return string(str);
+        if (is_type_int(str) || is_type_float(str)) return string(str);
     }
     return ret_type;
 }
@@ -107,13 +107,13 @@ string cast_type(string str1, string str2){
 
 string mul_type(string str1, string str2, char op){
     string ret_type = string("null");
-    if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char"))){
+    if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
         if (op == '*' || op == '/'){
-            if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+            if ((is_type_int(str1)) && (is_type_int(str2))) return string("int");
             else return string("float");
         }
         else if (op == '%'){
-            if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+            if ((is_type_int(str1)) && (is_type_int(str2))) return string("int");
         }
     }
     return ret_type;
@@ -121,21 +121,21 @@ string mul_type(string str1, string str2, char op){
 
 string add_type(string str1, string str2){
     string ret_type = string("null");
-    if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char"))){
-        if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+    if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
+        if ((is_type_int(str1)) && (is_type_int(str2))) return string("int");
         else return string("float");
     }
-    else if (str1[str1.size()-1] == '*' && (is_type_int(str2) || str2== string("char"))){
+    else if (str1[str1.size()-1] == '*' && (is_type_int(str2))){
         return string(str1);
     }
-    else if (str2[str2.size()-1] == '*' && (is_type_int(str1) || str1 == string("char"))){
+    else if (str2[str2.size()-1] == '*' && (is_type_int(str1))){
         return string(str2);
     }
     return ret_type;
 }
 
 string shift_type(string str1, string str2){
-    if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))){
+    if ((is_type_int(str1)) && (is_type_int(str2))){
         return string(str1);
     }
     return string("null");
@@ -143,8 +143,8 @@ string shift_type(string str1, string str2){
 
 string relat_type(string str1, string str2){
     string ret_type = string("null");
-    if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char"))){
-        if ((is_type_int(str1) || str1 == string("char")) && (is_type_int(str2) || str2 == string("char"))) return string("int");
+    if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
+        if ((is_type_int(str1)) && (is_type_int(str2))) return string("int");
         else return string("float");
     }
     if (str1[str1.size()-1] == '*' && str2[str2.size()-1] == '*'){
@@ -155,7 +155,7 @@ string relat_type(string str1, string str2){
             return string("*warning");
         }
     }
-    else if ((str1[str1.size()-1] == '*' && (is_type_int(str2) || str2 == string("char"))) || (str2[str2.size()-1] == '*') && (is_type_int(str1) || str1 == string("char"))){
+    else if ((str1[str1.size()-1] == '*' && (is_type_int(str2))) || (str2[str2.size()-1] == '*') && (is_type_int(str1))){
         return string("*warning");
     }
     return ret_type;
@@ -163,7 +163,7 @@ string relat_type(string str1, string str2){
 
 string bit_type(string str1, string str2){
     string ret_type = string("null");
-    if ((is_type_int(str1) || str1 == string("bool") || str1 == string("char")) && (is_type_int(str2) || str2 == string("bool") || str2 == string("char"))){
+    if ((is_type_int(str1)) && (is_type_int(str2))){
         if (str1 == string("bool") && str2 == string("bool")) return string("bool");
         else return string("int");
     }
@@ -172,7 +172,7 @@ string bit_type(string str1, string str2){
 
 string cond_type(string str1, string str2){
     if (str1 == str2) return string(str1);
-    if ((is_type_int(str1) || is_type_float(str1) || str1 == string("char") || str1 == string("bool")) && (is_type_int(str2) || is_type_float(str2) || str2 == string("char") || str2 == string("bool"))){
+    if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
         if (str1 == string("bool") || str2 == string("bool")) return string("bool");
         return string("long double");
     }

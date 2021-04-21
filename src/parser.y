@@ -33,7 +33,7 @@ extern int line;
   char* str;      /* node label */
   node* ptr;     /* node pointer */
   number* constant; /* constant pointer */
-  int val; 
+  int addr; 
 };
 
 %token <str> IDENTIFIER STRING_LITERAL SIZEOF
@@ -50,12 +50,12 @@ extern int line;
 
 %start translation_unit 
 
-%type <str> empty1 empty2 op_brace cl_brace assignment_operator
+%type <str> empty1 empty2 empty3 op_brace cl_brace assignment_operator
+%type <ptr> marker1 marker2 marker3 N switch_case_marker expr_marker exprstmt_marker if_expression
 %type <ptr> multiplicative_expression additive_expression cast_expression primary_expression expression
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
 %type <ptr> logical_or_expression logical_and_expression conditional_expression declaration constant_expression declaration_specifiers
-%type <ptr> expr_marker exprstmt_marker marker1 marker2
 %type <ptr> init_declarator_list storage_class_specifier type_specifier type_qualifier 
 %type <ptr> declarator initializer struct_or_union_specifier enum_specifier struct_or_union struct_declaration_list
 %type <ptr> struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enumerator pointer
@@ -63,7 +63,7 @@ extern int line;
 %type <ptr> labeled_statement compound_statement expression_statement declaration_list
 %type <ptr> selection_statement iteration_statement jump_statement external_declaration translation_unit function_definition statement
 %type <ptr> relational_expression init_declarator statement_list enumerator_list
-%type <val> M N 
+%type <addr> M
 
 %%
 
@@ -76,7 +76,10 @@ primary_expression
                                       $$->symbol = $1;
                                       $$->expr_type = 3;
 
-                                      if(!error_throw) $$->place = {$1, lookup_use($1, level, level_id)};
+                                      if(!error_throw){
+                                        qid t = pair<string, sym_tab_entry*>($1, lookup_use($1, level, level_id));
+                                        $$->place = t;
+                                      } 
                                     }
                                     else {
                                       error_throw = true;
@@ -91,7 +94,11 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
-                                    if(!error_throw) $$->place = {$1 -> str, NULL};
+                                    if(!error_throw){
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit({"=", NULL}, {"", NULL}, {to_string($$->int_val), NULL}, $$->place);
+                                    }
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
@@ -100,31 +107,46 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
                                     
-                                    if(!error_throw) $$->place = {$1 -> str, NULL};
+                                    if(!error_throw){
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit({"=", NULL}, {"", NULL}, {to_string($$->float_val), NULL}, $$->place);
+                                    }
                                   }
   | TRUE                          {$$ = terminal("TRUE");
                                     $$->nodetype = "bool";
                                     $$->init = true;
                                     $$->bool_val = true;
+                                    $$->expr_type = 5;
 
                                     if(!error_throw){
-                                      $$->place = {"1", NULL};
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit({"=", NULL}, {"", NULL}, {"1", NULL}, $$->place);
                                     }
                                   }
   | FALSE                         {$$ = terminal("FALSE");
                                     $$->nodetype = "bool";
                                     $$->init = true;
                                     $$->bool_val = false;
+                                    $$->expr_type = 5;
 
                                     if(!error_throw){
-                                      $$->place = {"0", NULL};
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit({"=", NULL}, {"", NULL}, {"0", NULL}, $$->place);
                                     }
                                   }
   | STRING_LITERAL                {$$ = terminal("STRING_LITERAL");
                                     $$->nodetype = "char*";
                                     $$->init = true;
+                                    $$->expr_type = 5;
 
-                                    if(!error_throw) $$->place = {$1, NULL};
+                                    if(!error_throw){
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit({"=", NULL}, {"", NULL}, {$1, NULL}, $$->place);
+                                    }
                                   }
   | '(' expression ')'            {$$ = $2; } 
   ;
@@ -140,8 +162,9 @@ postfix_expression
                                                 $$->nodetype = &type[0];
 
                                                 if(!error_throw){
-                                                  $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                  emit({"[]", NULL}, $1 -> place, $3 -> place, $$ -> place);
+                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                  $$->place = t;
+                                                  emit({"[]", NULL}, $1->place, $3->place, $$->place);
                                                 }
                                               }
                                               else {
@@ -163,9 +186,16 @@ postfix_expression
                                                   }
                                                 }
                                                 if(!error_throw){
-                                                  $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                  emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
-                                                  emit({"call", NULL}, $1 -> place, {"", NULL}, $$ -> place);
+                                                  if (type == "void"){
+                                                    qid t = pair<string, sym_tab_entry*>("", NULL);
+                                                    $$->place = t;
+                                                  }
+                                                  else {
+                                                    qid t = newtmp($$->nodetype, level, level_id);
+                                                    $$->place = t;
+                                                  }
+                                                  emit({"params", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                  emit({"call", NULL}, {"", NULL}, $1->place, $$->place);
                                                 }
                                               }
                                               else {
@@ -187,7 +217,6 @@ postfix_expression
                                                                 size_t f1 = 1;
                                                                 size_t f2 = 1;
                                                                 int arg_num = 0;
-                                                                // cout << temp1 << endl;
                                                                 while(f1 != string::npos && f2 != string::npos){
                                                                   f1 = temp1.find_first_of(delim);
                                                                   f2 = temp2.find_first_of(delim);
@@ -230,19 +259,25 @@ postfix_expression
                                                                 } 
                                                               }
                                                               if(!error_throw){
-                                                                string arguments = $3 -> curr_args_types, tmp = arguments;
-                                                                int curr_args = 0; // Should be initialised to 0 rather than 1
+                                                                string arguments = $3->curr_args_types;
+                                                                int curr_args = 0;
                                                                 size_t f = 1;
                                                                 string delim = string(",");
                                                                 while(f != string::npos){
                                                                     curr_args++;
                                                                     f = arguments.find_first_of(delim);
-                                                                    if(f == string::npos) tmp = arguments;
-                                                                    else tmp = arguments.substr(0, f), arguments = arguments.substr(f + 1);
+                                                                    if(f == string::npos) break;
+                                                                    else arguments = arguments.substr(f+1);
                                                                 }
-                                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                                emit({"params", NULL}, {"", NULL}, {"", NULL}, $$ -> place);
-                                                                emit({"call", NULL}, $1 -> place, {to_string(curr_args), NULL}, $$ -> place);
+                                                                if (type == "void"){
+                                                                  qid t = pair<string, sym_tab_entry*>("", NULL);
+                                                                  $$->place = t;
+                                                                } 
+                                                                else {
+                                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                                  $$->place = t;
+                                                                }
+                                                                emit({"call", NULL}, {to_string(curr_args), NULL}, $1->place, $$->place);
                                                               }
                                                             }
                                                             else {
@@ -265,8 +300,9 @@ postfix_expression
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
                                               if(!error_throw){
-                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                emit({"R++", NULL}, $1 -> place, {"", NULL}, $$ -> place);
+                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                $$->place = t;
+                                                emit({"E++", NULL}, $1->place, {"", NULL}, $$->place);
                                               }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
@@ -278,17 +314,21 @@ postfix_expression
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
                                               if(!error_throw){
-                                                $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                                emit({"R--", NULL}, $1 -> place, {"", NULL}, $$ -> place);
+                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                $$->place = t;
+                                                emit({"E--", NULL}, $1->place, {"", NULL}, $$->place);
                                               }
                                              }
   ;
 
 argument_expression_list
-  : assignment_expression            {$$ = $1;  // Doubt in this(statement no field should be used or not?)
+  : assignment_expression            {$$ = $1;
                                       $$->curr_args_types = $$->nodetype;
                                       if ($$->nodetype != "null") $$->nodetype = "void";
-                                      if(!error_throw) emit({"params", NULL}, $$ -> place, {"", NULL}, {"", NULL});
+                                      if(!error_throw){
+                                        int tmp = emit({"params", NULL}, $$->place, {"", NULL}, {"", NULL});
+                                        backpatch($$->nextlist, tmp);
+                                      } 
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
                                                           string type = args_type($1->nodetype, $3->nodetype);
@@ -297,7 +337,10 @@ argument_expression_list
                                                           string append = $1->curr_args_types + "," + $3->nodetype;
                                                           $$->curr_args_types = &append[0];
 
-                                                          if(!error_throw) emit({"params", NULL}, $3 -> place, {"", NULL}, {"", NULL});
+                                                          if(!error_throw){
+                                                            int tmp = emit({"params", NULL}, {"", NULL}, $3->place, {"", NULL});
+                                                            backpatch($3->nextlist, tmp);
+                                                          } 
                                                           }
   ;
 
@@ -312,8 +355,9 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
                                     if(!error_throw){
-                                        $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                        emit({"++R", NULL}, $2 -> place, {"", NULL},  $$ -> place);
+                                        qid t = newtmp($$->nodetype, level, level_id);
+                                        $$->place = t;
+                                        emit({"++E", NULL}, $2->place, {"", NULL}, $$->place);
                                     }
                                   }
 
@@ -326,8 +370,9 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
                                     if(!error_throw){
-                                        $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                        emit({"--R", NULL}, $2 -> place, {"", NULL},  $$ -> place);
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit({"--E", NULL}, $2->place, {"", NULL}, $$->place);
                                     }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
@@ -340,7 +385,7 @@ unary_expression
                                     }
                                     if(!error_throw){
                                       $$ -> place = newtmp($$ -> nodetype, level, level_id);
-                                      emit($1 -> place, $2 -> place, {"", NULL}, $$ -> place);
+                                      emit({$1->label, NULL}, $2 -> place, {"", NULL}, $$ -> place);
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2); 
@@ -366,7 +411,7 @@ unary_expression
                                     }
                                     if(!error_throw){
                                       $$ -> place = newtmp($$->nodetype, level, level_id);
-                                      emit({"SIZEOF", NULL}, $3 -> place, {"", NULL}, $$ -> place);
+                                      emit({"SIZEOF", NULL}, {$3->nodetype, NULL}, {"", NULL}, $$->place);
                                     }
                                   }
   ;
@@ -389,20 +434,24 @@ cast_expression
                                         string tmp = $4->nodetype + "to" + $2->nodetype;
                                         
                                         if (type == "0"){
-                                          $$->nodetype = $2->nodetype;
+                                          string tmp = string(($2->place).first);
+                                          $$->nodetype = &tmp[0];
                                           fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
 
                                           if(!error_throw){
-                                            $$->place = newtmp($2->nodetype, level, level_id);
-                                            emit({tmp, NULL}, $4->place, {" ", NULL}, $$->place);
+                                            qid t = newtmp($$->nodetype, level, level_id);
+                                            $$->place = t;
+                                            emit_assignment($$->nodetype, $4->nodetype, $$->place, $4->place, level, level_id);
                                           }
                                         }
                                         else if (type == "1"){
-                                          $$->nodetype = $2->nodetype;
+                                          string tmp = string(($2->place).first);
+                                          $$->nodetype = &tmp[0];
                                           
                                           if(!error_throw){
-                                            $$->place = newtmp($2->nodetype, level, level_id);
-                                            emit({tmp, NULL}, $4->place, {" ", NULL}, $$->place);
+                                            qid t = newtmp($$->nodetype, level, level_id);
+                                            $$->place = t;
+                                            emit_assignment($$->nodetype, $4->nodetype, $$->place, $4->place, level, level_id);
                                           }
                                         }
                                         else {
@@ -422,47 +471,32 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "* int", $1, $3);
                                                               $$->nodetype = "long long";
 
-                                                              
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }
-                                                                emit({"*int", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                emit({"*int", NULL}, $1->place, $3->place, $$->place);
                                                               }
-
-                                                              
                                                             }
                                                             else if (type == "float"){
                                                               $$ = non_terminal(0, "* float", $1, $3);
                                                               $$->nodetype = "long double";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }else if(is_type_int($1->nodetype)){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                if (is_type_int($1->nodetype)){
+                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                                  emit({"*float", NULL}, tmp, $3->place, $$->place);
                                                                 }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }else if(is_type_int($3->nodetype)){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                else if (is_type_int($3->nodetype)){
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                                  emit({"*float", NULL}, $1->place, tmp, $$->place);
                                                                 }
-                                                                emit({"*float", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                else {
+                                                                  emit({"*float", NULL}, $1->place, $3->place, $$->place);
+                                                                }
                                                               }
 
                                                             }
@@ -482,44 +516,31 @@ multiplicative_expression
                                                               $$->nodetype = "long long";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }
-                                                                emit({"/int", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                emit({"/int", NULL}, $1->place, $3->place, $$->place);
                                                               }
-
                                                             }
                                                             else if (type == "float"){
                                                               $$ = non_terminal(0, "/ float", $1, $3);
                                                               $$->nodetype = "long double";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }else if(is_type_int($1->nodetype)){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                if (is_type_int($1->nodetype)){
+                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                                  emit({"/float", NULL}, tmp, $3->place, $$->place);
                                                                 }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }else if(is_type_int($3->nodetype)){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                else if (is_type_int($3->nodetype)){
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                                  emit({"/float", NULL}, $1->place, tmp, $$->place);
                                                                 }
-                                                                emit({"/float", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                else {
+                                                                  emit({"/float", NULL}, $1->place, $3->place, $$->place);
+                                                                }
                                                               }
 
                                                             }
@@ -538,18 +559,9 @@ multiplicative_expression
                                                             $$->nodetype = "long long";
 
                                                             if(!error_throw){
-                                                              $$->place = newtmp($$->nodetype, level, level_id);
-                                                              qid arg1 = $1->place;
-                                                              qid arg2 = $3->place;
-                                                              if($1->nodetype == string("char")){
-                                                                arg1 = newtmp($$->nodetype, level, level_id);
-                                                                emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                              }
-                                                              if($3->nodetype == string("char")){
-                                                                arg2 = newtmp($$->nodetype, level, level_id);
-                                                                emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                              }
-                                                              emit({"%", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                              qid t = newtmp($$->nodetype, level, level_id);
+                                                              $$->place = t;
+                                                              emit({"%int", NULL}, $1->place, $3->place, $$->place);
                                                             }
                                                           }
                                                           else {
@@ -572,18 +584,9 @@ additive_expression
                                                               $$->nodetype = "long long";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }
-                                                                emit({"+int", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                emit({"+int", NULL}, $1->place, $3->place, $$->place);
                                                               }
                                                             }
                                                             else if (type == "float"){
@@ -592,24 +595,21 @@ additive_expression
                                                               $$->nodetype = "long double";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }else if(is_type_int($1->nodetype)){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                if (is_type_int($1->nodetype)){
+                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                                  emit({"+float", NULL}, tmp, $3->place, $$->place);
                                                                 }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }else if(is_type_int($3->nodetype)){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                else if (is_type_int($3->nodetype)){
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                                  emit({"+float", NULL}, $1->place, tmp, $$->place);
                                                                 }
-                                                                emit({"+float", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                else {
+                                                                  emit({"+float", NULL}, $1->place, $3->place, $$->place);
+                                                                }
                                                               }
                                                             }
                                                             else {
@@ -617,7 +617,24 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = &type[0];
 
-                                                              // 3AC TODO
+                                                              if(!error_throw){
+                                                                if (is_type_int($1->nodetype)){
+                                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                                  $$->place = t;
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  string tp($3->nodetype); tp[tp.size()-1] = '\0';
+                                                                  emit({"*int", NULL}, $1->place, {to_string(get_size(tp, level, level_id)), NULL}, tmp);
+                                                                  emit({"+int", NULL}, tmp, $3->place, $$->place);
+                                                                }
+                                                                else {
+                                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                                  $$->place = t;
+                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
+                                                                  string tp($1->nodetype); tp[tp.size()-1] = '\0';
+                                                                  emit({"*int", NULL}, $3->place, {to_string(get_size(tp, level, level_id)), NULL}, tmp);
+                                                                  emit({"+int", NULL}, $1->place, tmp, $$->place);
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                           else {
@@ -636,18 +653,9 @@ additive_expression
                                                               $$->nodetype = "long long";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }
-                                                                emit({"-int", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                emit({"-int", NULL}, $1->place, $3->place, $$->place);
                                                               }
                                                             }
                                                             else if (type == "float"){
@@ -656,24 +664,21 @@ additive_expression
                                                               $$->nodetype = "long double";
 
                                                               if(!error_throw){
-                                                                $$->place = newtmp($$->nodetype, level, level_id);
-                                                                qid arg1 = $1->place;
-                                                                qid arg2 = $3->place;
-                                                                if($1->nodetype == string("char")){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $1->place, {" ", NULL}, arg1);
-                                                                }else if(is_type_int($1->nodetype)){
-                                                                  arg1 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $1->place, {" ", NULL}, arg1);
+                                                                qid t = newtmp($$->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                if (is_type_int($1->nodetype)){
+                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                                  emit({"-float", NULL}, tmp, $3->place, $$->place);
                                                                 }
-                                                                if($3->nodetype == string("char")){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"chartofloat", NULL}, $3->place, {" ", NULL}, arg2);
-                                                                }else if(is_type_int($3->nodetype)){
-                                                                  arg2 = newtmp($$->nodetype, level, level_id);
-                                                                  emit({"inttofloat", NULL}, $3->place, {" ", NULL}, arg2);
+                                                                else if (is_type_int($3->nodetype)){
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                                  emit({"-float", NULL}, $1->place, tmp, $$->place);
                                                                 }
-                                                                emit({"-float", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                                else {
+                                                                  emit({"-float", NULL}, $1->place, $3->place, $$->place);
+                                                                }
                                                               }
                                                             }
                                                             else {
@@ -681,7 +686,24 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = &type[0];
 
-                                                              //3AC TODO
+                                                              if(!error_throw){
+                                                                if (is_type_int($1->nodetype)){
+                                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                                  $$->place = t;
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  string tp($3->nodetype); tp[tp.size()-1] = '\0';
+                                                                  emit({"*int", NULL}, $1->place, {to_string(get_size(tp, level, level_id)), NULL}, tmp);
+                                                                  emit({"-int", NULL}, tmp, $3->place, $$->place);
+                                                                }
+                                                                else {
+                                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                                  $$->place = t;
+                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
+                                                                  string tp($1->nodetype); tp[tp.size()-1] = '\0';
+                                                                  emit({"*int", NULL}, $3->place, {to_string(get_size(tp, level, level_id)), NULL}, tmp);
+                                                                  emit({"-int", NULL}, $1->place, tmp, $$->place);
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                           else {
@@ -705,18 +727,9 @@ shift_expression
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
                                                     }else{
                                                       if(!error_throw){
-                                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                                        qid arg1 = $1->place;
-                                                        qid arg2 = $3->place;
-                                                        if($1->nodetype == string("char")){
-                                                          arg1 = newtmp($$->nodetype, level, level_id);
-                                                          emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                        }
-                                                        if($3->nodetype == string("char")){
-                                                          arg2 = newtmp($$->nodetype, level, level_id);
-                                                          emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                        }
-                                                        emit({"<<", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                        qid t = newtmp($$->nodetype, level, level_id);
+                                                        $$->place = t;
+                                                        emit({"<<", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                   }
@@ -729,18 +742,9 @@ shift_expression
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
                                                     }else{
                                                       if(!error_throw){
-                                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                                        qid arg1 = $1->place;
-                                                        qid arg2 = $3->place;
-                                                        if($1->nodetype == string("char")){
-                                                          arg1 = newtmp($$->nodetype, level, level_id);
-                                                          emit({"chartoint", NULL}, $1->place, {" ", NULL}, arg1);
-                                                        }
-                                                        if($3->nodetype == string("char")){
-                                                          arg2 = newtmp($$->nodetype, level, level_id);
-                                                          emit({"chartoint", NULL}, $3->place, {" ", NULL}, arg2);
-                                                        }
-                                                        emit({">>", NULL}, arg1, arg2, $$->place); // why lookup?
+                                                        qid t = newtmp($$->nodetype, level, level_id);
+                                                        $$->place = t;
+                                                        emit({">>", NULL}, $1->place, $3->place, $$->place);
                                                       }
                                                     }
                                                   }
@@ -759,9 +763,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if(!error_throw){
-                                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"<", NULL}, $1->place, $3->place, $$->place);
+                                                      if (type == "*" || type == "int"){
+                                                        if(!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit({"<int", NULL}, $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "float"){
+                                                        if (!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          if (is_type_int($1->nodetype)){
+                                                            qid tmp = newtmp($3->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                            emit({"<float", NULL}, tmp, $3->place, $$->place);
+                                                          }
+                                                          else if (is_type_int($3->nodetype)){
+                                                            qid tmp = newtmp($1->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                            emit({"<float", NULL}, $1->place, tmp, $$->place);
+                                                          }
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -782,9 +805,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if(!error_throw){
-                                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({">", NULL}, $1->place, $3->place, $$->place);
+                                                      if (type == "*" || type == "int"){
+                                                        if(!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit({">int", NULL}, $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "float"){
+                                                        if (!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          if (is_type_int($1->nodetype)){
+                                                            qid tmp = newtmp($3->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                            emit({">float", NULL}, tmp, $3->place, $$->place);
+                                                          }
+                                                          else if (is_type_int($3->nodetype)){
+                                                            qid tmp = newtmp($1->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                            emit({">float", NULL}, $1->place, tmp, $$->place);
+                                                          }
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -805,9 +847,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if(!error_throw){
-                                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({"<=", NULL}, $1->place, $3->place, $$->place);
+                                                      if (type == "*" || type == "int"){
+                                                        if(!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit({"<=int", NULL}, $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "float"){
+                                                        if (!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          if (is_type_int($1->nodetype)){
+                                                            qid tmp = newtmp($3->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                            emit({"<=float", NULL}, tmp, $3->place, $$->place);
+                                                          }
+                                                          else if (is_type_int($3->nodetype)){
+                                                            qid tmp = newtmp($1->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                            emit({"<=float", NULL}, $1->place, tmp, $$->place);
+                                                          }
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -828,9 +889,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if(!error_throw){
-                                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                                        emit({">=", NULL}, $1->place, $3->place, $$->place);
+                                                      if (type == "*" || type == "int"){
+                                                        if(!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit({">=int", NULL}, $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "float"){
+                                                        if (!error_throw){
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          if (is_type_int($1->nodetype)){
+                                                            qid tmp = newtmp($3->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                            emit({">=float", NULL}, tmp, $3->place, $$->place);
+                                                          }
+                                                          else if (is_type_int($3->nodetype)){
+                                                            qid tmp = newtmp($1->nodetype, level, level_id);
+                                                            emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                            emit({">=float", NULL}, $1->place, tmp, $$->place);
+                                                          }
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -855,9 +935,28 @@ equality_expression
                                                         $$ = non_terminal(0, label, $1, $3);
                                                         $$->nodetype = "bool";
 
-                                                        if(!error_throw){
-                                                          $$->place = newtmp($$->nodetype, level, level_id);
-                                                          emit({"==", NULL}, $1->place, $3->place, $$->place);
+                                                        if (type == "*" || type == "int"){
+                                                          if(!error_throw){
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            emit({"==int", NULL}, $1->place, $3->place, $$->place);
+                                                          }
+                                                        }
+                                                        else if (type == "float"){
+                                                          if (!error_throw){
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            if (is_type_int($1->nodetype)){
+                                                              qid tmp = newtmp($3->nodetype, level, level_id);
+                                                              emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                              emit({"==float", NULL}, tmp, $3->place, $$->place);
+                                                            }
+                                                            else if (is_type_int($3->nodetype)){
+                                                              qid tmp = newtmp($1->nodetype, level, level_id);
+                                                              emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                              emit({"==float", NULL}, $1->place, tmp, $$->place);
+                                                            }
+                                                          }
                                                         }
                                                       }
                                                       else {
@@ -878,9 +977,28 @@ equality_expression
                                                         $$ = non_terminal(0, label, $1, $3);
                                                         $$->nodetype = "bool";
                                                         
-                                                        if(!error_throw){
-                                                          $$->place = newtmp($$->nodetype, level, level_id);
-                                                          emit({"!=", NULL}, $1->place, $3->place, $$->place);
+                                                        if (type == "*" || type == "int"){
+                                                          if(!error_throw){
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            emit({"!=int", NULL}, $1->place, $3->place, $$->place);
+                                                          }
+                                                        }
+                                                        else if (type == "float"){
+                                                          if (!error_throw){
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            if (is_type_int($1->nodetype)){
+                                                              qid tmp = newtmp($3->nodetype, level, level_id);
+                                                              emit({"inttofloat", NULL}, $1->place, {"", NULL}, tmp);
+                                                              emit({"!=float", NULL}, tmp, $3->place, $$->place);
+                                                            }
+                                                            else if (is_type_int($3->nodetype)){
+                                                              qid tmp = newtmp($1->nodetype, level, level_id);
+                                                              emit({"inttofloat", NULL}, $3->place, {"", NULL}, tmp);
+                                                              emit({"!=float", NULL}, $1->place, tmp, $$->place);
+                                                            }
+                                                          }
                                                         }
                                                       }
                                                       else {
@@ -901,7 +1019,8 @@ and_expression
                                                 $$->nodetype = "long long";
 
                                                 if(!error_throw){
-                                                  $$->place = newtmp($$->nodetype, level, level_id);
+                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                  $$->place = t;
                                                   emit({"&", NULL}, $1->place, $3->place, $$->place);
                                                 }
                                               }
@@ -923,15 +1042,16 @@ exclusive_or_expression
                                                     $$->nodetype = "long long";
 
                                                     if(!error_throw){
-                                                      $$->place = newtmp($$->nodetype, level, level_id);
-                                                      emit({"&",NULL}, $1->place, $3->place, $$->place);
+                                                      qid t = newtmp($$->nodetype, level, level_id);
+                                                      $$->place = t;
+                                                      emit({"^",NULL}, $1->place, $3->place, $$->place);
                                                     }
                                                   }
                                                   else {
                                                     error_throw = true;
                                                     fprintf(stderr, "%d |\t Error : Invalid operand(s) with ^\n", line);
                                                     $$ = non_terminal(0, $2, $1, $3);
-                                                    $$->nodetype = ^type[0];
+                                                    $$->nodetype = &type[0];
                                                   } 
                                                 }
   ;
@@ -945,7 +1065,8 @@ inclusive_or_expression
                                                             $$->nodetype = "long long";
 
                                                             if(!error_throw){
-                                                              $$->place = newtmp($$->nodetype, level, level_id);
+                                                              qid t = newtmp($$->nodetype, level, level_id);
+                                                              $$->place = t;
                                                               emit({"|", NULL}, $1->place, $3->place, $$->place);
                                                             }
                                                           }
@@ -1017,20 +1138,44 @@ logical_or_expression
                                       }
   ;
 
+marker3
+  : logical_or_expression '?'         {$$ = $1;
+                                        if(($1->truelist).size() == 0){
+                                          int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, $1->place, {"", NULL});
+                                          int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                          ($$->truelist).push_back(tmp1);
+                                          ($$->falselist).push_back(tmp2);
+                                        }
+                                      }
+
 conditional_expression
-  : logical_or_expression                                            {$$ = $1;}
-  | logical_or_expression '?' expression ':' conditional_expression  {$$ = non_terminal(3, "conditional_expression", $1, $3, $5);
-                                                                      string type = cond_type($3->nodetype, $5->nodetype);
+  : logical_or_expression                                           {$$ = $1;}
+  | marker3 M expression ':' N M conditional_expression               {$$ = non_terminal(3, "conditional_expression", $1, $3, $7);
+                                                                      string type = cond_type($3->nodetype, $7->nodetype);
                                                                       if (type != "null"){
                                                                         $$->nodetype = &type[0];
+
+                                                                        if (!error_throw){
+                                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                                          $$->place = t;
+                                                                          int k0 = emit({"=", NULL}, {"", NULL}, $7->place, $$->place);
+                                                                          backpatch($1->truelist, $2);
+                                                                          backpatch($1->falselist, $6);
+                                                                          int k1 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                                          ($$->nextlist).push_back(k1);
+                                                                          int k2 = emit({"=", NULL}, {"", NULL}, $3->place, $$->place);
+                                                                          backpatch($5->nextlist, k2);
+                                                                          backpatch($3->nextlist, k2);
+                                                                          backpatch($7->nextlist, k0);
+                                                                        }
                                                                       }
                                                                       else {
                                                                         error_throw = true;
                                                                         $$->nodetype = &type[0];
                                                                         fprintf(stderr, "%d |\t Error : Type mismatch in ternary expression\n", line);
                                                                       }
-                                                                      if ($1->init && $3->init && $5->init) $$->init = true;
-                                                                     }
+                                                                      if ($1->init && $3->init && $7->init) $$->init = true;
+                                                                    }
   ;
 
 assignment_expression
@@ -1054,6 +1199,19 @@ assignment_expression
                                                                     $$->nodetype = &type[0];
                                                                     fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype).c_str(), ($1->nodetype).c_str());
                                                                   }
+
+                                                                  if (!error_throw){
+                                                                    $$->place = $1->place;
+                                                                    $$->nextlist = $3->nextlist;
+                                                                    $$->truelist = $3->truelist;
+                                                                    $$->falselist = $3->falselist;
+                                                                    if (label == "="){
+                                                                      emit_assignment($1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                    }
+                                                                    else {
+                                                                      emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                    }
+                                                                  }
                                                                 }
   ;
 
@@ -1073,7 +1231,10 @@ assignment_operator
 
 expression
   : assignment_expression                 {$$ = $1;}
-  | expression ',' assignment_expression  {$$ = non_terminal(0, "expression", $1, $3);}
+  | expression ',' M assignment_expression  {$$ = non_terminal(0, "expression", $1, $4);
+                                              backpatch($1->nextlist, $3);
+                                              $$->nextlist = $4->nextlist;
+                                            }
   ;
 
 constant_expression
@@ -1147,13 +1308,16 @@ init_declarator
                                     else {
                                       unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
                                       insert_entry($1->symbol, $1->nodetype, size, 0, false, level, level_id[level]);
+                                      $$->init = false;
                                     }
                                     if (!error_throw){
-                                      $$->place = {$$->symbol, lookup_use($$->symbol, level, level_id)};
+                                      qid t = pair<string, sym_tab_entry*>($$->symbol, lookup_use($$->symbol, level, level_id));
+                                      $$->place = t;
                                     }
                                   }
                                 }
   | declarator '=' initializer  {$$ = non_terminal(0, $2, $1, $3);
+                                  $$->symbol = $1->symbol;
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
                                     string chk = is_valid($1->nodetype, $3->nodetype);
                                     string type = $1->nodetype;
@@ -1177,10 +1341,13 @@ init_declarator
                                       if (chk == "0") fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
                                       unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
                                       insert_entry($1->symbol, $1->nodetype, size, 0, $3->init, level, level_id[level]);
+                                      $$->nodetype = &type[0];
+                                      $$->init = true;
                                     }
                                   }
                                   if (!error_throw){
-                                    $$->place = {$$->symbol, lookup_use($$->symbol, level, level_id)};
+                                    qid t = pair<string, sym_tab_entry*>($$->symbol, lookup_use($$->symbol, level, level_id));
+                                    $$->place = t;
                                     if ($1->expr_type == 15){
                                       fprintf(stderr, "%d |\t Warning : Array initialization not allowed this way, proceeding without initialization\n", line);
                                       lookup_use($1->symbol, level, level_id)->init = false;
@@ -1283,8 +1450,12 @@ struct_declaration
   ;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);}
-	| type_specifier                            {$$ = $1;}
+	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
+                                                $$->nodetype = &t_name[0];
+                                              }
+	| type_specifier                            {$$ = $1;
+                                                $$->nodetype = &t_name[0];
+                                              }
 	| type_qualifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
@@ -1332,10 +1503,10 @@ type_qualifier
 declarator
 	: pointer direct_declarator {
                                 $$ = non_terminal(0, "declarator", $1, $2);
+                                $$->symbol = $2->symbol;
                                 if($2->expr_type == 1 || $2->expr_type == 15){
                                   string temp = $2->nodetype+$1->nodetype;
                                   $$->nodetype = &temp[0];
-                                  $$->symbol = $2->symbol;
                                   if ($2->expr_type == 15){
                                     unsigned long long size = get_size(t_name, level, level_id);
                                     if (size){
@@ -1357,12 +1528,12 @@ declarator
                                   }
                                   else update_func_type(func_name, level, level_id[level], $$->nodetype);
 
-                                  $$->symbol = $2->symbol;
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
-                                  if (!error_throw){
-                                    $$->place = {$$->symbol, NULL};
-                                  }
+                                }
+                                if (!error_throw){
+                                  qid t = pair<string, sym_tab_entry*>($$->symbol, NULL);
+                                  $$->place = t;
                                 }
                               }
 	| direct_declarator         {
@@ -1392,13 +1563,14 @@ direct_declarator
                             }
 														$$->size = get_size(t_name, level, level_id);
                             if (!error_throw){
-                              $$->place = {$$->symbol, NULL};
+                              qid t = pair<string, sym_tab_entry*>($$->symbol, NULL);
+                              $$->place = t;
                             }
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
+                                                      $$->symbol = $1->symbol;
                                                       if($1->expr_type == 1 || $1->expr_type == 15){
                                                         $$->expr_type = 15;
-                                                        $$->symbol = $1->symbol;
                                                         string temp = $1->nodetype+"*";
                                                         $$->nodetype = &temp[0];
                                                       }
@@ -1413,7 +1585,8 @@ direct_declarator
                                                         $$->size = $1->size * $3->int_val;
                                                       }
                                                       if (!error_throw){
-                                                        $$->place = {$$->symbol, NULL};
+                                                        qid t = pair<string, sym_tab_entry*>($$->symbol, NULL);
+                                                        $$->place = t;
                                                       }
                                                     }
   | direct_declarator '[' constant_expression ']'    {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
@@ -1422,8 +1595,8 @@ direct_declarator
                                                     }
 	| direct_declarator '(' empty1 parameter_type_list ')'  {
                                                             $$ = non_terminal(0, "direct_declarator", $1, $4, NULL, NULL, NULL, "()");
+                                                            $$->symbol = $1->symbol;
                                                             if($1->expr_type == 1){
-                                                              $$->symbol = $1->symbol;
                                                               $$->expr_type = 2;
                                                               $$->nodetype = $1->nodetype;
                                                               sym_tab_entry* entry = lookup_use($1->symbol, level, level_id);
@@ -1435,7 +1608,6 @@ direct_declarator
                                                                     fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
                                                                   }
                                                                   else {
-                                                                    // cout << $1->symbol << " : " << func_args << endl;
                                                                     if (!is_consistent($1->symbol, func_args)){
                                                                       error_throw = true;
                                                                       fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
@@ -1448,7 +1620,6 @@ direct_declarator
                                                                 }
                                                               }
                                                               else {
-                                                                // cout << "reached here for " << $$->symbol << "  " << func_args << "  " << func_symbols << "  " << level << "  " << level_id[level] << endl; 
                                                                 if (args_to_scope($$->symbol, func_args, func_symbols, level, level_id)){
                                                                   insert_entry($1->symbol, "func " + $$->nodetype, 0, 0, false, level, level_id[level]);
                                                                   insert_func_args($1->symbol, func_args);
@@ -1462,16 +1633,17 @@ direct_declarator
                                                               func_symbols = "";
                                                               $$->size = get_size($$->nodetype, level, level_id);
                                                               if (!error_throw){
-                                                                $$->place = {$$->symbol, NULL};
+                                                                qid t = pair<string, sym_tab_entry*>($$->symbol, NULL);
+                                                                $$->place = t;
                                                                 string start = "*function start*\t(" + $$->symbol + ")";
-                                                                emit(start, {"", NULL}, {"", NULL}, {"", NULL});
+                                                                emit({start, NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                                               }
                                                             }
                                                           }
 	| direct_declarator '(' empty1 ')'                      {
                                                             $$ = non_terminal(0, "direct_declarator", $1, NULL, NULL, NULL, NULL, "()");
+                                                            $$->symbol = $1->symbol;
                                                             if($1->expr_type == 1){
-                                                              $$->symbol = $1->symbol;
                                                               $$->expr_type = 2;
                                                               $$->nodetype = $1->nodetype;
                                                               sym_tab_entry* entry = lookup_use($1->symbol, level, level_id);
@@ -1503,9 +1675,10 @@ direct_declarator
                                                             }
                                                             $$->size = get_size($$->nodetype, level, level_id);
                                                             if (!error_throw){
-                                                              $$->place = {$$->symbol, NULL};
+                                                              qid t = pair<string, sym_tab_entry*>($$->symbol, NULL);
+                                                              $$->place = t;
                                                               string start = "*function start*\t(" + $$->symbol + ")";
-                                                              emit(start, {"", NULL}, {"", NULL}, {"", NULL});
+                                                              emit({start, NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                                             }
                                                           }
 	;
@@ -1610,9 +1783,9 @@ switch_case_marker
   : CASE constant_expression ':'                {
                                                   $$ = $2;
                                                   qid res = newtmp("bool", level, level_id);
-                                                  int tmp = emit(pair<string, sEntry*>("EQ_OP", lookup("\=\=")),pair<string, sEntry*>("", NULL), $2->place, res); 
-                                                  int tmp1 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"IF", lookup_use("if", level, level_id)}, res, {"", NULL});
-                                                  int tmp2 = emit({"GOTO", lookup_use("goto", level, level_id)}, {"", NULL}, {"", NULL}, {"", NULL});
+                                                  int tmp = emit({"==", NULL}, {"", NULL}, $2->place, res); 
+                                                  int tmp1 = emit({"GOTO", NULL}, {"IF", NULL}, res, {"", NULL});
+                                                  int tmp2 = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL});
                                                   ($$->caselist).push_back(tmp);
                                                   ($$->truelist).push_back(tmp1);
                                                   ($$->falselist).push_back(tmp2);
@@ -1643,7 +1816,7 @@ labeled_statement
                                                 }
                                               }
 	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
-                                                if (!error_throw)
+                                                if (!error_throw){
                                                   $$->breaklist= $3->breaklist;
                                                   $$->nextlist = $3->nextlist;
                                                   $$->continuelist=$3->continuelist;
@@ -1689,7 +1862,7 @@ statement_list
                                     backpatch($1->nextlist, $2);
                                     $$->nextlist = $3->nextlist;
                                     $$->caselist = merge($1->caselist, $3->caselist);
-                                    $$->continuelist = merge($1->continuelist, $3->continuelist;
+                                    $$->continuelist = merge($1->continuelist, $3->continuelist);
                                     $$->breaklist = merge($1->breaklist, $3->breaklist);
                                   }
                                 }
@@ -1743,7 +1916,7 @@ selection_statement
             if (!error_throw){
               patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
-              if (($5->continuelist).size){
+              if (($5->continuelist).size()){
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
               }
@@ -1951,8 +2124,8 @@ M
   ;
 
 N
-  : %empty  { $$ = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL}); 
-              ($$->nextlist).push_back($$);
+  : %empty  { int k = emit({"GOTO", NULL}, {"", NULL}, {"", NULL}, {"", NULL}); 
+              ($$->nextlist).push_back(k);
             }
   ;
 
@@ -2013,9 +2186,10 @@ int main (int argc, char* argv[]){
     graph_end();
     if (error_throw){
       // remove ast
-      // exit(0);
+      exit(0);
     }
     dump_tables();
+    dump_3ac();
     fclose (yyin);
     fclose (ast);
     return 0;
@@ -2025,11 +2199,11 @@ int main (int argc, char* argv[]){
 // incomplete and buggy structs implementation (semantics + 3ac)
 // initializer stuff (semantics + 3ac)
 
-// overflow handle
-// correct bool type checks
+// how is actual typecasting happening ??? signed unsigned float int pointer short long etc
 
 // init errors ??
 // normal syntax errors ??
 // aggressive error propagation
 // add more warnings
 // propagate symbol names
+// else of reqd expr type condn
