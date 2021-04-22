@@ -6,24 +6,24 @@ using namespace std;
 typedef struct {
     int id;
     char* label;
-    string nodetype;
+    char* nodetype;
     long long int int_val;
     long double float_val;
     bool bool_val;
     bool init = false;
     string symbol;
-    string curr_args_types;
+    char* curr_args_types;
     int expr_type;
     unsigned long long size;
     unsigned long long max_size = 0;
 
-    vector<int> nextlist;
-    vector<int> truelist;
-    vector<int> falselist;
-    vector<int> breaklist;
-    vector<int> continuelist;
-    vector<int> caselist;
-    qid place;
+    clist* nextlist = NULL;
+    clist* truelist = NULL;
+    clist* falselist = NULL;
+    clist* breaklist = NULL;
+    clist* continuelist = NULL;
+    clist* caselist = NULL;
+    qid place = NULL;
 } node;
 
 typedef struct {

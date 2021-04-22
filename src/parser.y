@@ -69,10 +69,12 @@ extern int line;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1);
+                                    // cout << "id enter\n";
                                     string type = id_type($1, level, level_id);
                                     if (type != "null"){
                                       $$->init = lookup_use($1, level, level_id)->init;
-                                      $$->nodetype = &type[0];
+                                      $$->nodetype = new char[type.size()+1];
+                                      strcpy($$->nodetype, type.c_str());
                                       $$->symbol = $1;
                                       $$->expr_type = 3;
 
@@ -83,28 +85,39 @@ primary_expression
                                     }
                                     else {
                                       error_throw = true;
-                                      $$->nodetype = &type[0];
+                                      $$->nodetype = new char[type.size()+1];
+                                      strcpy($$->nodetype, type.c_str());
                                       fprintf(stderr, "%d |\t Error : %s is not declared in this scope\n", line, $1);
                                     }
+                                    // cout << "id exit\n";
                                   }
   | INT_C                        {$$ = terminal("INT_C");
+                                    // cout << "int enter\n";
                                     $$->init = true;
                                     string type = const_type($1->type);
-                                    $$->nodetype = &type[0];
+                                    $$->nodetype = new char[type.size()+1];
+                                    strcpy($$->nodetype, type.c_str());
+                                    // cout << $$->nodetype << " " << level << " " << level_id[level] << endl;
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
                                     if(!error_throw){
                                       qid t = newtmp($$->nodetype, level, level_id);
+                                      // cout << "int exit1\n";
                                       $$->place = t;
+                                      // cout << "int exit2\n";
                                       int k = emit("=", NULL, NULL, $$->place);
+                                      // cout << "int exit3\n";
                                       patch_constant(to_string($$->int_val), k);
+                                      // cout << "int exit4\n";
                                     }
+                                    // cout << "int exit5\n";
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
                                     string type = const_type($1->type);
-                                    $$->nodetype = &type[0];
+                                    $$->nodetype = new char[type.size()+1];
+                                    strcpy($$->nodetype, type.c_str());
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
                                     
@@ -164,7 +177,8 @@ postfix_expression
                                               }
                                               string type = postfix_type($1->nodetype, 1);
                                               if (type != "null"){
-                                                $$->nodetype = &type[0];
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
 
                                                 if(!error_throw){
                                                   qid t = newtmp($$->nodetype, level, level_id);
@@ -174,14 +188,16 @@ postfix_expression
                                               }
                                               else {
                                                 error_throw = true;
-                                                $$->nodetype = &type[0];
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
                                                 fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension\n", line, ($1->symbol).c_str());
                                               }
                                              }
   | postfix_expression '(' ')'               {$$ = $1;
                                               $$->init = true;
                                               string type = postfix_type($1->nodetype, 2);
-                                              $$->nodetype = &type[0];
+                                              $$->nodetype = new char[type.size()+1];
+                                              strcpy($$->nodetype, type.c_str());
                                               if (type != "null"){
                                                 if ($1->expr_type == 3){
                                                   string args = get_func_args($1->symbol);
@@ -211,11 +227,12 @@ postfix_expression
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
                                                             if ($3->init) $$->init = true;
                                                             string type = postfix_type($1->nodetype, 3);
-                                                            $$->nodetype = &type[0];
+                                                            $$->nodetype = new char[type.size()+1];
+                                                            strcpy($$->nodetype, type.c_str());
                                                             if (type != "null"){
                                                               if ($1->expr_type == 3){
                                                                 string args = get_func_args($1->symbol);
-                                                                string temp1 = $3->curr_args_types; // This denotes the current args
+                                                                string temp1($3->curr_args_types); // This denotes the current args
                                                                 string temp2 = args == "null" ? "" : args;
                                                                 string typeA, typeB;
                                                                 string delim = string(",");
@@ -264,7 +281,7 @@ postfix_expression
                                                                 } 
                                                               }
                                                               if(!error_throw){
-                                                                string arguments = $3->curr_args_types;
+                                                                string arguments($3->curr_args_types);
                                                                 int curr_args = 0;
                                                                 size_t f = 1;
                                                                 string delim = string(",");
@@ -300,7 +317,8 @@ postfix_expression
   | postfix_expression INC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
                                               string type = postfix_type($1->nodetype, 6);
-                                              $$->nodetype = &type[0];
+                                              $$->nodetype = new char[type.size()+1];
+                                              strcpy($$->nodetype, type.c_str());
                                               if (type == "null"){
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
@@ -314,7 +332,8 @@ postfix_expression
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
                                               string type = postfix_type($1->nodetype, 7);
-                                              $$->nodetype = &type[0];
+                                              $$->nodetype = new char[type.size()+1];
+                                              strcpy($$->nodetype, type.c_str());
                                               if (type == "null"){
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
@@ -329,7 +348,9 @@ postfix_expression
 
 argument_expression_list
   : assignment_expression            {$$ = $1;
-                                      $$->curr_args_types = $$->nodetype;
+                                      string temp($$->nodetype);
+                                      $$->curr_args_types = new char[temp.size()+1];
+                                      strcpy($$->curr_args_types, temp.c_str());
                                       if ($$->nodetype != "null") $$->nodetype = "void";
                                       if(!error_throw){
                                         int tmp = emit("params", NULL, $$->place, NULL);
@@ -338,10 +359,12 @@ argument_expression_list
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3); 
                                                           string type = args_type($1->nodetype, $3->nodetype);
-                                                          $$->nodetype = &type[0];
+                                                          $$->nodetype = new char[type.size()+1];
+                                                          strcpy($$->nodetype, type.c_str());
                                                           if ($1->init && $3->init) $$->init = true;
-                                                          string append = $1->curr_args_types + "," + $3->nodetype;
-                                                          $$->curr_args_types = &append[0];
+                                                          string append = string($1->curr_args_types) + "," + string($3->nodetype);
+                                                          $$->curr_args_types = new char[append.size()+1];
+                                                          strcpy($$->curr_args_types, append.c_str());
 
                                                           if(!error_throw){
                                                             int tmp = emit("params", NULL, $3->place, NULL);
@@ -355,7 +378,8 @@ unary_expression
   | INC_OP unary_expression       {$$ = non_terminal(0, $1, $2);
                                     if ($2->init) $$->init = true;
                                     string type = postfix_type($2->nodetype, 6);
-                                    $$->nodetype = &type[0];
+                                    $$->nodetype = new char[type.size()+1];
+                                    strcpy($$->nodetype, type.c_str());
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
@@ -370,7 +394,8 @@ unary_expression
   | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); 
                                     if ($2->init) $$->init = true;
                                     string type = postfix_type($2->nodetype, 7);
-                                    $$->nodetype = &type[0];
+                                    $$->nodetype = new char[type.size()+1];
+                                    strcpy($$->nodetype, type.c_str());
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
@@ -384,13 +409,14 @@ unary_expression
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2); 
                                     if ($2->init) $$->init = true;
                                     string type = unary_type($1->label, $2->nodetype);
-                                    $$->nodetype = &type[0];
+                                    $$->nodetype = new char[type.size()+1];
+                                    strcpy($$->nodetype, type.c_str());
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
                                     }
                                     if(!error_throw){
-                                      $$ -> place = newtmp($$ -> nodetype, level, level_id);
+                                      $$ -> place = newtmp($$->nodetype, level, level_id);
                                       emit($1->label, NULL, $2 -> place, $$ -> place);
                                     }
                                   }
@@ -436,9 +462,8 @@ cast_expression
   : unary_expression                  {$$ = $1; }
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); 
                                         string type = cast_type($2->nodetype, $4->nodetype);
-                                        $$->nodetype = &type[0];
-
-                                        string tmp = $4->nodetype + "to" + $2->nodetype;
+                                        $$->nodetype = new char[type.size()+1];
+                                        strcpy($$->nodetype, type.c_str());
                                         
                                         if (type == "0"){
                                           $$->nodetype = $2->nodetype;
@@ -461,7 +486,7 @@ cast_expression
                                         }
                                         else {
                                           error_throw = true;
-                                          fprintf(stderr, "%d |\t Error : Cannot typecast given expression to %s\n", line, ($2->nodetype).c_str());
+                                          fprintf(stderr, "%d |\t Error : Cannot typecast given expression to %s\n", line, ($2->nodetype));
                                         }
                                         if ($4->init) $$->init = true;
                                       }
@@ -620,13 +645,14 @@ additive_expression
                                                             else {
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
-                                                              $$->nodetype = &type[0];
+                                                              $$->nodetype = new char[type.size()+1];
+                                                              strcpy($$->nodetype, type.c_str());
 
                                                               if(!error_throw){
                                                                 if (is_type_int($1->nodetype)){
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
-                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
+                                                                  qid tmp = newtmp($1->nodetype, level, level_id); 
                                                                   string tp($3->nodetype); tp[tp.size()-1] = '\0';
                                                                   int k = emit("*int", $1->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
@@ -691,7 +717,8 @@ additive_expression
                                                             else {
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
-                                                              $$->nodetype = &type[0];
+                                                              $$->nodetype = new char[type.size()+1];
+                                                              strcpy($$->nodetype, type.c_str());
 
                                                               if(!error_throw){
                                                                 if (is_type_int($1->nodetype)){
@@ -730,7 +757,8 @@ shift_expression
   | shift_expression LEFT_OP additive_expression  {$$ = non_terminal(0, $2, $1, $3);
                                                     if ($1->init && $3->init) $$->init = true;
                                                     string type = shift_type($1->nodetype, $3->nodetype);
-                                                    $$->nodetype = &type[0];
+                                                    $$->nodetype = new char[type.size()+1];
+                                                    strcpy($$->nodetype, type.c_str());
                                                     if (type == "null"){
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
@@ -745,7 +773,8 @@ shift_expression
   | shift_expression RIGHT_OP additive_expression {$$ = non_terminal(0, $2, $1, $3); 
                                                     if ($1->init && $3->init) $$->init = true;
                                                     string type = shift_type($1->nodetype, $3->nodetype);
-                                                    $$->nodetype = &type[0];
+                                                    $$->nodetype = new char[type.size()+1];
+                                                    strcpy($$->nodetype, type.c_str());
                                                     if (type == "null"){
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
@@ -765,7 +794,7 @@ relational_expression
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
                                                       if (type == "*warning"){
-                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype), ($3->nodetype));
                                                         type = "*";
                                                       }
                                                       char* label; string tmp = "< " + type; label = &tmp[0];
@@ -800,14 +829,15 @@ relational_expression
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <\n", line);
                                                       $$ = non_terminal(0, $2, $1, $3);
-                                                      $$->nodetype = &type[0];
+                                                      $$->nodetype = new char[type.size()+1];
+                                                      strcpy($$->nodetype, type.c_str());
                                                     }
                                                   }
   | relational_expression '>' shift_expression    {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
                                                       if (type == "*warning"){
-                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype), ($3->nodetype));
                                                         type = "*";
                                                       }
                                                       char* label; string tmp = "> " + type; label = &tmp[0];
@@ -842,14 +872,15 @@ relational_expression
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >\n", line);
                                                       $$ = non_terminal(0, $2, $1, $3);
-                                                      $$->nodetype = &type[0];
+                                                      $$->nodetype = new char[type.size()+1];
+                                                      strcpy($$->nodetype, type.c_str());
                                                     } 
                                                   }
   | relational_expression LE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
                                                       if (type == "*warning"){
-                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype), ($3->nodetype));
                                                         type = "*";
                                                       }
                                                       char* label; string tmp = "<= " + type; label = &tmp[0];
@@ -884,14 +915,15 @@ relational_expression
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <=\n", line);
                                                       $$ = non_terminal(0, $2, $1, $3);
-                                                      $$->nodetype = &type[0];
+                                                      $$->nodetype = new char[type.size()+1];
+                                                      strcpy($$->nodetype, type.c_str());
                                                     }
                                                   }
   | relational_expression GE_OP shift_expression  {if ($1->init && $3->init) $$->init = true;
                                                     string type = relat_type($1->nodetype, $3->nodetype);
                                                     if (type != "null"){
                                                       if (type == "*warning"){
-                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype), ($3->nodetype));
                                                         type = "*";
                                                       }
                                                       char* label; string tmp = ">= " + type; label = &tmp[0];
@@ -926,7 +958,8 @@ relational_expression
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >=\n", line);
                                                       $$ = non_terminal(0, $2, $1, $3);
-                                                      $$->nodetype = &type[0];
+                                                      $$->nodetype = new char[type.size()+1];
+                                                      strcpy($$->nodetype, type.c_str());
                                                     }
                                                   }
   ;
@@ -937,7 +970,7 @@ equality_expression
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != "null"){
                                                         if (type == "*warning"){
-                                                          fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype), ($3->nodetype));
                                                           type = "*";
                                                         }
                                                         char* label; string tmp = "== " + type; label = &tmp[0];
@@ -972,14 +1005,15 @@ equality_expression
                                                         error_throw = true;
                                                         fprintf(stderr, "%d |\t Error : Invalid operand(s) with ==\n", line);
                                                         $$ = non_terminal(0, $2, $1, $3);
-                                                        $$->nodetype = &type[0];
+                                                        $$->nodetype = new char[type.size()+1];
+                                                        strcpy($$->nodetype, type.c_str());
                                                       } 
                                                     }
   | equality_expression NE_OP relational_expression {if ($1->init && $3->init) $$->init = true;
                                                       string type = relat_type($1->nodetype, $3->nodetype);
                                                       if (type != "null"){
                                                         if (type == "*warning"){
-                                                          fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between %s and %s\n", line, ($1->nodetype), ($3->nodetype));
                                                           type = "*";
                                                         }
                                                         char* label; string tmp = "!= " + type; label = &tmp[0];
@@ -1014,7 +1048,8 @@ equality_expression
                                                         error_throw = true;
                                                         fprintf(stderr, "%d |\t Error : Invalid operand(s) with !=\n", line);
                                                         $$ = non_terminal(0, $2, $1, $3);
-                                                        $$->nodetype = &type[0];
+                                                        $$->nodetype = new char[type.size()+1];
+                                                        strcpy($$->nodetype, type.c_str());
                                                       } 
                                                     }
   ;
@@ -1037,7 +1072,8 @@ and_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Invalid operand(s) with &\n", line);
                                                 $$ = non_terminal(0, $2, $1, $3);
-                                                $$->nodetype = &type[0];
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
                                               }
                                             }
   ;
@@ -1060,7 +1096,8 @@ exclusive_or_expression
                                                     error_throw = true;
                                                     fprintf(stderr, "%d |\t Error : Invalid operand(s) with ^\n", line);
                                                     $$ = non_terminal(0, $2, $1, $3);
-                                                    $$->nodetype = &type[0];
+                                                    $$->nodetype = new char[type.size()+1];
+                                                    strcpy($$->nodetype, type.c_str());
                                                   } 
                                                 }
   ;
@@ -1083,7 +1120,8 @@ inclusive_or_expression
                                                             error_throw = true;
                                                             fprintf(stderr, "%d |\t Error : Invalid operand(s) with |\n", line);
                                                             $$ = non_terminal(0, $2, $1, $3);
-                                                            $$->nodetype = &type[0];
+                                                            $$->nodetype = new char[type.size()+1];
+                                                            strcpy($$->nodetype, type.c_str());
                                                           }
                                                           }
   ;
@@ -1091,11 +1129,11 @@ inclusive_or_expression
 marker1
   : logical_and_expression AND_OP {
                                     $$ = $1;
-                                    if(($1->truelist).size() == 0){
+                                    if($1->truelist == NULL){
                                       int tmp1 = emit("GOTO IF", NULL, $1->place, NULL);
                                       int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                      ($$->truelist).push_back(tmp1);
-                                      ($$->falselist).push_back(tmp2);
+                                      ($$->truelist) = insert($$->truelist, tmp1);
+                                      ($$->falselist) = insert($$->falselist, tmp2);
                                     }
                                   }
   ;
@@ -1106,11 +1144,11 @@ logical_and_expression
                                           if ($1->init && $3->init) $$->init = true;
                                           $$->nodetype = "bool";
 
-                                          if(($3->truelist).size() == 0){
+                                          if($3->truelist == NULL){
                                             int tmp1 = emit("GOTO IF", NULL, $3->place, NULL);
                                             int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                            ($3->truelist).push_back(tmp1);
-                                            ($3->falselist).push_back(tmp2);
+                                            ($3->truelist) = insert($3->truelist, tmp1);
+                                            ($3->falselist) = insert($3->falselist, tmp2);
                                           }
                                           backpatch($1->truelist, $2);
                                           $$->truelist = copy($3->truelist);
@@ -1121,11 +1159,11 @@ logical_and_expression
 marker2
   : logical_or_expression OR_OP {
                                     $$ = $1;
-                                    if(($1->truelist).size() == 0){
+                                    if($1->truelist == NULL){
                                       int tmp1 = emit("GOTO IF", NULL, $1->place, NULL);
                                       int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                      ($$->truelist).push_back(tmp1);
-                                      ($$->falselist).push_back(tmp2);
+                                      ($$->truelist) = insert($$->truelist, tmp1);
+                                      ($$->falselist) = insert($$->falselist, tmp2);
                                     }
                                   }
   ;
@@ -1135,11 +1173,11 @@ logical_or_expression
   | marker2 M logical_and_expression  {$$ = non_terminal(0, "||", $1, $3); 
                                         if ($1->init && $3->init) $$->init = true;
                                         $$->nodetype = "bool";
-                                        if(($3->truelist).size() == 0){
+                                        if($3->truelist == NULL){
                                           int tmp1 = emit("GOTO IF", NULL, $3->place, NULL);
                                           int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                          ($3->truelist).push_back(tmp1);
-                                          ($3->falselist).push_back(tmp2);
+                                          ($3->truelist) = insert($3->truelist, tmp1);
+                                          ($3->falselist) = insert($3->falselist, tmp2);
                                         }
                                         backpatch($1->falselist, $2);
                                         $$->falselist = copy($3->falselist);
@@ -1149,11 +1187,11 @@ logical_or_expression
 
 marker3
   : logical_or_expression '?'         {$$ = $1;
-                                        if(($1->truelist).size() == 0){
+                                        if($1->truelist == NULL){
                                           int tmp1 = emit("GOTO IF", NULL, $1->place, NULL);
                                           int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                          ($$->truelist).push_back(tmp1);
-                                          ($$->falselist).push_back(tmp2);
+                                          ($$->truelist) = insert($$->truelist, tmp1);
+                                          ($$->falselist) = insert($$->falselist, tmp2);
                                         }
                                       }
 
@@ -1162,7 +1200,8 @@ conditional_expression
   | marker3 M expression ':' N M conditional_expression               {$$ = non_terminal(3, "conditional_expression", $1, $3, $7);
                                                                       string type = cond_type($3->nodetype, $7->nodetype);
                                                                       if (type != "null"){
-                                                                        $$->nodetype = &type[0];
+                                                                        $$->nodetype = new char[type.size()+1];
+                                                                        strcpy($$->nodetype, type.c_str());
 
                                                                         if (!error_throw){
                                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -1171,7 +1210,7 @@ conditional_expression
                                                                           backpatch($1->truelist, $2);
                                                                           backpatch($1->falselist, $6);
                                                                           int k1 = emit("GOTO", NULL, NULL, NULL);
-                                                                          ($$->nextlist).push_back(k1);
+                                                                          ($$->nextlist) = insert($$->nextlist, k1);
                                                                           int k2 = emit("=", NULL, $3->place, $$->place);
                                                                           backpatch($5->nextlist, k2);
                                                                           backpatch($3->nextlist, k2);
@@ -1180,7 +1219,8 @@ conditional_expression
                                                                       }
                                                                       else {
                                                                         error_throw = true;
-                                                                        $$->nodetype = &type[0];
+                                                                        $$->nodetype = new char[type.size()+1];
+                                                                        strcpy($$->nodetype, type.c_str());
                                                                         fprintf(stderr, "%d |\t Error : Type mismatch in ternary expression\n", line);
                                                                       }
                                                                       if ($1->init && $3->init && $7->init) $$->init = true;
@@ -1190,6 +1230,7 @@ conditional_expression
 assignment_expression
   : conditional_expression                                      {$$ = $1;}
   | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(0, $2, $1, $3);
+                                                                  // cout << "ass in\n";
                                                                   string label = string($2);
                                                                   string type = assign_type($1->nodetype, $3->nodetype, label);
                                                                   if (type == "0"){
@@ -1205,8 +1246,9 @@ assignment_expression
                                                                   }
                                                                   else {
                                                                     error_throw = true;
-                                                                    $$->nodetype = &type[0];
-                                                                    fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype).c_str(), ($1->nodetype).c_str());
+                                                                    $$->nodetype = new char[type.size()+1];
+                                                                    strcpy($$->nodetype, type.c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype), ($1->nodetype));
                                                                   }
 
                                                                   if (!error_throw){
@@ -1221,6 +1263,7 @@ assignment_expression
                                                                       emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
                                                                     }
                                                                   }
+                                                                  // cout << "ass out\n";
                                                                 }
   ;
 
@@ -1266,9 +1309,9 @@ declaration
                                                           }
                                                         }
                                                         if (!error_throw){
-                                                          cout << "enter decl\n";
+                                                          // cout << "enter decl\n";
                                                           $$->nextlist = copy($2->nextlist);
-                                                          cout << "exit decl\n";
+                                                          // cout << "exit decl\n";
                                                         }
                                                       }
   ;
@@ -1298,10 +1341,10 @@ init_declarator_list
   : init_declarator                           {$$ = $1;}
   | init_declarator_list ',' M init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $4);
                                                   if (!error_throw){
-                                                    cout << "enter list\n";
+                                                    // cout << "enter list\n";
                                                     backpatch($1->nextlist, $3);
                                                     $$->nextlist = copy($4->nextlist);
-                                                    cout << "exit list\n";
+                                                    // cout << "exit list\n";
                                                   }
                                                 }
   ;
@@ -1314,7 +1357,7 @@ init_declarator
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol).c_str());
                                     }
-                                    else if ($1->nodetype == "void"){
+                                    else if (type == "void"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
                                     }
@@ -1334,27 +1377,29 @@ init_declarator
                                     $$->symbol = $1->symbol;
                                     string chk = is_valid($1->nodetype, $3->nodetype);
                                     string type = $1->nodetype;
+                                    string type2 = $3->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol).c_str());
                                     }
-                                    else if ($1->nodetype == "void"){
+                                    else if (type == "void"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
                                     }
-                                    else if ($3->nodetype == "void"){
+                                    else if (type2 == "void"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Variable or field %s assigned expression of type void\n", line, ($1->symbol).c_str());
                                     }
                                     else if (chk == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, ($1->nodetype).c_str(), ($3->nodetype).c_str());
+                                      fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, ($1->nodetype), ($3->nodetype));
                                     }
                                     else {
                                       if (chk == "0") fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
                                       unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
                                       insert_entry($1->symbol, $1->nodetype, size, 0, $3->init, level, level_id[level]);
-                                      $$->nodetype = &type[0];
+                                      $$->nodetype = new char[type.size()+1];
+                                      strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
                                     }
 
@@ -1392,7 +1437,7 @@ type_specifier
   | DOUBLE   {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | SIGNED   {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
   | UNSIGNED {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1;}
-  | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? $1->nodetype : t_name+" "+$1->nodetype;}
+  | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? $1->nodetype : t_name+" "+string($1->nodetype);}
   | enum_specifier  {$$ = $1; 
                     error_throw = true;
                     fprintf(stderr, "%d |\t Error : Enum not implemented yet\n", line); 
@@ -1411,7 +1456,8 @@ struct_or_union_specifier
                                                                               }
                                                                               else {
                                                                                 string temp = $1->label + string(" ") + $2;
-                                                                                $$->nodetype = &temp[0];
+                                                                                $$->nodetype = new char[temp.size()+1];
+                                                                                strcpy($$->nodetype, temp.c_str());
                                                                                 int size = $1->label == "struct" ? $4->size : $4->max_size;
                                                                                 insert_type_entry($$->nodetype, $1->label, size, level, level_id[level]);
                                                                                 // insert type names
@@ -1420,7 +1466,8 @@ struct_or_union_specifier
   | struct_or_union struct_op_brace struct_declaration_list '}'             {$$ = non_terminal(0, "struct_or_union_specifier", $1, $3);
                                                                               struct_id++;
                                                                               string temp = $1->label + string(" ") + to_string(struct_id);
-                                                                              $$->nodetype = &temp[0];
+                                                                              $$->nodetype = new char[temp.size()+1];
+                                                                              strcpy($$->nodetype, temp.c_str());
                                                                               int size = $1->label == "struct" ? $3->size : $3->max_size;
                                                                               insert_type_entry($$->nodetype, $1->label, size, level, level_id[level]);
                                                                               // insert type names
@@ -1428,7 +1475,8 @@ struct_or_union_specifier
   | struct_or_union IDENTIFIER                                  {$$ = non_terminal(0, "struct_or_union_specifier", $1, terminal($2));
                                                                   if (lookup_type_use($1->label + string(" ") + $2, level, level_id)){
                                                                     string temp = $1->label + string(" ") + $2;
-                                                                    $$->nodetype = &temp[0];
+                                                                    $$->nodetype = new char[temp.size()+1];
+                                                                    strcpy($$->nodetype, temp.c_str());
                                                                   }
                                                                   else {
                                                                     $$->nodetype = "null";
@@ -1465,10 +1513,12 @@ struct_declaration
 
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
-                                                $$->nodetype = &t_name[0];
+                                                $$->nodetype = new char[t_name.size()+1];
+                                                strcpy($$->nodetype, t_name.c_str());
                                               }
 	| type_specifier                            {$$ = $1;
-                                                $$->nodetype = &t_name[0];
+                                                $$->nodetype = new char[t_name.size()+1];
+                                                strcpy($$->nodetype, t_name.c_str());
                                               }
 	| type_qualifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
                                                 error_throw = true;
@@ -1519,8 +1569,9 @@ declarator
                                 $$ = non_terminal(0, "declarator", $1, $2);
                                 $$->symbol = $2->symbol;
                                 if($2->expr_type == 1 || $2->expr_type == 15){
-                                  string temp = $2->nodetype+$1->nodetype;
-                                  $$->nodetype = &temp[0];
+                                  string temp = string($2->nodetype) + string($1->nodetype);
+                                  $$->nodetype = new char[temp.size()+1];
+                                  strcpy($$->nodetype, temp.c_str());
                                   if ($2->expr_type == 15){
                                     unsigned long long size = get_size(t_name, level, level_id);
                                     if (size){
@@ -1533,10 +1584,11 @@ declarator
                                   $$->expr_type = $2->expr_type;
                                 }
                                 if($2->expr_type == 2){
-                                  string temp = $2->nodetype+$1->nodetype;
-                                  $$->nodetype = &temp[0];
+                                  string temp = string($2->nodetype) + string($1->nodetype);
+                                  $$->nodetype = new char[temp.size()+1];
+                                  strcpy($$->nodetype, temp.c_str());
                                   func_name = $2->symbol;
-                                  if (decl_track.find(func_name) != decl_track.end() && $$->nodetype != get_func_ret_type(func_name)){
+                                  if (decl_track.find(func_name) != decl_track.end() && string($$->nodetype) != get_func_ret_type(func_name)){
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($2->symbol).c_str());
                                   }
@@ -1553,7 +1605,7 @@ declarator
                                 $$ = $1;
                                 if($1->expr_type == 2){
                                   func_name = $1->symbol;
-                                  if (decl_track.find(func_name) != decl_track.end() && $$->nodetype != get_func_ret_type(func_name)){
+                                  if (decl_track.find(func_name) != decl_track.end() && string($$->nodetype) != get_func_ret_type(func_name)){
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol).c_str());
                                   }
@@ -1570,7 +1622,8 @@ direct_declarator
                             $$->expr_type = 1;
 														$$->symbol = $1;
                             if (is_valid_type(t_name, level, level_id)){
-                              $$->nodetype = &t_name[0];
+                              $$->nodetype = new char[t_name.size()+1];
+                              strcpy($$->nodetype, t_name.c_str());
                             }
                             else {
                               $$->nodetype = "null";
@@ -1587,8 +1640,9 @@ direct_declarator
                                                       $$->symbol = $1->symbol;
                                                       if($1->expr_type == 1 || $1->expr_type == 15){
                                                         $$->expr_type = 15;
-                                                        string temp = $1->nodetype+"*";
-                                                        $$->nodetype = &temp[0];
+                                                        string temp = string($1->nodetype) + "*";
+                                                        $$->nodetype = new char[temp.size()+1];
+                                                        strcpy($$->nodetype, temp.c_str());
                                                       }
                                                       if ($1->expr_type == 1){
                                                         if ($1->nodetype == "void"){
@@ -1637,7 +1691,7 @@ direct_declarator
                                                               }
                                                               else {
                                                                 if (args_to_scope($$->symbol, func_args, func_symbols, level, level_id)){
-                                                                  insert_entry($1->symbol, "func " + $$->nodetype, 0, 0, false, level, level_id[level]);
+                                                                  insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
                                                                   insert_func_args($1->symbol, func_args);
                                                                 }
                                                                 else {
@@ -1683,7 +1737,7 @@ direct_declarator
                                                                 }
                                                               }
                                                               else {
-                                                                insert_entry($1->symbol, "func " + $$->nodetype, 0, 0, false, level, level_id[level]);
+                                                                insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
                                                                 insert_func_args($1->symbol, "null");
                                                               }                                         
                                                               func_args = "";
@@ -1709,12 +1763,16 @@ empty1
 
 
 pointer
-  : '*'                             {$$ = terminal($1); string temp = "*"; $$->nodetype=&temp[0];}
+  : '*'                             {$$ = terminal($1); string temp = "*"; 
+                                      $$->nodetype = new char[temp.size()+1];
+                                      strcpy($$->nodetype, temp.c_str());}
   | '*' type_qualifier_list         {$$ = non_terminal(0, $1, $2); 
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
                                     }
-  | '*' pointer                     {$$ = non_terminal(0, $1, $2); string temp = "*" + $2->nodetype; $$->nodetype=&temp[0];}
+  | '*' pointer                     {$$ = non_terminal(0, $1, $2); string temp = "*" + string($2->nodetype); 
+                                      $$->nodetype = new char[temp.size()+1];
+                                      strcpy($$->nodetype, temp.c_str());}
   | '*' type_qualifier_list pointer {$$ = non_terminal(0, $1, $2, $3);
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Type qualifier not implemented yet\n", line);
@@ -1744,7 +1802,7 @@ parameter_declaration
                                             t_name = "";
                                             if($2->expr_type == 1){
                                               func_symbols = (func_symbols == "") ? $2->symbol : func_symbols + "," + $2->symbol;
-                                              func_args = (func_args == "") ?  $2->nodetype : func_args + "," + $2->nodetype;
+                                              func_args = (func_args == "") ?  string($2->nodetype) : func_args + "," + string($2->nodetype);
                                             }
                                           }
 	;
@@ -1755,10 +1813,12 @@ type_name
 
 initializer
 	: assignment_expression         {$$ = $1; }
-	| '{' initializer_list '}'      {$$ = $2; string temp = $2->nodetype + "*"; $$->nodetype = &temp[0];}
+	| '{' initializer_list '}'      {$$ = $2; string temp = string($2->nodetype) + "*"; $$->nodetype = new char[temp.size()+1];
+                                      strcpy($$->nodetype, temp.c_str());}
 	| '{' initializer_list ',' '}'  {$$ = non_terminal(0, "initializer", $2, NULL, NULL, NULL, NULL, $3);
-                                  string temp = $2->nodetype + "*";
-                                  $$->nodetype = &temp[0]; 
+                                  string temp = string($2->nodetype) + "*";
+                                  $$->nodetype = new char[temp.size()+1];
+                                  strcpy($$->nodetype, temp.c_str());
                                   $$->expr_type = $2->expr_type;
                                   if (!error_throw){
                                     $$->place = $2->place;
@@ -1802,9 +1862,9 @@ switch_case_marker
                                                   int tmp = emit("==", NULL, $2->place, res); 
                                                   int tmp1 = emit("GOTO IF", NULL, res, NULL);
                                                   int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                                  ($$->caselist).push_back(tmp);
-                                                  ($$->truelist).push_back(tmp1);
-                                                  ($$->falselist).push_back(tmp2);
+                                                  ($$->caselist) = insert($$->caselist, tmp);
+                                                  ($$->truelist) = insert($$->truelist, tmp1);
+                                                  ($$->falselist) = insert($$->falselist, tmp2);
                                                 }
 
 labeled_statement
@@ -1833,18 +1893,27 @@ labeled_statement
                                               }
 	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
                                                 if (!error_throw){
+                                                  // cout << "def enter\n";
                                                   $$->breaklist= copy($3->breaklist);
                                                   $$->nextlist = copy($3->nextlist);
                                                   $$->continuelist = copy($3->continuelist);
+                                                  // cout << "def exit\n";
                                                 }
                                               }
 	;
 
 compound_statement
 	: op_brace cl_brace                                   {$$ = terminal("{}");}
-	| op_brace statement_list cl_brace                    {$$ = $2; }
-	| op_brace declaration_list cl_brace                  {$$ = $2; }
-	| op_brace declaration_list statement_list cl_brace   {$$ = non_terminal(0, "compound_statement", $2, $3); }
+	| op_brace statement_list cl_brace                    {$$ = $2; 
+                                                          $$->nextlist = copy($2->nextlist);
+                                                        }
+	| op_brace declaration_list cl_brace                  {$$ = $2; 
+                                                          $$->nextlist = copy($2->nextlist);
+                                                        }
+	| op_brace declaration_list M statement_list cl_brace   {$$ = non_terminal(0, "compound_statement", $2, $4); 
+                                                            backpatch($2->nextlist, $3);
+                                                            $$->nextlist = copy($4->nextlist);
+                                                          }
 	;
 
 op_brace
@@ -1875,11 +1944,13 @@ statement_list
 	: statement                 {$$ = $1; }
 	| statement_list M statement  {$$ = non_terminal(0, "statement_list", $1, $3);
                                   if (!error_throw){
+                                    // cout << "stmt list enter\n";
                                     backpatch($1->nextlist, $2);
                                     $$->nextlist = copy($3->nextlist);
                                     $$->caselist = merge($1->caselist, $3->caselist);
                                     $$->continuelist = merge($1->continuelist, $3->continuelist);
                                     $$->breaklist = merge($1->breaklist, $3->breaklist);
+                                    // cout << "stmt list exit\n";
                                   }
                                 }
 	;
@@ -1892,11 +1963,11 @@ expression_statement
 if_expression
   : IF '(' expression ')'    {
                               $$ = $3;
-                              if(($3->truelist).size() == 0){
+                              if($3->truelist == NULL){
                                 int tmp1 = emit("GOTO IF", NULL, $3->place, NULL);
                                 int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                ($$->truelist).push_back(tmp1);
-                                ($$->falselist).push_back(tmp2);
+                                ($$->truelist) = insert($$->truelist, tmp1);
+                                ($$->falselist) = insert($$->falselist, tmp2);
                               }
                             }
 
@@ -1932,7 +2003,7 @@ selection_statement
             if (!error_throw){
               patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
-              if (($5->continuelist).size()){
+              if ($5->continuelist){
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
               }
@@ -1943,11 +2014,11 @@ selection_statement
 expr_marker
   : expression    {
                               $$ = $1;
-                              if(($1->truelist).size() == 0){
+                              if($1->truelist == NULL){
                                 int tmp1 = emit("GOTO IF", NULL, $1->place, NULL);
                                 int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                ($$->truelist).push_back(tmp1);
-                                ($$->falselist).push_back(tmp2);
+                                ($$->truelist) = insert($$->truelist, tmp1);
+                                ($$->falselist) = insert($$->falselist, tmp2);
                               }
                             }
 
@@ -1956,11 +2027,11 @@ expr_marker
 exprstmt_marker
   : expression_statement    {
                               $$ = $1;
-                              if(($1->truelist).size() == 0){
+                              if($1->truelist == NULL){
                                 int tmp1 = emit("GOTO IF", NULL, $1->place, NULL);
                                 int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                ($$->truelist).push_back(tmp1);
-                                ($$->falselist).push_back(tmp2);
+                                ($$->truelist) = insert($$->truelist, tmp1);
+                                ($$->falselist) = insert($$->falselist, tmp2);
                               }
                             }
 
@@ -1972,7 +2043,7 @@ iteration_statement
           $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
           if(!error_throw){
             int k = emit("GOTO", NULL, NULL, NULL);
-            ($7->nextlist).push_back(k);
+            ($7->nextlist) = insert($7->nextlist, k);
             backpatch($7->nextlist, $3);
             backpatch($7->continuelist, $3);
             backpatch($4->truelist, $6);
@@ -1994,7 +2065,7 @@ iteration_statement
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
           if(!error_throw){
             int k = emit("GOTO", NULL, NULL, NULL);
-            ($8->nextlist).push_back(k);
+            ($8->nextlist) = insert($8->nextlist, k);
             backpatch($5->truelist, $7);
             backpatch($3->nextlist, $4);
             backpatch($8->nextlist, $4);
@@ -2007,7 +2078,7 @@ iteration_statement
           $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
           if(!error_throw){
             int k = emit("GOTO", NULL, NULL, NULL);
-            ($11->nextlist).push_back(k);
+            ($11->nextlist) = insert($11->nextlist, k);
             backpatch($11->nextlist, $6);
             backpatch($11->continuelist, $6);
             backpatch($5->truelist, $10);
@@ -2034,7 +2105,7 @@ jump_statement
           $$ = terminal($1);
           if(!error_throw){
             int k = emit("GOTO", NULL, NULL, NULL);
-            ($$->continuelist).push_back(k);
+            ($$->continuelist) = insert($$->continuelist, k);
           }
         }
 	| BREAK ';'
@@ -2042,7 +2113,7 @@ jump_statement
           $$ = terminal($1);
           if(!error_throw){
             int k = emit("GOTO", NULL, NULL, NULL);
-            ($$->breaklist).push_back(k);
+            ($$->breaklist) = insert($$->breaklist, k);
           }
         }
 	| RETURN ';'                {$$ = terminal($1); 
@@ -2066,7 +2137,7 @@ jump_statement
                                   string chk = is_valid(type, $2->nodetype);
                                   if (chk == "null"){
                                     error_throw = true;
-                                    fprintf(stderr, "%d |\t Error : Returned expression of type %s cannot be typecasted to %s\n", line, ($2->nodetype).c_str(), type.c_str());
+                                    fprintf(stderr, "%d |\t Error : Returned expression of type %s cannot be typecasted to %s\n", line, ($2->nodetype), type.c_str());
                                   }
                                   else {
                                     if (chk == "0") fprintf(stderr, "%d |\t Warning : Returned expression and return type are incompatible pointer types\n", line);
@@ -2095,8 +2166,8 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator empty2 declaration_list compound_statement empty3   {
-                                                                                            $$ = non_terminal(3, "function_definition", $1, $2, $4, $5); 
+	: declaration_specifiers declarator empty2 declaration_list M compound_statement empty3   {
+                                                                                            $$ = non_terminal(3, "function_definition", $1, $2, $4, $6); 
                                                                                             sym_tab_entry* entry = lookup_use($2->symbol, level, level_id);
                                                                                             if (entry){
                                                                                               entry->init = true;
@@ -2105,6 +2176,8 @@ function_definition
                                                                                             if (!error_throw){
                                                                                               string end = "*function end*\t(" + $2->symbol + ")";
                                                                                               int k = emit(end, NULL, NULL, NULL);
+                                                                                              backpatch($4->nextlist, $5);
+                                                                                              backpatch($6->nextlist, k);
                                                                                             }
                                                                                           }
 	| declaration_specifiers declarator empty2 compound_statement empty3            {
@@ -2117,6 +2190,7 @@ function_definition
                                                                                     if (!error_throw){
                                                                                       string end = "*function end*\t(" + $2->symbol + ")";
                                                                                       int k = emit(end, NULL, NULL, NULL);
+                                                                                      backpatch($4->nextlist, k);
                                                                                     }
                                                                                   }
 	;
@@ -2140,8 +2214,9 @@ M
   ;
 
 N
-  : %empty  { int k = emit("GOTO", NULL, NULL, NULL); 
-              ($$->nextlist).push_back(k);
+  : %empty  { $$ = terminal("N");
+              int k = emit("GOTO", NULL, NULL, NULL); 
+              ($$->nextlist) = insert($$->nextlist, k);
             }
   ;
 

@@ -27,6 +27,27 @@ int emit(string op, qid arg1, qid arg2, qid res){
     tmp.arg2 = arg2;
     tmp.res = res;
     code_arr.push_back(tmp);
+
+    cout << code_arr.size()-1 << ".\t";
+    if (tmp.res){
+        cout << tmp.res->sym_name;
+    }
+    else if (tmp.op == "GOTO" || tmp.op == "GOTO IF"){
+        cout << tmp.goto_label;
+    }
+    cout << " <- ";
+    if (tmp.arg1){
+        cout << tmp.arg1->sym_name;
+    }
+    cout << " " << tmp.op << " ";
+    if (tmp.arg2){
+        cout << tmp.arg2->sym_name;
+    }
+    else {
+        cout << tmp.constant;
+    }
+    cout << endl;
+
     return code_arr.size()-1;
 }
 
@@ -34,23 +55,61 @@ int nextinstr(){
     return code_arr.size();
 }
 
-vector<int> merge(vector<int> l1, vector<int> l2){
-    vector<int> tmp;
-    for(int i: l1) tmp.push_back(i);
-    for(int i: l2) tmp.push_back(i);
-    return tmp;
+clist* merge(clist* l1, clist* l2){
+    clist* new1 = copy(l1);
+    clist* new2 = copy(l2);
+    if (!new1 && !new2) return NULL;
+    else if (new1){
+        clist* head = new1;
+        while (new1->next != NULL) new1 = new1->next;
+        new1->next = new2;
+        return head;
+    }
+    else {
+        clist* head = new2;
+        while (new2->next != NULL) new2 = new2->next;
+        new2->next = new1;
+        return head;
+    }
 }
 
-vector<int> copy(vector<int> li){
-    vector<int> tmp;
-    for (int i: li) tmp.push_back(i);
-    return tmp;
+clist* copy(clist* li){
+    clist* current = li;
+    clist* newlist = NULL;
+    clist* tail = NULL;
+    while (current){
+        if (newlist == NULL){
+            newlist = (clist*)malloc(sizeof(clist));
+            newlist->val = current->val;
+            newlist->next = NULL;
+            tail = newlist;
+        }
+        else {
+            tail->next = (clist*)malloc(sizeof(clist));
+            tail = tail->next;
+            tail->val = current->val;
+            tail->next = NULL;
+        }
+        current = current->next;
+    }
+    return newlist;
 }
 
-void backpatch(vector<int> li, int tmp){
-    if (li.size() == 0) return;
-    for(int i: li){
-        code_arr[i].goto_label = tmp;
+clist* insert(clist* li, int tmp){
+    clist* head = (clist*)malloc(sizeof(clist));
+    if (li == NULL){
+        head->val = tmp; head->next = NULL;
+        return head;
+    }
+    head->val = tmp;
+    head->next = li;
+    return head; 
+}
+
+void backpatch(clist* li, int tmp){
+    while (li){
+        code_arr[li->val].goto_label = tmp;
+        li = li->next;
     }
 }
 
@@ -74,9 +133,10 @@ bool patch_user_goto(string label, int addr){
     return true;
 }
 
-void patch_caselist(vector<int> li, qid arg1){
-    for(int i: li){
-        code_arr[i].arg1 = arg1;
+void patch_caselist(clist* li, qid arg1){
+    while (li){
+        code_arr[li->val].arg1 = arg1;
+        li = li->next;
     }
 }
 
@@ -179,6 +239,9 @@ void dump_3ac(){
         if (q.res){
             cout << q.res->sym_name;
         }
+        else if (q.op == "GOTO" || q.op == "GOTO IF"){
+            cout << q.goto_label;
+        }
         cout << " <- ";
         if (q.arg1){
             cout << q.arg1->sym_name;
@@ -186,9 +249,6 @@ void dump_3ac(){
         cout << " " << q.op << " ";
         if (q.arg2){
             cout << q.arg2->sym_name;
-        }
-        else if (q.op == "GOTO" || q.op == "GOTO IF"){
-            cout << q.goto_label;
         }
         else {
             cout << q.constant;
