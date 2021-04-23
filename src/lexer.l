@@ -185,7 +185,7 @@ int is_type(){
 
 void get_float_info(){
     int i = yyleng - 1;
-    sscanf (yytext, "Lf", &yylval.constant->float_val);
+    sscanf (yytext, "%Lf", &yylval.constant->float_val);
     if (yytext[i] == 'f' || yytext[i] == 'F')
         yylval.constant->type = 3;
     else if (yytext[i] == 'l' || yytext[i] == 'L')

@@ -11,18 +11,18 @@ typedef struct {
     long double float_val;
     bool bool_val;
     bool init = false;
-    string symbol;
+    char* symbol;
     char* curr_args_types;
     int expr_type;
     unsigned long long size;
     unsigned long long max_size = 0;
 
-    clist* nextlist = NULL;
-    clist* truelist = NULL;
-    clist* falselist = NULL;
-    clist* breaklist = NULL;
-    clist* continuelist = NULL;
-    clist* caselist = NULL;
+    char* nextlist = NULL;
+    char* truelist = NULL;
+    char* falselist = NULL;
+    char* breaklist = NULL;
+    char* continuelist = NULL;
+    char* caselist = NULL;
     qid place = NULL;
 } node;
 

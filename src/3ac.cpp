@@ -6,6 +6,15 @@ long long counter = 0;
 vector<quad> code_arr;
 unordered_map<string, int> user_goto;
 
+void init_lists(char* nextlist, char* truelist, char* falselist, char* breaklist, char* continuelist, char* caselist){
+    nextlist = NULL;
+    truelist = NULL;
+    falselist = NULL;
+    breaklist = NULL;
+    continuelist = NULL;
+    caselist = NULL;
+}
+
 string new_symbol(){
     counter++;
     string new_sym = "#temp"+to_string(counter);
@@ -28,25 +37,25 @@ int emit(string op, qid arg1, qid arg2, qid res){
     tmp.res = res;
     code_arr.push_back(tmp);
 
-    cout << code_arr.size()-1 << ".\t";
-    if (tmp.res){
-        cout << tmp.res->sym_name;
-    }
-    else if (tmp.op == "GOTO" || tmp.op == "GOTO IF"){
-        cout << tmp.goto_label;
-    }
-    cout << " <- ";
-    if (tmp.arg1){
-        cout << tmp.arg1->sym_name;
-    }
-    cout << " " << tmp.op << " ";
-    if (tmp.arg2){
-        cout << tmp.arg2->sym_name;
-    }
-    else {
-        cout << tmp.constant;
-    }
-    cout << endl;
+    // cout << code_arr.size()-1 << ".\t";
+    // if (tmp.res){
+    //     cout << tmp.res->sym_name;
+    // }
+    // else if (tmp.op == "GOTO" || tmp.op == "GOTO IF"){
+    //     cout << tmp.goto_label;
+    // }
+    // cout << " <- ";
+    // if (tmp.arg1){
+    //     cout << tmp.arg1->sym_name;
+    // }
+    // cout << " " << tmp.op << " ";
+    // if (tmp.arg2){
+    //     cout << tmp.arg2->sym_name;
+    // }
+    // else {
+    //     cout << tmp.constant;
+    // }
+    // cout << endl;
 
     return code_arr.size()-1;
 }
@@ -55,61 +64,58 @@ int nextinstr(){
     return code_arr.size();
 }
 
-clist* merge(clist* l1, clist* l2){
-    clist* new1 = copy(l1);
-    clist* new2 = copy(l2);
-    if (!new1 && !new2) return NULL;
-    else if (new1){
-        clist* head = new1;
-        while (new1->next != NULL) new1 = new1->next;
-        new1->next = new2;
-        return head;
+char* merge(char* l1, char* l2){
+    if (!l1 && !l2) return NULL;
+    else if (l1 && !l2){
+        return l1;
+    }
+    else if (!l1 && l2){
+        return l2;
     }
     else {
-        clist* head = new2;
-        while (new2->next != NULL) new2 = new2->next;
-        new2->next = new1;
-        return head;
+        string ret = string(l1) + "," + string(l2);
+        char* str = new char[ret.size()+1];
+        strcpy(str, ret.c_str());
+        return str;
     }
 }
 
-clist* copy(clist* li){
-    clist* current = li;
-    clist* newlist = NULL;
-    clist* tail = NULL;
-    while (current){
-        if (newlist == NULL){
-            newlist = (clist*)malloc(sizeof(clist));
-            newlist->val = current->val;
-            newlist->next = NULL;
-            tail = newlist;
-        }
-        else {
-            tail->next = (clist*)malloc(sizeof(clist));
-            tail = tail->next;
-            tail->val = current->val;
-            tail->next = NULL;
-        }
-        current = current->next;
-    }
-    return newlist;
-}
-
-clist* insert(clist* li, int tmp){
-    clist* head = (clist*)malloc(sizeof(clist));
+char* insert(char* li, int tmp){
     if (li == NULL){
-        head->val = tmp; head->next = NULL;
-        return head;
+        string str = to_string(tmp);
+        li = new char[str.size()+1];
+        strcpy(li, str.c_str());
+        return li;
     }
-    head->val = tmp;
-    head->next = li;
-    return head; 
+    else {
+        string str(li);
+        str += "," + to_string(tmp);
+        free(li);
+        li = new char[str.size()+1];
+        strcpy(li, str.c_str());
+        return li;
+    }
 }
 
-void backpatch(clist* li, int tmp){
-    while (li){
-        code_arr[li->val].goto_label = tmp;
-        li = li->next;
+char* copy(char* li){
+    if (li == NULL) return NULL;
+    string str(li);
+    char* ret = new char[str.size()+1];
+    strcpy(ret, str.c_str());
+    return ret;
+}
+
+void backpatch(char* li, int tmp){
+    if (li == NULL) return;
+    string str(li);
+    string delim = ",";
+    size_t f = 1;
+    while (f != string::npos){
+        f = str.find_first_of(delim);
+        string t = str.substr(0, f);
+        code_arr[stoi(t)].goto_label = tmp;
+        if (f == string::npos) break;
+        else str = str.substr(f+1);
     }
 }
 
@@ -133,10 +139,19 @@ bool patch_user_goto(string label, int addr){
     return true;
 }
 
-void patch_caselist(clist* li, qid arg1){
-    while (li){
-        code_arr[li->val].arg1 = arg1;
-        li = li->next;
+void patch_caselist(char* li, qid arg1){
+    if (li == NULL) return;
+    string str(li);
+    cout << str << endl;
+    string delim = ",";
+    size_t f = 1;
+    while (f != string::npos){
+        f = str.find_first_of(delim);
+        string t = str.substr(0, f);
+        cout << t << endl;
+        code_arr[stoi(t)].arg1 = arg1;
+        if (f == string::npos) break;
+        else str = str.substr(f+1);
     }
 }
 

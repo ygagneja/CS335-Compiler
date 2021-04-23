@@ -5,11 +5,6 @@ using namespace std;
 
 typedef sym_tab_entry* qid;
 
-typedef struct clist{
-    int val;
-    struct clist* next = NULL;
-}clist;
-
 typedef struct{
     string op;
     qid arg1;
@@ -19,18 +14,19 @@ typedef struct{
     string constant; // should be in arg2
 } quad;
 
+void init_lists(char* nextlist, char* truelist, char* falselist, char* breaklist, char* continuelist, char* caselist);
 string new_symbol();
 qid newtmp(string type, unsigned long long level, unsigned long long* level_id);
 int emit(string op, qid op1, qid op2, qid res);
 int nextinstr();
-clist* merge(clist* l1, clist* l2);
-clist* copy(clist* li);
-clist* insert(clist* li, int tmp);
-void backpatch(clist* li, int tmp);
+char* merge(char* l1, char* l2);
+char* insert(char* li, int tmp);
+char* copy(char* li);
+void backpatch(char* li, int tmp);
 bool insert_user_label(string label, int addr);
 void patch_constant(string constant, int addr);
 bool patch_user_goto(string label, int addr);
-void patch_caselist(clist* li, qid arg1);
+void patch_caselist(char* li, qid arg1);
 void emit_assignment(string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id);
 void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id);
 void dump_3ac();

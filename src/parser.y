@@ -69,16 +69,22 @@ extern int line;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1);
-                                    // cout << "id enter\n";
+                                    // cout << "id enter (primary)\n";
                                     string type = id_type($1, level, level_id);
+                                    // cout << "id enter (primary)\n";
                                     if (type != "null"){
                                       $$->init = lookup_use($1, level, level_id)->init;
+                                      // cout << "id enter (primary)\n";
                                       $$->nodetype = new char[type.size()+1];
                                       strcpy($$->nodetype, type.c_str());
-                                      $$->symbol = $1;
+                                      // cout << "id enter (primary)\n";
+                                      string id($1);
+                                      $$->symbol = new char[id.size()+1];
+                                      strcpy($$->symbol, id.c_str());
                                       $$->expr_type = 3;
+                                      // cout << "id enter (primary)\n";
 
-                                      if(!error_throw){
+                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                         qid t = lookup_use($1, level, level_id);
                                         $$->place = t;
                                       } 
@@ -101,7 +107,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       // cout << "int exit1\n";
                                       $$->place = t;
@@ -121,7 +127,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
                                     
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -134,7 +140,7 @@ primary_expression
                                     $$->bool_val = true;
                                     $$->expr_type = 5;
 
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -147,7 +153,7 @@ primary_expression
                                     $$->bool_val = false;
                                     $$->expr_type = 5;
 
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -159,7 +165,7 @@ primary_expression
                                     $$->init = true;
                                     $$->expr_type = 5;
 
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -180,7 +186,7 @@ postfix_expression
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
 
-                                                if(!error_throw){
+                                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                   $$->place = t;
                                                   emit("[]", $1->place, $3->place, $$->place);
@@ -190,7 +196,7 @@ postfix_expression
                                                 error_throw = true;
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
-                                                fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension\n", line, ($1->symbol).c_str());
+                                                fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension\n", line, ($1->symbol));
                                               }
                                              }
   | postfix_expression '(' ')'               {$$ = $1;
@@ -203,10 +209,10 @@ postfix_expression
                                                   string args = get_func_args($1->symbol);
                                                   if (args != "null"){
                                                     error_throw = true;
-                                                    fprintf(stderr, "%d |\t Error : %s function requires some arguments to be passed\n", line, ($1->symbol).c_str());
+                                                    fprintf(stderr, "%d |\t Error : %s function requires some arguments to be passed\n", line, ($1->symbol));
                                                   }
                                                 }
-                                                if(!error_throw){
+                                                if(!error_throw){ 
                                                   if (type == "void"){
                                                     qid t = NULL;
                                                     $$->place = t;
@@ -221,7 +227,7 @@ postfix_expression
                                               }
                                               else {
                                                 error_throw = true;
-                                                fprintf(stderr, "%d |\t Error : Invalid function call for the function \"%s\"\n", line, ($1->symbol).c_str());
+                                                fprintf(stderr, "%d |\t Error : Invalid function call for the function \"%s\"\n", line, ($1->symbol));
                                               }
                                              }
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
@@ -256,11 +262,11 @@ postfix_expression
                                                                   if (typeB == string("...")) break;
                                                                   string chk = is_valid(typeA, typeB);
                                                                   if (chk == string("0")){
-                                                                    fprintf(stderr, "%d |\t Warning : Passing argument %d of %s from incompatible pointer type. Note : expected %s but argument is of type %s\n", line,  arg_num, ($1->symbol).c_str(), typeB.c_str(), typeA.c_str());
+                                                                    fprintf(stderr, "%d |\t Warning : Passing argument %d of %s from incompatible pointer type. Note : expected %s but argument is of type %s\n", line,  arg_num, ($1->symbol), typeB.c_str(), typeA.c_str());
                                                                   }
                                                                   else if (chk == "null"){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Incompatible type for argument %d of %s. Note : expected %s but argument is of type %s\n", line, arg_num, ($1->symbol).c_str(), typeB.c_str(), typeA.c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Incompatible type for argument %d of %s. Note : expected %s but argument is of type %s\n", line, arg_num, ($1->symbol), typeB.c_str(), typeA.c_str());
                                                                   }
                                                                   if ((f1 != string::npos) && (f2 != string::npos)){
                                                                     continue;
@@ -268,19 +274,19 @@ postfix_expression
                                                                   else if (f2 != string::npos){
                                                                     if(!(temp2==string("..."))){
                                                                       error_throw = true;
-                                                                      fprintf(stderr, "%d |\t Error : Too few arguments for the function %s\n", line, ($1->symbol).c_str());
+                                                                      fprintf(stderr, "%d |\t Error : Too few arguments for the function %s\n", line, ($1->symbol));
                                                                     } 
                                                                     break;
                                                                   }
                                                                   else if (f1 != string::npos){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Too many arguments for the function %s\n", line, ($1->symbol).c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Too many arguments for the function %s\n", line, ($1->symbol));
                                                                     break;
                                                                   }
                                                                   else break;
                                                                 } 
                                                               }
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 string arguments($3->curr_args_types);
                                                                 int curr_args = 0;
                                                                 size_t f = 1;
@@ -305,7 +311,7 @@ postfix_expression
                                                             }
                                                             else {
                                                               error_throw = true;
-                                                              fprintf(stderr, "%d |\t Error : Invalid function call %s\n", line, ($1->symbol).c_str());
+                                                              fprintf(stderr, "%d |\t Error : Invalid function call %s\n", line, ($1->symbol));
                                                             }
                                                           }
   | postfix_expression '.' IDENTIFIER        {$$ = non_terminal(0, "postfix_expression.IDENTIFIER", $1, terminal($3));
@@ -323,7 +329,7 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
-                                              if(!error_throw){
+                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                 $$->place = t;
                                                 emit("E++", $1->place, NULL, $$->place);
@@ -338,7 +344,7 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
-                                              if(!error_throw){
+                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                 $$->place = t;
                                                 emit("E--", $1->place, NULL, $$->place);
@@ -352,7 +358,7 @@ argument_expression_list
                                       $$->curr_args_types = new char[temp.size()+1];
                                       strcpy($$->curr_args_types, temp.c_str());
                                       if ($$->nodetype != "null") $$->nodetype = "void";
-                                      if(!error_throw){
+                                      if(!error_throw){ 
                                         int tmp = emit("params", NULL, $$->place, NULL);
                                         backpatch($$->nextlist, tmp);
                                       } 
@@ -366,7 +372,7 @@ argument_expression_list
                                                           $$->curr_args_types = new char[append.size()+1];
                                                           strcpy($$->curr_args_types, append.c_str());
 
-                                                          if(!error_throw){
+                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                             int tmp = emit("params", NULL, $3->place, NULL);
                                                             backpatch($3->nextlist, tmp);
                                                           } 
@@ -384,7 +390,7 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                         qid t = newtmp($$->nodetype, level, level_id);
                                         $$->place = t;
                                         emit("++E", NULL, $2->place, $$->place);
@@ -400,7 +406,7 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       emit("--E", NULL, $2->place, $$->place);
@@ -415,7 +421,7 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
                                     }
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       $$ -> place = newtmp($$->nodetype, level, level_id);
                                       emit($1->label, NULL, $2 -> place, $$ -> place);
                                     }
@@ -428,7 +434,7 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       $$ -> place = newtmp($$->nodetype, level, level_id);
                                       emit("SIZEOF", NULL, $2 -> place, $$ -> place);
                                     }
@@ -441,7 +447,7 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
-                                    if(!error_throw){
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       $$ -> place = newtmp($$->nodetype, level, level_id);
                                       int k = emit("SIZEOF", NULL, NULL, $$->place);
                                       patch_constant($3->nodetype, k);
@@ -469,7 +475,7 @@ cast_expression
                                           $$->nodetype = $2->nodetype;
                                           fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
 
-                                          if(!error_throw){
+                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                             qid t = newtmp($$->nodetype, level, level_id);
                                             $$->place = t;
                                             emit_assignment($$->nodetype, $4->nodetype, $$->place, $4->place, level, level_id);
@@ -478,7 +484,7 @@ cast_expression
                                         else if (type == "1"){
                                           $$->nodetype = $2->nodetype;
                                           
-                                          if(!error_throw){
+                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                             qid t = newtmp($$->nodetype, level, level_id);
                                             $$->place = t;
                                             emit_assignment($$->nodetype, $4->nodetype, $$->place, $4->place, level, level_id);
@@ -501,7 +507,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "* int", $1, $3);
                                                               $$->nodetype = "long long";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("*int", $1->place, $3->place, $$->place);
@@ -511,7 +517,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "* float", $1, $3);
                                                               $$->nodetype = "long double";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 if (is_type_int($1->nodetype)){
@@ -545,7 +551,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "/ int", $1, $3);
                                                               $$->nodetype = "long long";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("/int", $1->place, $3->place, $$->place);
@@ -555,7 +561,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "/ float", $1, $3);
                                                               $$->nodetype = "long double";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 if (is_type_int($1->nodetype)){
@@ -588,7 +594,7 @@ multiplicative_expression
                                                             $$ = non_terminal(0, "% int", $1, $3);
                                                             $$->nodetype = "long long";
 
-                                                            if(!error_throw){
+                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                               qid t = newtmp($$->nodetype, level, level_id);
                                                               $$->place = t;
                                                               emit("%int", $1->place, $3->place, $$->place);
@@ -613,7 +619,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long long";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("+int", $1->place, $3->place, $$->place);
@@ -624,7 +630,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long double";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 if (is_type_int($1->nodetype)){
@@ -648,7 +654,7 @@ additive_expression
                                                               $$->nodetype = new char[type.size()+1];
                                                               strcpy($$->nodetype, type.c_str());
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 if (is_type_int($1->nodetype)){
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
@@ -685,7 +691,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long long";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("-int", $1->place, $3->place, $$->place);
@@ -696,7 +702,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "long double";
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 if (is_type_int($1->nodetype)){
@@ -720,7 +726,7 @@ additive_expression
                                                               $$->nodetype = new char[type.size()+1];
                                                               strcpy($$->nodetype, type.c_str());
 
-                                                              if(!error_throw){
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 if (is_type_int($1->nodetype)){
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
@@ -763,7 +769,7 @@ shift_expression
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
                                                     }else{
-                                                      if(!error_throw){
+                                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                         qid t = newtmp($$->nodetype, level, level_id);
                                                         $$->place = t;
                                                         emit("<<", $1->place, $3->place, $$->place);
@@ -779,7 +785,7 @@ shift_expression
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
                                                     }else{
-                                                      if(!error_throw){
+                                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                         qid t = newtmp($$->nodetype, level, level_id);
                                                         $$->place = t;
                                                         emit(">>", $1->place, $3->place, $$->place);
@@ -802,14 +808,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*" || type == "int"){
-                                                        if(!error_throw){
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit("<int", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           if (is_type_int($1->nodetype)){
@@ -845,14 +851,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*" || type == "int"){
-                                                        if(!error_throw){
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit(">int", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           if (is_type_int($1->nodetype)){
@@ -888,14 +894,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*" || type == "int"){
-                                                        if(!error_throw){
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit("<=int", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           if (is_type_int($1->nodetype)){
@@ -931,14 +937,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*" || type == "int"){
-                                                        if(!error_throw){
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit(">=int", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           if (is_type_int($1->nodetype)){
@@ -978,14 +984,14 @@ equality_expression
                                                         $$->nodetype = "bool";
 
                                                         if (type == "*" || type == "int"){
-                                                          if(!error_throw){
+                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             emit("==int", $1->place, $3->place, $$->place);
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          if (!error_throw){
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             if (is_type_int($1->nodetype)){
@@ -1021,14 +1027,14 @@ equality_expression
                                                         $$->nodetype = "bool";
                                                         
                                                         if (type == "*" || type == "int"){
-                                                          if(!error_throw){
+                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             emit("!=int", $1->place, $3->place, $$->place);
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          if (!error_throw){
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             if (is_type_int($1->nodetype)){
@@ -1062,7 +1068,7 @@ and_expression
                                                 $$ = non_terminal(0, "& int", $1, $3);
                                                 $$->nodetype = "long long";
 
-                                                if(!error_throw){
+                                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                   $$->place = t;
                                                   emit("&", $1->place, $3->place, $$->place);
@@ -1086,7 +1092,7 @@ exclusive_or_expression
                                                     $$ = non_terminal(0, "^ int", $1, $3);
                                                     $$->nodetype = "long long";
 
-                                                    if(!error_throw){
+                                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                       qid t = newtmp($$->nodetype, level, level_id);
                                                       $$->place = t;
                                                       emit("^", $1->place, $3->place, $$->place);
@@ -1110,7 +1116,7 @@ inclusive_or_expression
                                                             $$ = non_terminal(0, "| int", $1, $3);
                                                             $$->nodetype = "long long";
 
-                                                            if(!error_throw){
+                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                               qid t = newtmp($$->nodetype, level, level_id);
                                                               $$->place = t;
                                                               emit("|", $1->place, $3->place, $$->place);
@@ -1197,13 +1203,13 @@ marker3
 
 conditional_expression
   : logical_or_expression                                           {$$ = $1;}
-  | marker3 M expression ':' N M conditional_expression               {$$ = non_terminal(3, "conditional_expression", $1, $3, $7);
+  | marker3 M expression ':' N M conditional_expression               {$$ = non_terminal(1, "conditional_expression", $1, $3, $7);
                                                                       string type = cond_type($3->nodetype, $7->nodetype);
                                                                       if (type != "null"){
                                                                         $$->nodetype = new char[type.size()+1];
                                                                         strcpy($$->nodetype, type.c_str());
 
-                                                                        if (!error_throw){
+                                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                                           $$->place = t;
                                                                           int k0 = emit("=", NULL, $7->place, $$->place);
@@ -1242,7 +1248,7 @@ assignment_expression
                                                                   }
                                                                   else if ($1->nodetype == "void"){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Variable or field %s of type void is being assigned a value\n", line, ($1->symbol).c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Variable or field %s of type void is being assigned a value\n", line, ($1->symbol));
                                                                   }
                                                                   else {
                                                                     error_throw = true;
@@ -1251,7 +1257,7 @@ assignment_expression
                                                                     fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype), ($1->nodetype));
                                                                   }
 
-                                                                  if (!error_throw){
+                                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                     $$->place = $1->place;
                                                                     $$->nextlist = copy($3->nextlist);
                                                                     $$->truelist = copy($3->truelist);
@@ -1302,13 +1308,13 @@ declaration
                                                         if ($2->expr_type == 2){
                                                           if (decl_track.find($2->symbol) != decl_track.end()){
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($2->symbol).c_str());
+                                                            fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($2->symbol));
                                                           }
                                                           else {
                                                             decl_track.insert($2->symbol);
                                                           }
                                                         }
-                                                        if (!error_throw){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           // cout << "enter decl\n";
                                                           $$->nextlist = copy($2->nextlist);
                                                           // cout << "exit decl\n";
@@ -1340,7 +1346,7 @@ declaration_specifiers
 init_declarator_list
   : init_declarator                           {$$ = $1;}
   | init_declarator_list ',' M init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $4);
-                                                  if (!error_throw){
+                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                     // cout << "enter list\n";
                                                     backpatch($1->nextlist, $3);
                                                     $$->nextlist = copy($4->nextlist);
@@ -1355,18 +1361,18 @@ init_declarator
                                     string type = $1->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol));
                                     }
                                     else if (type == "void"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
                                     }
                                     else {
                                       unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
                                       insert_entry($1->symbol, $1->nodetype, size, 0, false, level, level_id[level]);
                                       $$->init = false;
                                     }
-                                    if (!error_throw){
+                                    if (!error_throw){ 
                                       qid t = lookup_use($$->symbol, level, level_id);
                                       $$->place = t;
                                     }
@@ -1380,15 +1386,15 @@ init_declarator
                                     string type2 = $3->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Redeclaration of symbol %s\n", line, ($1->symbol));
                                     }
                                     else if (type == "void"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
                                     }
                                     else if (type2 == "void"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Variable or field %s assigned expression of type void\n", line, ($1->symbol).c_str());
+                                      fprintf(stderr, "%d |\t Error : Variable or field %s assigned expression of type void\n", line, ($1->symbol));
                                     }
                                     else if (chk == "null"){
                                       error_throw = true;
@@ -1402,8 +1408,8 @@ init_declarator
                                       strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
                                     }
-
-                                    if (!error_throw){
+                                    // cout << "dec = init enter\n";
+                                    if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = lookup_use($$->symbol, level, level_id);
                                       $$->place = t;
                                       if ($1->expr_type == 15){
@@ -1414,6 +1420,7 @@ init_declarator
                                         emit_assignment($$->nodetype, $3->nodetype, $$->place, $3->place, level, level_id);
                                       }
                                     }
+                                    // cout << "dec = init exit\n";
                                   }
                                 }
   ;
@@ -1448,7 +1455,7 @@ type_specifier
   ;
 
 struct_or_union_specifier
-  : struct_or_union IDENTIFIER struct_op_brace struct_declaration_list '}'  {$$ = non_terminal(3, "struct_or_union_specifier", $1, $4, terminal($2));
+  : struct_or_union IDENTIFIER struct_op_brace struct_declaration_list '}'  {$$ = non_terminal(1, "struct_or_union_specifier", $1, $4, terminal($2));
                                                                               if (lookup_type_decl($1->label + string(" ") + $2, level, level_id[level])){
                                                                                 $$->nodetype = "null";
                                                                                 error_throw = true;
@@ -1587,30 +1594,30 @@ declarator
                                   string temp = string($2->nodetype) + string($1->nodetype);
                                   $$->nodetype = new char[temp.size()+1];
                                   strcpy($$->nodetype, temp.c_str());
-                                  func_name = $2->symbol;
+                                  func_name = string($2->symbol);
                                   if (decl_track.find(func_name) != decl_track.end() && string($$->nodetype) != get_func_ret_type(func_name)){
                                     error_throw = true;
-                                    fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($2->symbol).c_str());
+                                    fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($2->symbol));
                                   }
                                   else update_func_type(func_name, level, level_id[level], $$->nodetype);
 
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
                                 }
-                                if (!error_throw){
+                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                   $$->place = lookup_use($$->symbol, level, level_id);
                                 }
                               }
 	| direct_declarator         {
                                 $$ = $1;
                                 if($1->expr_type == 2){
-                                  func_name = $1->symbol;
+                                  func_name = string($1->symbol);
                                   if (decl_track.find(func_name) != decl_track.end() && string($$->nodetype) != get_func_ret_type(func_name)){
                                     error_throw = true;
-                                    fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol).c_str());
+                                    fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol));
                                   }
                                 }
-                                if (!error_throw){
+                                if (!error_throw){ 
                                   $$->place = lookup_use($$->symbol, level, level_id);
                                 }
                               }
@@ -1618,12 +1625,20 @@ declarator
 
 direct_declarator
 	: IDENTIFIER            {
+                            // cout << "id enter\n";
+                            // cout << "yes entered" << endl;
 														$$ = terminal($1);
+                            // cout << "id exit1\n";
                             $$->expr_type = 1;
-														$$->symbol = $1;
+                            string id($1);
+                            $$->symbol = new char[id.size()+1];
+														strcpy($$->symbol, id.c_str());
+                            // cout << "id exit2\n";
                             if (is_valid_type(t_name, level, level_id)){
+                              // cout << "id exit3\n";
                               $$->nodetype = new char[t_name.size()+1];
                               strcpy($$->nodetype, t_name.c_str());
+                              // cout << "id exit4\n";
                             }
                             else {
                               $$->nodetype = "null";
@@ -1631,10 +1646,12 @@ direct_declarator
                               fprintf(stderr, "%d |\t Error : Invalid type for symbol \'%s\'\n", line, $1);
                             }
 														$$->size = get_size(t_name, level, level_id);
-                            if (!error_throw){
+                            
+                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                               qid t = NULL;
                               $$->place = t;
                             }
+                            // cout << "id exit\n";
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
@@ -1647,14 +1664,14 @@ direct_declarator
                                                       if ($1->expr_type == 1){
                                                         if ($1->nodetype == "void"){
                                                           error_throw = true;
-                                                          fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol).c_str());
+                                                          fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
                                                         }
                                                         $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
                                                       }
                                                       else if ($1->expr_type == 15){
                                                         $$->size = $1->size * $3->int_val;
                                                       }
-                                                      if (!error_throw){
+                                                      if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                         qid t = NULL;
                                                         $$->place = t;
                                                       }
@@ -1675,18 +1692,18 @@ direct_declarator
                                                                 if (type.substr(0, 5) == "func "){
                                                                   if (entry->init){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol).c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of function %s\n", line, ($$->symbol));
                                                                   }
                                                                   else {
                                                                     if (!is_consistent($1->symbol, func_args)){
                                                                       error_throw = true;
-                                                                      fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
+                                                                      fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol));
                                                                     }
                                                                   }
                                                                 }
                                                                 else {
                                                                   error_throw = true;
-                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations of symbol %s\n", line, ($$->symbol).c_str());
+                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations of symbol %s\n", line, ($$->symbol));
                                                                 }
                                                               }
                                                               else {
@@ -1696,16 +1713,16 @@ direct_declarator
                                                                 }
                                                                 else {
                                                                   error_throw = true;
-                                                                  fprintf(stderr, "%d |\t Error : Redeclaration of symbols in args of function %s\n", line, ($$->symbol).c_str());
+                                                                  fprintf(stderr, "%d |\t Error : Redeclaration of symbols in args of function %s\n", line, ($$->symbol));
                                                                 }
                                                               }
                                                               func_args = "";
                                                               func_symbols = "";
                                                               $$->size = get_size($$->nodetype, level, level_id);
-                                                              if (!error_throw){
+                                                              if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                 qid t = NULL;
                                                                 $$->place = t;
-                                                                string start = "*function start*\t(" + $$->symbol + ")";
+                                                                string start = "*function start*\t(" + string($$->symbol) + ")";
                                                                 emit(start, NULL, NULL, NULL);
                                                               }
                                                             }
@@ -1722,18 +1739,18 @@ direct_declarator
                                                                 if (type.substr(0, 5) == "func "){
                                                                   if (entry->init){
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of symbol %s\n", line, ($$->symbol).c_str());
+                                                                    fprintf(stderr, "%d |\t Error : Multiple declarations/definitions of symbol %s\n", line, ($$->symbol));
                                                                   }
                                                                   else {
                                                                     if (!is_consistent($1->symbol, func_args)){
                                                                       error_throw = true;
-                                                                      fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol).c_str());
+                                                                      fprintf(stderr, "%d |\t Error : Conflicting argument types for function %s\n", line, ($$->symbol));
                                                                     }
                                                                   }
                                                                 }
                                                                 else {
                                                                   error_throw = true;
-                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations of symbol %s\n", line, ($$->symbol).c_str());
+                                                                  fprintf(stderr, "%d |\t Error : Multiple declarations of symbol %s\n", line, ($$->symbol));
                                                                 }
                                                               }
                                                               else {
@@ -1744,10 +1761,10 @@ direct_declarator
                                                               func_symbols = "";
                                                             }
                                                             $$->size = get_size($$->nodetype, level, level_id);
-                                                            if (!error_throw){
+                                                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                               qid t = NULL;
                                                               $$->place = t;
-                                                              string start = "*function start*\t(" + $$->symbol + ")";
+                                                              string start = "*function start*\t(" + string($$->symbol) + ")";
                                                               emit(start, NULL, NULL, NULL);
                                                             }
                                                           }
@@ -1780,8 +1797,8 @@ pointer
   ;
 
 type_qualifier_list
-	: type_qualifier                      {$$=$1;}
-	| type_qualifier_list type_qualifier  {$$=non_terminal(0, "type_qualifier_list", $1, $2);}
+	: type_qualifier                      {$$ = $1;}
+	| type_qualifier_list type_qualifier  {$$ = non_terminal(0, "type_qualifier_list", $1, $2);}
 	;
 
 parameter_type_list
@@ -1801,7 +1818,7 @@ parameter_declaration
                                             $$ = non_terminal(0, "parameter_declaration", $1, $2);
                                             t_name = "";
                                             if($2->expr_type == 1){
-                                              func_symbols = (func_symbols == "") ? $2->symbol : func_symbols + "," + $2->symbol;
+                                              func_symbols = (func_symbols == "") ? string($2->symbol) : func_symbols + "," + string($2->symbol);
                                               func_args = (func_args == "") ?  string($2->nodetype) : func_args + "," + string($2->nodetype);
                                             }
                                           }
@@ -1820,7 +1837,7 @@ initializer
                                   $$->nodetype = new char[temp.size()+1];
                                   strcpy($$->nodetype, temp.c_str());
                                   $$->expr_type = $2->expr_type;
-                                  if (!error_throw){
+                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                     $$->place = $2->place;
                                     $$->nextlist = copy($2->nextlist);
                                   }
@@ -1858,6 +1875,7 @@ statement
 switch_case_marker
   : CASE constant_expression ':'                {
                                                   $$ = $2;
+                                                  // cout << "marker enter\n";
                                                   qid res = newtmp("bool", level, level_id);
                                                   int tmp = emit("==", NULL, $2->place, res); 
                                                   int tmp1 = emit("GOTO IF", NULL, res, NULL);
@@ -1865,11 +1883,12 @@ switch_case_marker
                                                   ($$->caselist) = insert($$->caselist, tmp);
                                                   ($$->truelist) = insert($$->truelist, tmp1);
                                                   ($$->falselist) = insert($$->falselist, tmp2);
+                                                  // cout << "marker exit\n";
                                                 }
 
 labeled_statement
 	: IDENTIFIER ':' M statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $4);
-                                                  if (!error_throw){
+                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                     if (insert_user_label($1, $3)){
                                                       $$->nextlist = copy($4->nextlist);
                                                       $$->caselist = copy($4->caselist);
@@ -1883,16 +1902,18 @@ labeled_statement
                                                   }
                                                 }
 	| switch_case_marker M statement            {$$ = non_terminal(0, "labeled_statement", $1, $3);
-                                                if (!error_throw){
+                                                // cout << "switch enter\n";
+                                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                   backpatch($1->truelist, $2);
                                                   $$->breaklist = copy($3->breaklist);
                                                   $$->nextlist = merge($3->nextlist, $1->falselist);
                                                   $$->caselist = copy($1->caselist);
                                                   $$->continuelist = copy($3->continuelist);
                                                 }
+                                                // cout << "switch exit\n";
                                               }
 	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
-                                                if (!error_throw){
+                                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                   // cout << "def enter\n";
                                                   $$->breaklist= copy($3->breaklist);
                                                   $$->nextlist = copy($3->nextlist);
@@ -1904,12 +1925,8 @@ labeled_statement
 
 compound_statement
 	: op_brace cl_brace                                   {$$ = terminal("{}");}
-	| op_brace statement_list cl_brace                    {$$ = $2; 
-                                                          $$->nextlist = copy($2->nextlist);
-                                                        }
-	| op_brace declaration_list cl_brace                  {$$ = $2; 
-                                                          $$->nextlist = copy($2->nextlist);
-                                                        }
+	| op_brace statement_list cl_brace                    {$$ = $2; }
+	| op_brace declaration_list cl_brace                  {$$ = $2; }
 	| op_brace declaration_list M statement_list cl_brace   {$$ = non_terminal(0, "compound_statement", $2, $4); 
                                                             backpatch($2->nextlist, $3);
                                                             $$->nextlist = copy($4->nextlist);
@@ -1933,7 +1950,7 @@ cl_brace
 declaration_list
 	: declaration                   {$$ = $1; }
 	| declaration_list M declaration  {$$ = non_terminal(0, "declaration_list", $1, $3);
-                                      if (!error_throw){
+                                      if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                         $$->nextlist = copy($3->nextlist);
                                         backpatch($1->nextlist, $2);
                                       }
@@ -1943,7 +1960,7 @@ declaration_list
 statement_list
 	: statement                 {$$ = $1; }
 	| statement_list M statement  {$$ = non_terminal(0, "statement_list", $1, $3);
-                                  if (!error_throw){
+                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                     // cout << "stmt list enter\n";
                                     backpatch($1->nextlist, $2);
                                     $$->nextlist = copy($3->nextlist);
@@ -1974,40 +1991,44 @@ if_expression
   ;
 
 selection_statement
-	: if_expression M statement                  
+	: if_expression M statement ELSE N M statement
           {
+            $$ = non_terminal(1, "IF (expr) stmt ELSE stmt", $1, $3, $7);
+            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
+              backpatch($1->truelist, $2);
+              backpatch($1->falselist, $6);
+              $$->nextlist = merge($3->nextlist, $7->nextlist);
+              $$->nextlist = merge($$->nextlist, $5->nextlist);
+              $$->breaklist = merge($3->breaklist, $7->breaklist);
+              $$->continuelist = merge($3->continuelist, $7->continuelist);
+            }
+          }
+	| if_expression M statement 
+          {
+            cout << "if reduced\n";
             $$ = non_terminal(0, "IF (expr) stmt", $1, $3);
-            if(!error_throw){
+            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
               backpatch($1->truelist, $2);
               $$->nextlist = merge($1->falselist, $3->nextlist);
               $$->continuelist = copy($3->continuelist);
               $$->breaklist = copy($3->breaklist);
             }
           }
-	| if_expression M statement N ELSE M statement   
-          {
-            $$ = non_terminal(3, "IF (expr) stmt ELSE stmt", $1, $3, $7);
-            if(!error_throw){
-              backpatch($1->truelist, $2);
-              backpatch($1->falselist, $6);
-              $$->nextlist = merge($3->nextlist, $7->nextlist);
-              $$->nextlist = merge($$->nextlist, $4->nextlist);
-              $$->breaklist = merge($3->breaklist, $7->breaklist);
-              $$->continuelist = merge($3->continuelist, $7->continuelist);
-            }
-          }
-
 	| SWITCH '(' expression ')' statement             
           {
             $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
-            if (!error_throw){
+            // cout << "switch stmt enter\n";
+            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
               patch_caselist($5->caselist, $3->place);
+              // cout << "switch stmt exit1\n";
               $$->nextlist = merge($5->nextlist, $5->breaklist);
+              // cout << "switch stmt exit2\n";
               if ($5->continuelist){
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
               }
             }
+            // cout << "switch stmt exit\n";
           }
 	;
 
@@ -2041,7 +2062,7 @@ iteration_statement
 	: WHILE '(' M expr_marker ')' M statement                                        
         {
           $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
-          if(!error_throw){
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($7->nextlist) = insert($7->nextlist, k);
             backpatch($7->nextlist, $3);
@@ -2053,7 +2074,7 @@ iteration_statement
 	| DO M statement WHILE '(' M expr_marker ')' ';'                                     
         {
           $$ = non_terminal(0, "DO stmt WHILE (expr)", $3, $7);
-          if(!error_throw){
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             backpatch($3->continuelist, $6);
             backpatch($3->nextlist, $6);
             backpatch($7->truelist, $2);
@@ -2062,8 +2083,8 @@ iteration_statement
         }
 	| FOR '(' expression_statement M exprstmt_marker ')' M statement               
         {
-          $$ = non_terminal(3, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
-          if(!error_throw){
+          $$ = non_terminal(1, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($8->nextlist) = insert($8->nextlist, k);
             backpatch($5->truelist, $7);
@@ -2075,8 +2096,8 @@ iteration_statement
         }
 	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M statement
         {
-          $$ = non_terminal(3, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
-          if(!error_throw){
+          $$ = non_terminal(1, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($11->nextlist) = insert($11->nextlist, k);
             backpatch($11->nextlist, $6);
@@ -2092,7 +2113,7 @@ iteration_statement
 jump_statement
 	: GOTO IDENTIFIER ';'       {
                                 $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2)); 
-                                if(!error_throw){
+                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                   int tmp = emit("GOTO", NULL, NULL, NULL);
                                   if (!patch_user_goto($2, tmp)){
                                     error_throw = true;
@@ -2103,7 +2124,7 @@ jump_statement
 	| CONTINUE ';'
         {
           $$ = terminal($1);
-          if(!error_throw){
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($$->continuelist) = insert($$->continuelist, k);
           }
@@ -2111,10 +2132,12 @@ jump_statement
 	| BREAK ';'
         {
           $$ = terminal($1);
-          if(!error_throw){
+          // cout << "break entered\n";
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($$->breaklist) = insert($$->breaklist, k);
           }
+          // cout << "break exit\n";
         }
 	| RETURN ';'                {$$ = terminal($1); 
                                 string type = get_func_ret_type(func_name);
@@ -2122,7 +2145,7 @@ jump_statement
                                   error_throw = true;
                                   fprintf(stderr, "%d |\t Error : Function %s of type non-void is not returning a value\n", line, func_name.c_str());
                                 }else{
-                                  if(!error_throw){
+                                  if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                     emit("RETURN", NULL, NULL, NULL);
                                   }
                                 }
@@ -2144,7 +2167,7 @@ jump_statement
                                   }
                                 }
 
-                                if(!error_throw){
+                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                   qid tmp = newtmp(type, level, level_id);
                                   emit_assignment(type, $2->nodetype, tmp, $2->place, level, level_id);
                                   int k = emit("RETURN", NULL, tmp, NULL);
@@ -2167,28 +2190,28 @@ external_declaration
 
 function_definition
 	: declaration_specifiers declarator empty2 declaration_list M compound_statement empty3   {
-                                                                                            $$ = non_terminal(3, "function_definition", $1, $2, $4, $6); 
+                                                                                            $$ = non_terminal(1, "function_definition", $1, $2, $4, $6); 
                                                                                             sym_tab_entry* entry = lookup_use($2->symbol, level, level_id);
                                                                                             if (entry){
                                                                                               entry->init = true;
                                                                                             }
                                                                                             t_name = "";
-                                                                                            if (!error_throw){
-                                                                                              string end = "*function end*\t(" + $2->symbol + ")";
+                                                                                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
+                                                                                              string end = "*function end*\t(" + string($2->symbol) + ")";
                                                                                               int k = emit(end, NULL, NULL, NULL);
                                                                                               backpatch($4->nextlist, $5);
                                                                                               backpatch($6->nextlist, k);
                                                                                             }
                                                                                           }
 	| declaration_specifiers declarator empty2 compound_statement empty3            {
-                                                                                    $$ = non_terminal(3, "function_definition", $1, $2, $4);
+                                                                                    $$ = non_terminal(1, "function_definition", $1, $2, $4);
                                                                                     sym_tab_entry* entry = lookup_use($2->symbol, level, level_id);
                                                                                     if (entry){
                                                                                       entry->init = true;
                                                                                     }
                                                                                     t_name = "";
-                                                                                    if (!error_throw){
-                                                                                      string end = "*function end*\t(" + $2->symbol + ")";
+                                                                                    if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
+                                                                                      string end = "*function end*\t(" + string($2->symbol) + ")";
                                                                                       int k = emit(end, NULL, NULL, NULL);
                                                                                       backpatch($4->nextlist, k);
                                                                                     }
@@ -2215,6 +2238,7 @@ M
 
 N
   : %empty  { $$ = terminal("N");
+              $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
               int k = emit("GOTO", NULL, NULL, NULL); 
               ($$->nextlist) = insert($$->nextlist, k);
             }
@@ -2291,6 +2315,7 @@ int main (int argc, char* argv[]){
 // initializer stuff (semantics + 3ac)
 
 // how is actual typecasting happening ??? signed unsigned float int pointer short long etc
+// user goto labels
 
 // init errors ??
 // normal syntax errors ??

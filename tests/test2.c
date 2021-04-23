@@ -12,19 +12,19 @@ int main() {
 
     switch(operator)
     {
-        case '+':
+        case 1:
             printf("%.1lf + %.1lf = %.1lf",n1, n2, n1+n2);
             break;
 
-        case '-':
+        case 2:
             printf("%.1lf - %.1lf = %.1lf",n1, n2, n1-n2);
             break;
 
-        case '*':
+        case 3:
             printf("%.1lf * %.1lf = %.1lf",n1, n2, n1*n2);
             break;
 
-        case '/':
+        case 4:
             printf("%.1lf / %.1lf = %.1lf",n1, n2, n1/n2);
             break;
 
