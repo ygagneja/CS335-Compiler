@@ -1226,7 +1226,6 @@ conditional_expression
 assignment_expression
   : conditional_expression                                      {$$ = $1;}
   | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(0, $2, $1, $3);
-                                                                  // cout << "ass in\n";
                                                                   string label = string($2);
                                                                   string type = assign_type($1->nodetype, $3->nodetype, label);
                                                                   if (type == "0"){
@@ -1260,7 +1259,6 @@ assignment_expression
                                                                       emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
                                                                     }
                                                                   }
-                                                                  // cout << "ass out\n";
                                                                 }
   ;
 
@@ -1306,9 +1304,7 @@ declaration
                                                           }
                                                         }
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                                          // cout << "enter decl\n";
                                                           $$->nextlist = copy($2->nextlist);
-                                                          // cout << "exit decl\n";
                                                         }
                                                       }
   ;
@@ -1338,10 +1334,8 @@ init_declarator_list
   : init_declarator                           {$$ = $1;}
   | init_declarator_list ',' M init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $4);
                                                   if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                                    // cout << "enter list\n";
                                                     backpatch($1->nextlist, $3);
                                                     $$->nextlist = copy($4->nextlist);
-                                                    // cout << "exit list\n";
                                                   }
                                                 }
   ;
@@ -1635,7 +1629,7 @@ direct_declarator
                               qid t = NULL;
                               $$->place = t;
                             }
-                            // t_name = "";
+                            t_name = "";
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
@@ -1659,7 +1653,6 @@ direct_declarator
                                                         qid t = NULL;
                                                         $$->place = t;
                                                       }
-                                                      // t_name = "";
                                                     }
   | direct_declarator '[' constant_expression ']'    {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       error_throw = true;
@@ -1860,7 +1853,6 @@ statement
 switch_case_marker
   : CASE constant_expression ':'                {
                                                   $$ = $2;
-                                                  // cout << "marker enter\n";
                                                   qid res = newtmp("bool", level, level_id);
                                                   int tmp = emit("==", NULL, $2->place, res); 
                                                   int tmp1 = emit("GOTO IF", NULL, res, NULL);
@@ -1868,7 +1860,6 @@ switch_case_marker
                                                   ($$->caselist) = insert($$->caselist, tmp);
                                                   ($$->truelist) = insert($$->truelist, tmp1);
                                                   ($$->falselist) = insert($$->falselist, tmp2);
-                                                  // cout << "marker exit\n";
                                                 }
 
 labeled_statement
@@ -1887,7 +1878,6 @@ labeled_statement
                                                   }
                                                 }
 	| switch_case_marker M statement            {$$ = non_terminal(0, "labeled_statement", $1, $3);
-                                                // cout << "switch enter\n";
                                                 if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                   backpatch($1->truelist, $2);
                                                   $$->breaklist = copy($3->breaklist);
@@ -1895,15 +1885,12 @@ labeled_statement
                                                   $$->caselist = copy($1->caselist);
                                                   $$->continuelist = copy($3->continuelist);
                                                 }
-                                                // cout << "switch exit\n";
                                               }
 	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3); 
                                                 if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                                  // cout << "def enter\n";
                                                   $$->breaklist= copy($3->breaklist);
                                                   $$->nextlist = copy($3->nextlist);
                                                   $$->continuelist = copy($3->continuelist);
-                                                  // cout << "def exit\n";
                                                 }
                                               }
 	;
@@ -1946,13 +1933,11 @@ statement_list
 	: statement                 {$$ = $1; }
 	| statement_list M statement  {$$ = non_terminal(0, "statement_list", $1, $3);
                                   if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                    // cout << "stmt list enter\n";
                                     backpatch($1->nextlist, $2);
                                     $$->nextlist = copy($3->nextlist);
                                     $$->caselist = merge($1->caselist, $3->caselist);
                                     $$->continuelist = merge($1->continuelist, $3->continuelist);
                                     $$->breaklist = merge($1->breaklist, $3->breaklist);
-                                    // cout << "stmt list exit\n";
                                   }
                                 }
 	;
@@ -1990,7 +1975,6 @@ selection_statement
           }
 	| if_expression M statement 
           {
-            // cout << "if reduced\n";
             $$ = non_terminal(0, "IF (expr) stmt", $1, $3);
             if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
               backpatch($1->truelist, $2);
@@ -2002,18 +1986,14 @@ selection_statement
 	| SWITCH '(' expression ')' statement             
           {
             $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
-            // cout << "switch stmt enter\n";
             if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
               patch_caselist($5->caselist, $3->place);
-              // cout << "switch stmt exit1\n";
               $$->nextlist = merge($5->nextlist, $5->breaklist);
-              // cout << "switch stmt exit2\n";
               if ($5->continuelist){
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
               }
             }
-            // cout << "switch stmt exit\n";
           }
 	;
 
@@ -2117,12 +2097,10 @@ jump_statement
 	| BREAK ';'
         {
           $$ = terminal($1);
-          // cout << "break entered\n";
           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($$->breaklist) = insert($$->breaklist, k);
           }
-          // cout << "break exit\n";
         }
 	| RETURN ';'                {$$ = terminal($1); 
                                 string type = get_func_ret_type(func_name);
