@@ -24,14 +24,15 @@ int main(){
         printf("%d\n", i);
     }
 
+    Print_three:
+        printf("3\n");
+
     //goto jump stmt
     for(i = 0; i < 5; i++){
         if(i == 3)
             goto Print_three;
         printf("%d\n", i);
     }
-    Print_three:
-        printf("3\n");
 
     // return jump
     printf("%d\n", fact(7));

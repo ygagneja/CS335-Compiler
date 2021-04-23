@@ -69,20 +69,15 @@ extern int line;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1);
-                                    // cout << "id enter (primary)\n";
                                     string type = id_type($1, level, level_id);
-                                    // cout << "id enter (primary)\n";
                                     if (type != "null"){
                                       $$->init = lookup_use($1, level, level_id)->init;
-                                      // cout << "id enter (primary)\n";
                                       $$->nodetype = new char[type.size()+1];
                                       strcpy($$->nodetype, type.c_str());
-                                      // cout << "id enter (primary)\n";
                                       string id($1);
                                       $$->symbol = new char[id.size()+1];
                                       strcpy($$->symbol, id.c_str());
                                       $$->expr_type = 3;
-                                      // cout << "id enter (primary)\n";
 
                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                         qid t = lookup_use($1, level, level_id);
@@ -95,29 +90,21 @@ primary_expression
                                       strcpy($$->nodetype, type.c_str());
                                       fprintf(stderr, "%d |\t Error : %s is not declared in this scope\n", line, $1);
                                     }
-                                    // cout << "id exit\n";
                                   }
   | INT_C                        {$$ = terminal("INT_C");
-                                    // cout << "int enter\n";
                                     $$->init = true;
                                     string type = const_type($1->type);
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
-                                    // cout << $$->nodetype << " " << level << " " << level_id[level] << endl;
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
-                                      // cout << "int exit1\n";
                                       $$->place = t;
-                                      // cout << "int exit2\n";
                                       int k = emit("=", NULL, NULL, $$->place);
-                                      // cout << "int exit3\n";
                                       patch_constant(to_string($$->int_val), k);
-                                      // cout << "int exit4\n";
                                     }
-                                    // cout << "int exit5\n";
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
@@ -199,7 +186,8 @@ postfix_expression
                                                 fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension\n", line, ($1->symbol));
                                               }
                                              }
-  | postfix_expression '(' ')'               {$$ = $1;
+  | postfix_expression '(' ')'               {qid tmp = $1->place;
+                                              $$ = $1;
                                               $$->init = true;
                                               string type = postfix_type($1->nodetype, 2);
                                               $$->nodetype = new char[type.size()+1];
@@ -222,7 +210,7 @@ postfix_expression
                                                     $$->place = t;
                                                   }
                                                   emit("params", NULL, NULL, NULL);
-                                                  emit("call", NULL, $1->place, $$->place);
+                                                  emit("call", NULL, tmp, $$->place);
                                                 }
                                               }
                                               else {
@@ -478,7 +466,8 @@ cast_expression
                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                             qid t = newtmp($$->nodetype, level, level_id);
                                             $$->place = t;
-                                            emit_assignment($$->nodetype, $4->nodetype, $$->place, $4->place, level, level_id);
+                                            qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
+                                            emit("=", NULL, tmp, $$->place); 
                                           }
                                         }
                                         else if (type == "1"){
@@ -487,7 +476,8 @@ cast_expression
                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                             qid t = newtmp($$->nodetype, level, level_id);
                                             $$->place = t;
-                                            emit_assignment($$->nodetype, $4->nodetype, $$->place, $4->place, level, level_id);
+                                            qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
+                                            emit("=", NULL, tmp, $$->place);
                                           }
                                         }
                                         else {
@@ -1263,7 +1253,8 @@ assignment_expression
                                                                     $$->truelist = copy($3->truelist);
                                                                     $$->falselist = copy($3->falselist);
                                                                     if (label == "="){
-                                                                      emit_assignment($1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                      qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                      emit("=", NULL, tmp, $$->place); 
                                                                     }
                                                                     else {
                                                                       emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
@@ -1408,7 +1399,6 @@ init_declarator
                                       strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
                                     }
-                                    // cout << "dec = init enter\n";
                                     if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = lookup_use($$->symbol, level, level_id);
                                       $$->place = t;
@@ -1417,10 +1407,10 @@ init_declarator
                                         lookup_use($1->symbol, level, level_id)->init = false;
                                       }
                                       else {
-                                        emit_assignment($$->nodetype, $3->nodetype, $$->place, $3->place, level, level_id);
+                                        qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
+                                        emit("=", NULL, tmp, $$->place); 
                                       }
                                     }
-                                    // cout << "dec = init exit\n";
                                   }
                                 }
   ;
@@ -1625,20 +1615,14 @@ declarator
 
 direct_declarator
 	: IDENTIFIER            {
-                            // cout << "id enter\n";
-                            // cout << "yes entered" << endl;
 														$$ = terminal($1);
-                            // cout << "id exit1\n";
                             $$->expr_type = 1;
                             string id($1);
                             $$->symbol = new char[id.size()+1];
 														strcpy($$->symbol, id.c_str());
-                            // cout << "id exit2\n";
                             if (is_valid_type(t_name, level, level_id)){
-                              // cout << "id exit3\n";
                               $$->nodetype = new char[t_name.size()+1];
                               strcpy($$->nodetype, t_name.c_str());
-                              // cout << "id exit4\n";
                             }
                             else {
                               $$->nodetype = "null";
@@ -1651,7 +1635,7 @@ direct_declarator
                               qid t = NULL;
                               $$->place = t;
                             }
-                            // cout << "id exit\n";
+                            // t_name = "";
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
@@ -1675,6 +1659,7 @@ direct_declarator
                                                         qid t = NULL;
                                                         $$->place = t;
                                                       }
+                                                      // t_name = "";
                                                     }
   | direct_declarator '[' constant_expression ']'    {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       error_throw = true;
@@ -2005,7 +1990,7 @@ selection_statement
           }
 	| if_expression M statement 
           {
-            cout << "if reduced\n";
+            // cout << "if reduced\n";
             $$ = non_terminal(0, "IF (expr) stmt", $1, $3);
             if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
               backpatch($1->truelist, $2);
@@ -2168,8 +2153,7 @@ jump_statement
                                 }
 
                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                  qid tmp = newtmp(type, level, level_id);
-                                  emit_assignment(type, $2->nodetype, tmp, $2->place, level, level_id);
+                                  qid tmp = emit_assignment(type, $2->nodetype, $2->place, level, level_id);
                                   int k = emit("RETURN", NULL, tmp, NULL);
                                 }
                               }

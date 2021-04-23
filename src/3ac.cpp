@@ -155,25 +155,31 @@ void patch_caselist(char* li, qid arg1){
     }
 }
 
-void emit_assignment(string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id){
-    if(is_type_int(str1) && is_type_int(str1)){
-        emit("=", NULL, place2, place1);
+qid emit_assignment(string str1, string str2, qid place2, unsigned long long level, unsigned long long* level_id){
+    if(is_type_int(str1) && is_type_int(str2)){
+        // emit("=", NULL, place2, place1); 
+        // No type-casting
+        return place2;
 	}
 	else if(is_type_float(str1) && is_type_int(str2)){
 		qid tmp = newtmp(str1, level, level_id);
 		emit("inttofloat", place2, NULL, tmp);
-		emit("=", NULL, tmp, place1);
+		// emit("=", NULL, tmp, place1);
+        return tmp;
 	}
 	else if(is_type_int(str1) && is_type_float(str2)){
 		qid tmp = newtmp(str1, level, level_id);
 		emit("floattoint", place2, NULL, tmp);
-		emit("=", NULL, tmp, place1);
+		// emit("=", NULL, tmp, place1);
+        return tmp;
 	}
 	else if(is_type_float(str1) && is_type_float(str2)){
-		emit("=", NULL, place2, place1);
+		// emit("=", NULL, place2, place1);
+        return place2;
 	}
     else { // handles ptr to int and int to ptr and ptr to ptr
-        emit("=", NULL, place2, place1);
+        // emit("=", NULL, place2, place1);
+        return place2;
     }
 }
 
