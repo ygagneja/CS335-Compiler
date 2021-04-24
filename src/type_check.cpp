@@ -26,12 +26,12 @@ bool is_type_float(string str){
 }
 
 string is_valid(string str1, string str2){
-    if (str1 == str2) return string("1");
+    if (str1 == str2) return string("1"); // does not hold for structs
     if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
         return string("1");
     }
-    else if (str1[str1.size()-1] == '*' && (is_type_int(str2) || str2 == string("char"))) return string("0");
-    else if (str2[str2.size()-1] == '*' && (is_type_int(str1) || str1 == string("char"))) return string("0");
+    else if (str1[str1.size()-1] == '*' && is_type_int(str2)) return string("0");
+    else if (str2[str2.size()-1] == '*' && is_type_int(str1)) return string("0");
     else if (str1[str1.size()-1] == '*' && str2[str2.size()-1] == '*'){
         if (str1 == string("void*") || str2 == string("void*") && str1 == str2) return string("1");
         else return string("0");
@@ -54,11 +54,11 @@ string const_type(int label){
     else if (label == 5) return "long double";
 }
 
-string postfix_type(string str, int label){
+string postfix_type(string str, string exp_type, int label){
     string ret_type = string(str);
     if (label == 1){
-        if (str[str.size()-1] == '*'){
-            ret_type[ret_type.size()-1] = '\0';
+        if (str[str.size()-1] == '*' && is_type_int(exp_type)){
+            ret_type.pop_back();
             return ret_type;
         }
         else return string("null");
@@ -87,7 +87,7 @@ string unary_type(char* op, string str){
         return string(str + "*");
     }
     else if (*op == '*'){
-        return postfix_type(str, 1);
+        return postfix_type(str, "int", 1);
     }
     else if (*op == '+' || *op == '-'){
         if (is_type_int(str) || is_type_float(str)) return string(str);

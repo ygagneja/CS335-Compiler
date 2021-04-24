@@ -13,7 +13,6 @@ sym_tab* curr;
 void tab_init(){
     curr = &global_sym_tab;
     offsets[curr] = 0;
-    // add reserved keywords in table so they arent used again
 }
 
 void set_current_sym_tab(string func_name){
@@ -100,39 +99,39 @@ type_tab_entry* lookup_type_use(string type_name, unsigned long long level, unsi
 }
 
 unsigned long long get_size(string type, unsigned long long level, unsigned long long* level_id){
-    if(type == string("int")) return sizeof(int);
-    if(type == string("long")) return sizeof(long);
-    if(type == string("long int")) return sizeof(long int);
-    if(type == string("long long")) return sizeof(long long);
-    if(type == string("long long int")) return sizeof(long long int);
-    if(type == string("unsigned int")) return sizeof(unsigned int);
-    if(type == string("unsigned long int")) return sizeof(unsigned long int);
-    if(type == string("unsigned long")) return sizeof(unsigned long);
-    if(type == string("unsigned long long")) return sizeof(unsigned long long);
-    if(type == string("unsigned long long int")) return sizeof(unsigned long long int);
-    if(type == string("signed int")) return sizeof(signed int);
-    if(type == string("signed long int")) return sizeof(signed long int);
-    if(type == string("signed long")) return sizeof(signed long);
-    if(type == string("signed long long")) return sizeof(signed long long);
-    if(type == string("signed long long int")) return sizeof(signed long long int);
-    if(type == string("short")) return sizeof(short);
-    if(type == string("short int")) return sizeof(short int);
-    if(type == string("unsigned short int")) return sizeof(unsigned short int);
-    if(type == string("signed short int")) return sizeof(signed short int);
-    if(type == string("unsigned short")) return sizeof(unsigned short);
-    if(type == string("signed short")) return sizeof(signed short);
+    if(type == "int") return sizeof(int);
+    if(type == "long") return sizeof(long);
+    if(type == "long int") return sizeof(long int);
+    if(type == "long long") return sizeof(long long);
+    if(type == "long long int") return sizeof(long long int);
+    if(type == "unsigned int") return sizeof(unsigned int);
+    if(type == "unsigned long int") return sizeof(unsigned long int);
+    if(type == "unsigned long") return sizeof(unsigned long);
+    if(type == "unsigned long long") return sizeof(unsigned long long);
+    if(type == "unsigned long long int") return sizeof(unsigned long long int);
+    if(type == "signed int") return sizeof(signed int);
+    if(type == "signed long int") return sizeof(signed long int);
+    if(type == "signed long") return sizeof(signed long);
+    if(type == "signed long long") return sizeof(signed long long);
+    if(type == "signed long long int") return sizeof(signed long long int);
+    if(type == "short") return sizeof(short);
+    if(type == "short int") return sizeof(short int);
+    if(type == "unsigned short int") return sizeof(unsigned short int);
+    if(type == "signed short int") return sizeof(signed short int);
+    if(type == "unsigned short") return sizeof(unsigned short);
+    if(type == "signed short") return sizeof(signed short);
 
-    if(type == string("float")) return sizeof(float);
-    if(type == string("double")) return sizeof(double);
-    if(type == string("long double")) return sizeof(long double);
+    if(type == "float") return sizeof(float);
+    if(type == "double") return sizeof(double);
+    if(type == "long double") return sizeof(long double);
 
-    if(type == string("char")) return sizeof(char);
+    if(type == "char") return sizeof(char);
 
-    if(type == string("bool")) return 1;
+    if(type == "bool") return 1;
 
-    if (type == string("void")) return 1;
+    if (type == "void") return 1;
 
-    if (type[type.size()-1] == '*') return 8;
+    if (type[type.length()-1] == '*') return 8;
 
     if (lookup_type_use(type, level, level_id)) return lookup_type_use(type, level, level_id)->size;
 
@@ -142,7 +141,8 @@ unsigned long long get_size(string type, unsigned long long level, unsigned long
 }
 
 bool is_valid_type(string type, unsigned long long level, unsigned long long* level_id){
-    if (is_type_int(type) || is_type_float(type) || type == "bool" || type == "char" || type == "void" || type[type.size()-1] == '*') return true;
+    while (type[type.length()-1] == '*') type.pop_back();
+    if (is_type_int(type) || is_type_float(type) || type == "void") return true;
     if (lookup_type_use(type, level, level_id)) return true;
     return false;
 }
@@ -176,13 +176,11 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
 
 bool is_consistent(string func_name, string args){
     if (args == "") args = "null";
-    // cout << "is cons : " << func_name << " : " << func_args_map[func_name] << endl;
     if (func_args_map[func_name] == args) return true;
     return false;
 }
 
 void insert_func_args(string func_name, string arg_types){
-    // cout << "insert : " << func_name << " : " << arg_types << endl;
     func_args_map[func_name] = arg_types;
 }
 

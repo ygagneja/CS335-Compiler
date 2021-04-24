@@ -135,21 +135,19 @@ bool patch_user_goto(string label, int addr){
     if (user_goto.find(label) == user_goto.end()){
         return false;
     }
-    code_arr[addr].goto_label = addr;
+    code_arr[addr].goto_label = user_goto[label];
     return true;
 }
 
-void patch_caselist(char* li, qid arg1){
+void patch_caselist(char* li, qid arg2){
     if (li == NULL) return;
     string str(li);
-    cout << str << endl;
     string delim = ",";
     size_t f = 1;
     while (f != string::npos){
         f = str.find_first_of(delim);
         string t = str.substr(0, f);
-        cout << t << endl;
-        code_arr[stoi(t)].arg1 = arg1;
+        code_arr[stoi(t)].arg2 = arg2;
         if (f == string::npos) break;
         else str = str.substr(f+1);
     }
@@ -161,14 +159,15 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
 	}
 	else if(is_type_float(str1) && is_type_int(str2)){
 		qid tmp = newtmp(str1, level, level_id);
-		emit("inttofloat", place2, NULL, tmp);
+		emit("inttofloat", NULL, place2, tmp);
         return tmp;
 	}
 	else if(is_type_int(str1) && is_type_float(str2)){
 		qid tmp = newtmp(str1, level, level_id);
-		emit("floattoint", place2, NULL, tmp);
+		emit("floattoint", NULL, place2, tmp);
         return tmp;
 	}
+	else if(is_type_float(str1) && is_type_float(str2)){
         return place2;
 	}
     else { // handles ptr to int and int to ptr and ptr to ptr
@@ -176,73 +175,73 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
     }
 }
 
-void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id){
+int emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id){
     if (op == "*=" || op == "/=" || op == "%="){
         op = op.substr(0, 1);
         if (is_type_int(str1) && is_type_int(str2)){
-            emit(op + "int", place1, place2, place1);
+            return emit(op + "int", place1, place2, place1);
         }   
         else if (is_type_int(str1) && is_type_float(str2)){
             qid tmp = newtmp(str2, level, level_id);
-            emit("inttofloat", place1, NULL, tmp);
+            emit("inttofloat", NULL, place1, tmp);
             emit(op + "float", tmp, place2, tmp);
-            emit("floattoint", tmp, NULL, place1);
+            return emit("floattoint", NULL, tmp, place1);
         }
         else if (is_type_float(str1) && is_type_int(str2)){
             qid tmp = newtmp(str1, level, level_id);
-            emit("inttofloat", place2, NULL, tmp);
-            emit(op + "float", place1, tmp, place2);
+            emit("inttofloat", NULL, place2, tmp);
+            return emit(op + "float", place1, tmp, place2);
         }
         else {
-            emit(op + "float", place1, place2, place1);
+            return emit(op + "float", place1, place2, place1);
         }
     }
     else if (op == "+=" || op == "-="){
         op = op.substr(0, 1);
         string type = add_type(str1, str2);
         if (type == "int"){
-            emit(op + "int", place1, place2, place1);
+            return emit(op + "int", place1, place2, place1);
         }
         else if (type == "float"){
             if (is_type_int(str1)){
                 qid tmp = newtmp(str2, level, level_id);
-                emit("inttofloat", place1, NULL, tmp);
+                emit("inttofloat", NULL, place1, tmp);
                 emit(op + "float", tmp, place2, tmp);
-                emit("floattoint", tmp, NULL, place1);
+                return emit("floattoint", NULL, tmp, place1);
             }
             else if (is_type_int(str2)){
                 qid tmp = newtmp(str1, level, level_id);
-                emit("inttofloat", place2, NULL, tmp);
-                emit(op + "float", place1, tmp, place2);
+                emit("inttofloat", NULL, place2, tmp);
+                return emit(op + "float", place1, tmp, place2);
             }
             else {
-                emit(op + "float", place1, place2, place1);
+                return emit(op + "float", place1, place2, place1);
             }
         }
         else {
             if (is_type_int(str1)){
-                string tp(str2); tp[tp.size()-1] = '\0';
+                string tp(str2); tp.pop_back();
                 qid tmp = newtmp(str1, level, level_id);
                 int k = emit("*int", place1, NULL, tmp);
                 patch_constant(to_string(get_size(tp, level, level_id)), k);
-                emit(op + "int", tmp, place2, place1);
+                return emit(op + "int", tmp, place2, place1);
             }
             else {
-                string tp(str1); tp[tp.size()-1] = '\0';
+                string tp(str1); tp.pop_back();
                 qid tmp = newtmp(str2, level, level_id);
                 int k = emit("*int", place2, NULL, tmp);
                 patch_constant(to_string(get_size(tp, level, level_id)), k);
-                emit(op + "int", place1, tmp, place1);
+                return emit(op + "int", place1, tmp, place1);
             }
         }
     }
     else if (op == ">>=" || op == "<<="){
         op = op.substr(0, 2);
-        emit(op, place1, place2, place1);
+        return emit(op, place1, place2, place1);
     }
     else if (op == "&=" || op == "^=" || op == "|="){
         op = op.substr(0, 1);
-        emit(op, place1, place2, place1);
+        return emit(op, place1, place2, place1);
     }
 }
 
@@ -270,5 +269,4 @@ void dump_3ac(){
         cout << endl;
         i++;
     }
-    // handle goto label and constants
 }

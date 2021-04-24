@@ -17,6 +17,7 @@ string func_name;
 string func_args;
 string func_symbols;
 string t_name;
+string switch_type;
 int struct_id = 0;
 unsigned long long level_id[MAX_LEVELS];
 unsigned long long level = 0;
@@ -168,28 +169,29 @@ postfix_expression
                                               if ($1->init && $3->init){
                                                 $$->init = true;
                                               }
-                                              string type = postfix_type($1->nodetype, 1);
+                                              string type = postfix_type($1->nodetype, $3->nodetype, 1);
                                               if (type != "null"){
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
 
                                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                                  qid t = newtmp($$->nodetype, level, level_id);
+                                                  qid t = newtmp($1->nodetype, level, level_id);
                                                   $$->place = t;
-                                                  emit("[]", $1->place, $3->place, $$->place);
+                                                  emit("[+]", $1->place, $3->place, $$->place);
                                                 }
                                               }
                                               else {
                                                 error_throw = true;
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
-                                                fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension\n", line, ($1->symbol));
+                                                fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension or array index is not an integer\n", line, ($1->symbol));
                                               }
+                                              $$->expr_type = 10;
                                              }
   | postfix_expression '(' ')'               {qid tmp = $1->place;
                                               $$ = $1;
                                               $$->init = true;
-                                              string type = postfix_type($1->nodetype, 2);
+                                              string type = postfix_type($1->nodetype, "", 2);
                                               $$->nodetype = new char[type.size()+1];
                                               strcpy($$->nodetype, type.c_str());
                                               if (type != "null"){
@@ -220,7 +222,7 @@ postfix_expression
                                              }
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
                                                             if ($3->init) $$->init = true;
-                                                            string type = postfix_type($1->nodetype, 3);
+                                                            string type = postfix_type($1->nodetype, "", 3);
                                                             $$->nodetype = new char[type.size()+1];
                                                             strcpy($$->nodetype, type.c_str());
                                                             if (type != "null"){
@@ -310,7 +312,7 @@ postfix_expression
                                              }
   | postfix_expression INC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
-                                              string type = postfix_type($1->nodetype, 6);
+                                              string type = postfix_type($1->nodetype, "", 6);
                                               $$->nodetype = new char[type.size()+1];
                                               strcpy($$->nodetype, type.c_str());
                                               if (type == "null"){
@@ -325,7 +327,7 @@ postfix_expression
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
-                                              string type = postfix_type($1->nodetype, 7);
+                                              string type = postfix_type($1->nodetype, "", 7);
                                               $$->nodetype = new char[type.size()+1];
                                               strcpy($$->nodetype, type.c_str());
                                               if (type == "null"){
@@ -371,7 +373,7 @@ unary_expression
   : postfix_expression            {$$ = $1; }
   | INC_OP unary_expression       {$$ = non_terminal(0, $1, $2);
                                     if ($2->init) $$->init = true;
-                                    string type = postfix_type($2->nodetype, 6);
+                                    string type = postfix_type($2->nodetype, "", 6);
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
                                     if (type == "null"){
@@ -387,7 +389,7 @@ unary_expression
 
   | DEC_OP unary_expression       {$$ = non_terminal(0, $1, $2); 
                                     if ($2->init) $$->init = true;
-                                    string type = postfix_type($2->nodetype, 7);
+                                    string type = postfix_type($2->nodetype, "", 7);
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
                                     if (type == "null"){
@@ -428,6 +430,14 @@ unary_expression
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3); 
+                                    if (!is_valid_type($3->nodetype, level, level_id)){
+                                      error_throw = true;
+                                      fprintf(stderr, "%d |\t Error : Invalid type used for typecasting\n", line);
+                                    }
+                                    else if (string($3->nodetype) == "void"){
+                                      error_throw = true;
+                                      fprintf(stderr, "%d |\t Error : Cannot typecast into void type\n", line);
+                                    }
                                     if ($3->init) $$->init = true;
                                     $$->nodetype = "unsigned int";
                                     string type = $3->nodetype;
@@ -455,6 +465,14 @@ unary_operator
 cast_expression
   : unary_expression                  {$$ = $1; }
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4); 
+                                        if (!is_valid_type($2->nodetype, level, level_id)){
+                                          error_throw = true;
+                                          fprintf(stderr, "%d |\t Error : Invalid type used for typecasting\n", line);
+                                        }
+                                        else if (string($2->nodetype) == "void"){
+                                          error_throw = true;
+                                          fprintf(stderr, "%d |\t Error : Cannot typecast into void type\n", line);
+                                        }
                                         string type = cast_type($2->nodetype, $4->nodetype);
                                         $$->nodetype = new char[type.size()+1];
                                         strcpy($$->nodetype, type.c_str());
@@ -464,20 +482,16 @@ cast_expression
                                           fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
 
                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                            qid t = newtmp($$->nodetype, level, level_id);
-                                            $$->place = t;
                                             qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
-                                            emit("=", NULL, tmp, $$->place); 
+                                            $$->place = tmp;
                                           }
                                         }
                                         else if (type == "1"){
                                           $$->nodetype = $2->nodetype;
                                           
                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                            qid t = newtmp($$->nodetype, level, level_id);
-                                            $$->place = t;
                                             qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
-                                            emit("=", NULL, tmp, $$->place);
+                                            $$->place = tmp;
                                           }
                                         }
                                         else {
@@ -649,7 +663,7 @@ additive_expression
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
                                                                   qid tmp = newtmp($1->nodetype, level, level_id); 
-                                                                  string tp($3->nodetype); tp[tp.size()-1] = '\0';
+                                                                  string tp($3->nodetype); tp.pop_back();
                                                                   int k = emit("*int", $1->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
                                                                   emit("+int", tmp, $3->place, $$->place);
@@ -658,7 +672,7 @@ additive_expression
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
                                                                   qid tmp = newtmp($3->nodetype, level, level_id);
-                                                                  string tp($1->nodetype); tp[tp.size()-1] = '\0';
+                                                                  string tp($1->nodetype); tp.pop_back();
                                                                   int k = emit("*int", $3->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
                                                                   emit("+int", $1->place, tmp, $$->place);
@@ -1200,17 +1214,73 @@ conditional_expression
                                                                         strcpy($$->nodetype, type.c_str());
 
                                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                                                          qid t = newtmp($$->nodetype, level, level_id);
-                                                                          $$->place = t;
-                                                                          int k0 = emit("=", NULL, $7->place, $$->place);
                                                                           backpatch($1->truelist, $2);
                                                                           backpatch($1->falselist, $6);
-                                                                          int k1 = emit("GOTO", NULL, NULL, NULL);
-                                                                          ($$->nextlist) = insert($$->nextlist, k1);
-                                                                          int k2 = emit("=", NULL, $3->place, $$->place);
-                                                                          backpatch($5->nextlist, k2);
-                                                                          backpatch($3->nextlist, k2);
+                                                                          
+                                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                                          $$->place = t;
+
+                                                                          int k0, k1, k2, k3;
+                                                                          if ($7->truelist || $7->falselist){
+                                                                            if ($7->truelist && $7->falselist){
+                                                                              k0 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("1", k0);
+                                                                              k1 = emit("GOTO", NULL, NULL, NULL);
+                                                                              k2 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("0", k2);
+                                                                              k3 = emit("GOTO", NULL, NULL, NULL);
+                                                                              $$->nextlist = insert($$->nextlist, k1);
+                                                                              $$->nextlist = insert($$->nextlist, k3);
+                                                                            }
+                                                                            else if ($7->truelist) {
+                                                                              k0 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("1", k0);
+                                                                              k1 = emit("GOTO", NULL, NULL, NULL);
+                                                                              $$->nextlist = insert($$->nextlist, k1);
+                                                                            }
+                                                                            else if ($7->falselist){
+                                                                              k2 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("0", k2);
+                                                                              k3 = emit("GOTO", NULL, NULL, NULL);
+                                                                              $$->nextlist = insert($$->nextlist, k3);
+                                                                            }
+                                                                          }
+                                                                          else {
+                                                                            k0 = emit("=", NULL, $7->place, $$->place);
+                                                                            k1 = emit("GOTO", NULL, NULL, NULL);
+                                                                            $$->nextlist = insert($$->nextlist, k1);
+                                                                          }
+                                                                          backpatch($7->truelist, k0);
+                                                                          backpatch($7->falselist, k2);
                                                                           backpatch($7->nextlist, k0);
+
+                                                                          backpatch($5->nextlist, nextinstr());
+
+                                                                          int k4, k5, k6;
+                                                                          if ($3->truelist || $3->falselist){
+                                                                            if ($3->truelist && $3->falselist){
+                                                                              k4 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("1", k4);
+                                                                              k5 = emit("GOTO", NULL, NULL, NULL);
+                                                                              k6 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("0", k6);
+                                                                              $$->nextlist = insert($$->nextlist, k5);
+                                                                            }
+                                                                            else if ($7->truelist) {
+                                                                              k4 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("1", k4);
+                                                                            }
+                                                                            else if ($7->falselist){
+                                                                              k6 = emit("=", NULL, NULL, $$->place);
+                                                                              patch_constant("0", k6);
+                                                                            }
+                                                                          }
+                                                                          else {
+                                                                            k4 = emit("=", NULL, $3->place, $$->place);
+                                                                          }
+                                                                          backpatch($3->truelist, k4);
+                                                                          backpatch($3->falselist, k6);
+                                                                          backpatch($3->nextlist, k4);
                                                                         }
                                                                       }
                                                                       else {
@@ -1248,15 +1318,48 @@ assignment_expression
 
                                                                   if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                                     $$->place = $1->place;
-                                                                    $$->nextlist = copy($3->nextlist);
-                                                                    $$->truelist = copy($3->truelist);
-                                                                    $$->falselist = copy($3->falselist);
-                                                                    if (label == "="){
-                                                                      qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
-                                                                      emit("=", NULL, tmp, $$->place); 
+                                                                    
+                                                                    if ($3->truelist || $3->falselist){
+                                                                      qid tmp = newtmp("bool", level, level_id);
+                                                                      if ($3->truelist && $3->falselist){
+                                                                        int k0 = emit("=", NULL, NULL, tmp);
+                                                                        patch_constant("1", k0);
+                                                                        int k1 = emit("GOTO", NULL, NULL, NULL);
+                                                                        int k2 = emit("=", NULL, NULL, tmp);
+                                                                        patch_constant("0", k2);
+                                                                        backpatch($3->truelist, k0);
+                                                                        backpatch($3->falselist, k2);
+                                                                        $3->nextlist = insert($3->nextlist, k1);
+                                                                        backpatch($3->nextlist, nextinstr());
+                                                                      }
+                                                                      else if ($3->truelist){
+                                                                        int k0 = emit("=", NULL, NULL, tmp);
+                                                                        patch_constant("1", k0);
+                                                                        backpatch($3->truelist, k0);
+                                                                      }
+                                                                      else if ($3->falselist){
+                                                                        int k0 = emit("=", NULL, NULL, tmp);
+                                                                        patch_constant("0", k0);
+                                                                        backpatch($3->falselist, k0);
+                                                                      }
+
+                                                                      if (label == "="){
+                                                                        qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id);
+                                                                        int k = emit("=", NULL, tmp1, $$->place); 
+                                                                      }
+                                                                      else {
+                                                                        int k = emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, level, level_id);
+                                                                      }
                                                                     }
                                                                     else {
-                                                                      emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                      backpatch($3->nextlist, nextinstr());
+                                                                      if (label == "="){
+                                                                        qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                        int k = emit("=", NULL, tmp, $$->place); 
+                                                                      }
+                                                                      else {
+                                                                        int k = emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                      }
                                                                     }
                                                                   }
                                                                 }
@@ -1401,8 +1504,38 @@ init_declarator
                                         lookup_use($1->symbol, level, level_id)->init = false;
                                       }
                                       else {
-                                        qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
-                                        emit("=", NULL, tmp, $$->place); 
+                                        if ($3->truelist || $3->falselist){
+                                          qid tmp = newtmp("bool", level, level_id);
+                                          if ($3->truelist && $3->falselist){
+                                            int k0 = emit("=", NULL, NULL, tmp);
+                                            patch_constant("1", k0);
+                                            int k1 = emit("GOTO", NULL, NULL, NULL);
+                                            int k2 = emit("=", NULL, NULL, tmp);
+                                            patch_constant("0", k2);
+                                            backpatch($3->truelist, k0);
+                                            backpatch($3->falselist, k2);
+                                            $3->nextlist = insert($3->nextlist, k1);
+                                            backpatch($3->nextlist, nextinstr());
+                                          }
+                                          else if ($3->truelist){
+                                            int k0 = emit("=", NULL, NULL, tmp);
+                                            patch_constant("1", k0);
+                                            backpatch($3->truelist, k0);
+                                          }
+                                          else if ($3->falselist){
+                                            int k0 = emit("=", NULL, NULL, tmp);
+                                            patch_constant("0", k0);
+                                            backpatch($3->falselist, k0);
+                                          }
+
+                                          qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id);
+                                          int k = emit("=", NULL, tmp1, $$->place); 
+                                        }
+                                        else {
+                                          backpatch($3->nextlist, nextinstr());
+                                          qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
+                                          int k = emit("=", NULL, tmp, $$->place);
+                                        }
                                       }
                                     }
                                   }
@@ -1504,12 +1637,14 @@ struct_declaration
 
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
-                                                $$->nodetype = new char[t_name.size()+1];
-                                                strcpy($$->nodetype, t_name.c_str());
+                                                string type = string($1->label) + " " + string($2->nodetype);
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
                                               }
 	| type_specifier                            {$$ = $1;
-                                                $$->nodetype = new char[t_name.size()+1];
-                                                strcpy($$->nodetype, t_name.c_str());
+                                                string type($1->label);
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
                                               }
 	| type_qualifier specifier_qualifier_list   {$$ = non_terminal(0, "specifier_qualifier_list", $1, $2);
                                                 error_throw = true;
@@ -1629,7 +1764,6 @@ direct_declarator
                               qid t = NULL;
                               $$->place = t;
                             }
-                            t_name = "";
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
@@ -1854,7 +1988,22 @@ switch_case_marker
   : CASE constant_expression ':'                {
                                                   $$ = $2;
                                                   qid res = newtmp("bool", level, level_id);
-                                                  int tmp = emit("==", NULL, $2->place, res); 
+                                                  string type = relat_type(switch_type, $2->place->type);
+                                                  int tmp;
+                                                  if (type == "int" || (is_type_float(switch_type) && is_type_float($2->place->type))) tmp = emit("==int", $2->place, NULL, res); 
+                                                  else {
+                                                    if (is_type_int(switch_type)){
+                                                      qid mid = newtmp($2->place->type, level, level_id);
+                                                      int k = emit("inttofloat", NULL, NULL, mid);
+                                                      ($$->caselist) = insert($$->caselist, k);
+                                                      tmp = emit("==float", mid, NULL, res);
+                                                    }
+                                                    else {
+                                                      qid mid = newtmp(switch_type, level, level_id);
+                                                      emit("inttofloat", NULL, $2->place, mid);
+                                                      tmp = emit("==float", mid, NULL, res);
+                                                    }
+                                                  }
                                                   int tmp1 = emit("GOTO IF", NULL, res, NULL);
                                                   int tmp2 = emit("GOTO", NULL, NULL, NULL);
                                                   ($$->caselist) = insert($$->caselist, tmp);
@@ -1990,6 +2139,7 @@ selection_statement
               patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
               if ($5->continuelist){
+                switch_type = string($3->nodetype);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
               }
@@ -2274,10 +2424,9 @@ int main (int argc, char* argv[]){
 // exhaustive code review
 
 // incomplete and buggy structs implementation (semantics + 3ac)
-// initializer stuff (semantics + 3ac)
+// incomplete array (3ac)
 
 // how is actual typecasting happening ??? signed unsigned float int pointer short long etc
-// user goto labels
 
 // init errors ??
 // normal syntax errors ??
