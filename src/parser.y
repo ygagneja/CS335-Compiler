@@ -1380,7 +1380,9 @@ assignment_operator
   ;
 
 expression
-  : assignment_expression                 {$$ = $1;}
+  : assignment_expression                 {$$ = $1;
+                                            switch_type = string($$->nodetype);
+                                          }
   | expression ',' M assignment_expression  {$$ = non_terminal(0, "expression", $1, $4);
                                               backpatch($1->nextlist, $3);
                                               $$->nextlist = copy($4->nextlist);
@@ -2139,7 +2141,6 @@ selection_statement
               patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
               if ($5->continuelist){
-                switch_type = string($3->nodetype);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
               }
@@ -2425,6 +2426,7 @@ int main (int argc, char* argv[]){
 
 // incomplete and buggy structs implementation (semantics + 3ac)
 // incomplete array (3ac)
+// string literal initialisation
 
 // how is actual typecasting happening ??? signed unsigned float int pointer short long etc
 
@@ -2434,3 +2436,5 @@ int main (int argc, char* argv[]){
 // add more warnings
 // propagate symbol names
 // else of reqd expr type condn
+// set up software like flow (dump relevant stuff)
+// documentation and readme
