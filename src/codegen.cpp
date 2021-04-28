@@ -140,16 +140,15 @@ void code_gen(){
         --pos; // skip ')'
         while(tmp[pos] != '(') func += tmp[pos], --pos;
         reverse(func.begin(), func.end());
-        // cout << "Function Name : " << func << endl;
         if(func == "main"){
             asmb_line("la, $fp, ($sp)");
             // func_size = get_func_size(func);
-            func_size = 256;
+            func_size = 256; // Assumed
             asmb_line("sub $sp, $sp, " + to_string(func_size)); // Decrease the stack pointer by size
         }
         else{
             // func_size = get_func_size(func);
-            func_size = 256;
+            func_size = 256; // Assumed
             asmb_line("sub $sp, $sp, " + to_string(func_size));
             asmb_line("sw $ra, 0($sp)");
             asmb_line("la $fp, 72($sp)");
@@ -172,7 +171,6 @@ void code_gen(){
             asmb_line("sub $sp, $sp, $v0");
 
             string arguments = get_func_args(func); // Assume less than 4 args(a0 - a3)
-            cout << "Arguments : " << arguments << endl;
             if(!arguments.empty()){
                int n_args = 0, param_size = 0;
                size_t f = 1;
@@ -186,7 +184,7 @@ void code_gen(){
                      asmb_line("li $s6, " + to_string(param_size));
                      asmb_line("sub $s7, $fp, $s6");
                      asmb_line("sw $a" + to_string(n_args - 1) + ", 0($s7)");
-                     param_size += sizeof(int);
+                     param_size += sizeof(int); // default assumed as int, type change later
                    }
                }
             }
