@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include "nodes.h"
 #include "type_check.h"
+#include "codegen.h"
 
 #define MAX_LEVELS 1024
 using namespace std;
@@ -2412,6 +2413,7 @@ int main (int argc, char* argv[]){
     graph_init();
     yyparse();
     graph_end();
+    code_gen();
     if (error_throw){
       // remove ast
       exit(0);
