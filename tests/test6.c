@@ -3,9 +3,9 @@ void scanf(char* str, ...);
 
 int MAX_SIZE = 500;
 
-int a[2][2] = {{1, 2}, {3, 5}};
-int b[2][2] = {{1, 4}, {5, 8}};
-// r2 = c1
+int a[2][2];
+int b[2][2];
+
 int mul_and_xor(int r1, int c1, int r2, int c2){
     int res = 0;
     int i, j, k, counter;
@@ -19,7 +19,6 @@ int mul_and_xor(int r1, int c1, int r2, int c2){
     return res;
 }
 
-// Checks Unary expression, relational_expression, shift_expression, equality expression etc.
 void Check(){
     int c = 5;
     int *ptr = &c;
@@ -39,22 +38,25 @@ void Check(){
 
 }
 
-// int MAX_GIRLFRIENDS = 5;
-// struct person {
-//     int age;
-//     char* name;
-//     struct girlfriend_list* gf;
-// };
+int MAX_GIRLFRIENDS = 5;
+struct girlfriend_list {
+    char *name;
+};
+struct person {
+    int age;
+    char* name;
+    struct girlfriend_list* gf;
+};
 
-// struct girlfriend_list {
-//     char *name;
-// };
 
-
-// int main(){
-//     struct person me = {21, "Yuvraj", NULL};
-//     int r1 = 2, c1 = 2, r2 = 2, c2 = 2;
-//     int res = mul_and_xor(r1, c1, r2, c2);
-//     Check();
-//     return 0;
-// }
+int main(){
+    struct person me;
+    int null = 0;
+    int r1 = 2, c1 = 2, r2 = 2, c2 = 2;
+    int res = mul_and_xor(r1, c1, r2, c2);
+    me.age = 21; 
+    me.name = "Yuvraj";
+    me.gf = null;
+    Check();
+    return 0;
+}

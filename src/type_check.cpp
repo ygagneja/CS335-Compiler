@@ -26,7 +26,13 @@ bool is_type_float(string str){
 }
 
 string is_valid(string str1, string str2){
-    if (str1 == str2) return string("1"); // does not hold for structs
+    if (str1 == str2){
+        if (str1.substr(0, 7) == "struct "){
+            if (str1[str1.size()-1] == '*') return string("1");
+            else return "null";
+        }
+        return string("1");
+    }
     if ((is_type_int(str1) || is_type_float(str1)) && (is_type_int(str2) || is_type_float(str2))){
         return string("1");
     }
@@ -46,12 +52,12 @@ string id_type(string str, unsigned long long level, unsigned long long* level_i
 }
 
 string const_type(int label){
-    if (label == 0) return "int";
-    else if (label == 1) return "long";
-    else if (label == 2) return "long long";
-    else if (label == 3) return "float";
-    else if (label == 4) return "double";
-    else if (label == 5) return "long double";
+    if (label == 0) return string("int");
+    else if (label == 1) return string("long");
+    else if (label == 2) return string("long long");
+    else if (label == 3) return string("float");
+    else if (label == 4) return string("double");
+    else if (label == 5) return string("long double");
 }
 
 string postfix_type(string str, string exp_type, int label){
@@ -64,11 +70,26 @@ string postfix_type(string str, string exp_type, int label){
         else return string("null");
     }
     else if (label == 2 || label == 3){
+        // cout << str << endl;
         if (str.substr(0, 5) == "func "){
             ret_type.erase(0, 5);
             return ret_type;
         }
         return string("null");
+    }
+    else if (label == 4){
+        if (str[str.size()-1] != '*' && str.substr(0, 7) == "struct "){
+            return "1";
+        }
+        return "null";
+    }
+    else if (label == 5){
+        if (str.substr(0, 7) == "struct " && str[str.size()-1] == '*'){
+            str.pop_back();
+            if (str[str.size()-1] == '*') return "null";
+            return "1";
+        }
+        return "null";
     }
     else if (label == 6 || label == 7){
         if (is_type_int(str) || is_type_float(str) || str == string("char") || str[str.size()-1] == '*') return ret_type;

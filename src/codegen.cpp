@@ -10,14 +10,22 @@ queue <pair <string, sym_tab_entry*> > free_regs;
 vector <string> assembly_code;
 map <string, string> regs; // reg["$s5"] gives the name of the symbol that is allocated to reg $s5
 
+// fstream my_file;
+// my_file.open("my_file.S", ios::out);
+// 	if (!my_file) {
+// 		cout << "File not created!";
+// 	}
+
 void asmb_line(string s){
   // assembly_code.push_back(s);
   cout << s << endl;
+//   my_file << s << endl;
 }
 
 void dump_asm_code(){
   for(string it : assembly_code) printf("%s\n", it.c_str());
 }
+
 
 // Allocates a reg if available
 // If not then free a used reg
@@ -114,7 +122,7 @@ void initialise(){
   regs["$t6"] = "";
   regs["$t7"] = "";
   regs["$t8"] = "";
-  regs["$t9"] = "";
+  // regs["$t9"] = "";
   regs["$s0"] = "";
   regs["$s1"] = "";
   regs["$s2"] = "";
@@ -126,6 +134,10 @@ void initialise(){
 }
 
 void code_gen(){
+    asmb_line(".data");
+    asmb_line("reservedspace: .space 1024");
+    asmb_line("_newline: .asciiz \"\\n\"");
+    asmb_line(".text\n");
     initialise();
     string func;
     unsigned long long func_size;
@@ -141,7 +153,7 @@ void code_gen(){
         while(tmp[pos] != '(') func += tmp[pos], --pos;
         reverse(func.begin(), func.end());
         if(func == "main"){
-            asmb_line("la, $fp, ($sp)");
+            asmb_line("main: la, $fp, ($sp)");
             // func_size = get_func_size(func);
             func_size = 256; // Assumed
             asmb_line("sub $sp, $sp, " + to_string(func_size)); // Decrease the stack pointer by size
@@ -149,9 +161,11 @@ void code_gen(){
         else{
             // func_size = get_func_size(func);
             func_size = 256; // Assumed
-            asmb_line("sub $sp, $sp, " + to_string(func_size));
-            asmb_line("sw $ra, 0($sp)");
-            asmb_line("la $fp, 72($sp)");
+            asmb_line(func + " : sub $sp, $sp, " + to_string(72)); // Label of calle function
+            asmb_line("sw $ra, 0($sp)"); // Store return address
+            asmb_line("sw $fp, 4($sp)");
+
+            asmb_line("la $fp, 72($sp)"); // set frame pointer to basse of alloted stack frame
             asmb_line("sw $t0, 12($sp)"); // Store regs into mem
             asmb_line("sw $t1, 16($sp)");
             asmb_line("sw $t2, 20($sp)");
@@ -167,8 +181,9 @@ void code_gen(){
             asmb_line("sw $s2, 60($sp)");
             asmb_line("sw $s3, 64($sp)");
             asmb_line("sw $s4, 68($sp)");
+
             asmb_line("li $v0, " + to_string(func_size));
-            asmb_line("sub $sp, $sp, $v0");
+            asmb_line("sub $sp, $sp, $v0"); // Allocate space for temporaries which this func may use
 
             string arguments = get_func_args(func); // Assume less than 4 args(a0 - a3)
             if(!arguments.empty()){
@@ -184,7 +199,7 @@ void code_gen(){
                      asmb_line("li $s6, " + to_string(param_size));
                      asmb_line("sub $s7, $fp, $s6");
                      asmb_line("sw $a" + to_string(n_args - 1) + ", 0($s7)");
-                     param_size += sizeof(int); // default assumed as int, type change later
+                     param_size += get_size(curr_argument, 0, NULL); // default assumed as int, type change later
                    }
                }
             }
@@ -194,7 +209,7 @@ void code_gen(){
           cout << "Printing params assembly \n";
           string arg_reg = get_reg(code_arr[i].arg2);
           asmb_line("move $a" + to_string(current_n_param) + " , " + arg_reg);
-          current_n_param++; // assume there are less than 4 params
+          current_n_param++; // Assume less than 4 args
       }
       else if(code_arr[i].op == "="){  // res <- = arg2, arg2 could be a constant(num) or a temporary
         cout << "Printing = assembly\n";
@@ -299,7 +314,7 @@ void code_gen(){
           }
       }
       // Integer modulo
-      else if(code_arr[i].op == "/%int"){
+      else if(code_arr[i].op == "%int"){
           cout << "Printing modulo assembly\n";
           string res_reg = get_reg(code_arr[i].res);
           string arg1_reg = get_reg(code_arr[i].arg1);
@@ -339,8 +354,7 @@ void code_gen(){
              asmb_line("addi $t9, $0, " + code_arr[i].constant);
              reg1 = "$t9";
          }
-         else
-             reg1 = get_reg(code_arr[i].arg2);
+         else reg1 = get_reg(code_arr[i].arg2);
          reg2 = get_reg(code_arr[i].arg1);
          reg3 = get_reg(code_arr[i].res);
          asmb_line("sge " + reg3 + ", " + reg2 + ", " + reg1);
@@ -352,8 +366,7 @@ void code_gen(){
            asmb_line("addi $t9, $0, " + code_arr[i].constant);
            reg1 = "$t9";
        }
-       else
-           reg1 = get_reg(code_arr[i].arg2);
+       else reg1 = get_reg(code_arr[i].arg2);
        reg2 = get_reg(code_arr[i].arg1);
        reg3 = get_reg(code_arr[i].res);
        asmb_line("sle " + reg3 + ", " + reg2 + ", " + reg1);
@@ -365,8 +378,7 @@ void code_gen(){
            asmb_line("addi $t9, $0, " + code_arr[i].constant);
            reg1 = "$t9";
        }
-       else
-           reg1 = get_reg(code_arr[i].arg2);
+       else reg1 = get_reg(code_arr[i].arg2);
        reg2 = get_reg(code_arr[i].arg1);
        reg3 = get_reg(code_arr[i].res);
        asmb_line("seq " + reg3 + ", " + reg2 + ", " + reg1);
@@ -378,37 +390,43 @@ void code_gen(){
            asmb_line("addi $t9, $0, " + code_arr[i].constant);
            reg1 = "$t9";
        }
-       else
-           reg1 = get_reg(code_arr[i].arg2);
+       else reg1 = get_reg(code_arr[i].arg2);
        reg2 = get_reg(code_arr[i].arg1);
        reg3 = get_reg(code_arr[i].res);
        asmb_line("sne " + reg3 + ", " + reg2 + ", " + reg1);
     }
-
-
-      else if(code_arr[i].op == "call"){ // call func_name
+      else if(code_arr[i].op == "call" && code_arr[i].arg2 -> sym_name != "printf"){ // call func_name
         asmb_line("jal " + code_arr[i].arg2 -> sym_name);
         if(code_arr[i].res){ // Call to non void function
             string res_reg = get_reg(code_arr[i].res);
             asmb_line("move " + res_reg + ", $v0");
             current_n_param = 0; // Reset to 0, to be incremented by next func call
         }
-        else current_n_param = 0; // Call to Void function, don't do anything
-
+        else current_n_param = 0; // Call to function without params, don't do anything
+      }
+      else if(code_arr[i].op == "call" && code_arr[i].arg2 -> sym_name == "printf"){
+        asmb_line("li $v0, 1");
+        asmb_line("syscall");
+        asmb_line("li $v0, 4");
+        asmb_line("la $a0, _newline");
+        asmb_line("syscall");
+        current_n_param = 0;
       }
       else if(code_arr[i].op == "RETURN" && func == "main"){ // RETURN called in main function
           cout << "Return from main\n";
           asmb_line("li $a0, 0");
+
           asmb_line("li $v0, 10");
-          asmb_line("syscall");
+          asmb_line("syscall"); // Exit
       }
       else if(code_arr[i].op == "RETURN" && func != "main"){
           cout << "Return from non main\n";
           string arg_reg = get_reg(code_arr[i].arg2);
           asmb_line("move $v0, " + arg_reg);
-          asmb_line("b " + func + "_end_");
+          asmb_line("b " + func + "_end_"); // Branch to function end directive
 
           asmb_line(func + "_end_: "); // Assembly for end directive
+          asmb_line("addi $sp, $sp, " + to_string(func_size)); // Pop local data
 
           asmb_line("lw $ra, 0($sp)");
           asmb_line("lw $fp, 4($sp)");
@@ -429,9 +447,50 @@ void code_gen(){
           asmb_line("lw $s2, 60($sp)");
           asmb_line("lw $s3, 64($sp)");
           asmb_line("lw $s4, 68($sp)");
-          asmb_line("addi $sp, $sp, 72");
-          asmb_line("jr $ra");
+          asmb_line("addi $sp, $sp, 72"); // Pop stack
+          asmb_line("jr $ra"); // Return to calling procedure
       }
+        else if(code_arr[i].op == "E++"){ // res <- i E++
+          string res_reg = get_reg(code_arr[i].res);
+          string arg_reg = get_reg(code_arr[i].arg1);
+          asmb_line("move " + res_reg + " , " + arg_reg);
+          asmb_line("addi " + arg_reg + " , " + arg_reg + " , 1");
+        }
+        else if(code_arr[i].op == "E--"){ // res <- i E--
+          string res_reg = get_reg(code_arr[i].res);
+          string arg_reg = get_reg(code_arr[i].arg1);
+          asmb_line("move " + res_reg + " , " + arg_reg);
+          asmb_line("sub " + arg_reg + " , " + arg_reg + " , 1");
+        }
+        else if(code_arr[i].op == "--E"){ // res <- --E i
+          string res_reg = get_reg(code_arr[i].res);
+          string arg_reg = get_reg(code_arr[i].arg2);
+          asmb_line("sub " + arg_reg + " , " + arg_reg + " , 1");
+          asmb_line("move " + res_reg + " , " + arg_reg);
+        }
+        else if(code_arr[i].op == "++E"){ // res <- ++E i
+          string res_reg = get_reg(code_arr[i].res);
+          string arg_reg = get_reg(code_arr[i].arg2);
+          asmb_line("addi " + arg_reg + " , " + arg_reg + " , 1");
+          asmb_line("move " + res_reg + " , " + arg_reg);
+        }
+        else if(code_arr[i].op == "GOTO"){ // GOTO
+			asmb_line("j " + to_string(code_arr[i].goto_label));
+        }
+        else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
+            string arg_reg = get_reg(code_arr[i].arg2);
+			asmb_line("bnq $0, " + arg_reg + " , " + to_string(code_arr[i].goto_label));
+        }
+
     }
           // dump_asm_code();
+	
+	
+// 	cout << "File dumped successfully!" << endl;
+// 	my_file.close(); 
+	
 }
+
+// +float , *float etc. not handled
+// GOTO to be handled
+// res <= "%d\n" not handled

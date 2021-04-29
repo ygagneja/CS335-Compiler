@@ -5,9 +5,9 @@ int main(){
     int a = 2.5;
     bool b = true;
     float c = (float) a;
-    // b = a;   
-    // b = c;
     float d = (float)a;
     int e = (int)c;
+    b = a; //should convert inttobool (no conversion now)
+    b = c;
     // int-to-bool conversion possible but reverse not supported
 }

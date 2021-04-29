@@ -28,7 +28,6 @@ int main() {
             printf("%.1lf / %.1lf = %.1lf",n1, n2, n1/n2);
             break;
 
-        // operator doesn't match any case constant +, -, *, /
         default:
             printf("Error! operator is not correct");
     }

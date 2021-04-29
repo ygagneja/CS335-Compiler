@@ -15,7 +15,6 @@ typedef struct {
     char* curr_args_types;
     int expr_type;
     unsigned long long size;
-    unsigned long long max_size = 0;
 
     char* nextlist = NULL;
     char* truelist = NULL;

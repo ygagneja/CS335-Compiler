@@ -42,7 +42,7 @@ extern int line;
 %token <str> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token <str> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token <str> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
-%token <str> XOR_ASSIGN OR_ASSIGN TYPE_NAME
+%token <str> XOR_ASSIGN OR_ASSIGN
 %token <str> TYPEDEF EXTERN STATIC AUTO REGISTER
 %token <str> BOOL CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token <str> STRUCT UNION ENUM ELLIPSIS
@@ -71,6 +71,7 @@ extern int line;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1);
+                                    // cout << "id enter\n";
                                     string type = id_type($1, level, level_id);
                                     if (type != "null"){
                                       $$->init = lookup_use($1, level, level_id)->init;
@@ -92,6 +93,7 @@ primary_expression
                                       strcpy($$->nodetype, type.c_str());
                                       fprintf(stderr, "%d |\t Error : %s is not declared in this scope\n", line, $1);
                                     }
+                                    // cout << "id exit\n";
                                   }
   | INT_C                        {$$ = terminal("INT_C");
                                     $$->init = true;
@@ -167,19 +169,23 @@ primary_expression
 postfix_expression
   : primary_expression                       {$$ = $1; }
   | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
+                                              // cout << "enter\n";
                                               if ($1->init && $3->init){
                                                 $$->init = true;
                                               }
+                                              $$->symbol = $1->symbol;
                                               string type = postfix_type($1->nodetype, $3->nodetype, 1);
+                                              // cout << "exit\n";
                                               if (type != "null"){
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
-
+                                                // cout << "exit\n";
                                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                   qid t = newtmp($1->nodetype, level, level_id);
                                                   $$->place = t;
                                                   emit("[+]", $1->place, $3->place, $$->place);
                                                 }
+                                                // cout << "exit\n";
                                               }
                                               else {
                                                 error_throw = true;
@@ -188,6 +194,7 @@ postfix_expression
                                                 fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension or array index is not an integer\n", line, ($1->symbol));
                                               }
                                               $$->expr_type = 10;
+                                              // cout << "exit\n";
                                              }
   | postfix_expression '(' ')'               {qid tmp = $1->place;
                                               $$ = $1;
@@ -222,14 +229,16 @@ postfix_expression
                                               }
                                              }
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
+                                                            // cout << $3->curr_args_types << endl;
                                                             if ($3->init) $$->init = true;
+                                                            $$->symbol = $1->symbol;
                                                             string type = postfix_type($1->nodetype, "", 3);
                                                             $$->nodetype = new char[type.size()+1];
                                                             strcpy($$->nodetype, type.c_str());
                                                             if (type != "null"){
                                                               if ($1->expr_type == 3){
                                                                 string args = get_func_args($1->symbol);
-                                                                string temp1($3->curr_args_types); // This denotes the current args
+                                                                string temp1($3->curr_args_types);
                                                                 string temp2 = args == "null" ? "" : args;
                                                                 string typeA, typeB;
                                                                 string delim = string(",");
@@ -306,10 +315,63 @@ postfix_expression
                                                             }
                                                           }
   | postfix_expression '.' IDENTIFIER        {$$ = non_terminal(0, "postfix_expression.IDENTIFIER", $1, terminal($3));
-                                              // what is this
+                                              string type = postfix_type($1->nodetype, "", 4);
+                                              if (type == "null"){
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
+                                                error_throw = true;
+                                                fprintf(stderr, "%d |\t Error : \'%s\' is either a struct pointer or not a valid struct\n", line, $1->symbol);
+                                              }
+                                              else {
+                                                string type = struct_sym_type($1->nodetype, $3, level, level_id);
+                                                if (type == "null"){
+                                                  $$->nodetype = new char[type.size()+1];
+                                                  strcpy($$->nodetype, type.c_str());
+                                                  error_throw = true;
+                                                  fprintf(stderr, "%d |\t Error : \'%s\' is not a member of the struct being used\n", line, $3);
+                                                }
+                                                else {
+                                                  $$->nodetype = new char[type.size()+1];
+                                                  strcpy($$->nodetype, type.c_str());
+                                                  string symbol = string($1->symbol) + "." + string($3);
+                                                  $$->symbol = new char[symbol.size()+1];
+                                                  strcpy($$->symbol, symbol.c_str());
+
+                                                  if (!error_throw){
+                                                    $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
+                                                  }
+                                                }
+                                              }
                                              }
   | postfix_expression PTR_OP IDENTIFIER     {$$ = non_terminal(0, $2, $1, terminal($3));
-                                              // what is this
+                                              string type = postfix_type($1->nodetype, "", 5);
+                                              if (type == "null"){
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
+                                                error_throw = true;
+                                                fprintf(stderr, "%d |\t Error : \'%s\' is either a struct multi pointer or not a valid struct\n", line, $1->symbol);
+                                              }
+                                              else {
+                                                string tmp($1->nodetype); tmp.pop_back();
+                                                string type = struct_sym_type(tmp, $3, level, level_id);
+                                                if (type == "null"){
+                                                  $$->nodetype = new char[type.size()+1];
+                                                  strcpy($$->nodetype, type.c_str());
+                                                  error_throw = true;
+                                                  fprintf(stderr, "%d |\t Error : \'%s\' is not a member of the struct being used\n", line, $3);
+                                                }
+                                                else {
+                                                  $$->nodetype = new char[type.size()+1];
+                                                  strcpy($$->nodetype, type.c_str());
+                                                  string symbol = string($1->symbol) + "->" + string($3);
+                                                  $$->symbol = new char[symbol.size()+1];
+                                                  strcpy($$->symbol, symbol.c_str());
+
+                                                  if (!error_throw){
+                                                    $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
+                                                  }
+                                                }
+                                              }
                                              }
   | postfix_expression INC_OP                {$$ = non_terminal(0, $2, $1);
                                               if ($1->init) $$->init = true;
@@ -345,28 +407,34 @@ postfix_expression
 
 argument_expression_list
   : assignment_expression            {$$ = $1;
+                                      // cout << "single arg list enter\n";
                                       string temp($$->nodetype);
                                       $$->curr_args_types = new char[temp.size()+1];
                                       strcpy($$->curr_args_types, temp.c_str());
-                                      if ($$->nodetype != "null") $$->nodetype = "void";
+                                      if (!($$->nodetype == "null")) $$->nodetype = "void";
                                       if(!error_throw){
                                         int tmp = emit("params", NULL, $$->place, NULL);
                                         backpatch($$->nextlist, tmp);
                                       }
+                                      // cout << "single arg list exit\n";
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3);
+                                                          // cout << "arg list enter\n";
                                                           string type = args_type($1->nodetype, $3->nodetype);
                                                           $$->nodetype = new char[type.size()+1];
                                                           strcpy($$->nodetype, type.c_str());
                                                           if ($1->init && $3->init) $$->init = true;
+                                                          // cout << "arg list exit\n";
                                                           string append = string($1->curr_args_types) + "," + string($3->nodetype);
                                                           $$->curr_args_types = new char[append.size()+1];
                                                           strcpy($$->curr_args_types, append.c_str());
-
+                                                          // cout << "arg list exit\n";
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                             int tmp = emit("params", NULL, $3->place, NULL);
+                                                            // cout << "arg list exit\n";
                                                             backpatch($3->nextlist, tmp);
                                                           }
+                                                          // cout << "arg list exit\n";
                                                           }
   ;
 
@@ -431,17 +499,17 @@ unary_expression
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3);
-                                    if (!is_valid_type($3->nodetype, level, level_id)){
+                                    string type = $3->nodetype;
+                                    if (!is_valid_type(type, level, level_id)){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Invalid type used for typecasting\n", line);
                                     }
-                                    else if (string($3->nodetype) == "void"){
+                                    else if (type == "void"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Cannot typecast into void type\n", line);
                                     }
                                     if ($3->init) $$->init = true;
                                     $$->nodetype = "unsigned int";
-                                    string type = $3->nodetype;
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
@@ -466,11 +534,12 @@ unary_operator
 cast_expression
   : unary_expression                  {$$ = $1; }
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4);
+                                        string tmp($2->nodetype);
                                         if (!is_valid_type($2->nodetype, level, level_id)){
                                           error_throw = true;
                                           fprintf(stderr, "%d |\t Error : Invalid type used for typecasting\n", line);
                                         }
-                                        else if (string($2->nodetype) == "void"){
+                                        else if (tmp == "void"){
                                           error_throw = true;
                                           fprintf(stderr, "%d |\t Error : Cannot typecast into void type\n", line);
                                         }
@@ -1299,6 +1368,7 @@ assignment_expression
   | unary_expression assignment_operator assignment_expression  {$$ = non_terminal(0, $2, $1, $3);
                                                                   string label = string($2);
                                                                   string type = assign_type($1->nodetype, $3->nodetype, label);
+                                                                  string tmp($1->nodetype);
                                                                   if (type == "0"){
                                                                     $$->nodetype = $1->nodetype;
                                                                     fprintf(stderr, "%d |\t Warning : Incompatible pointer type assignment\n", line);
@@ -1306,7 +1376,8 @@ assignment_expression
                                                                   else if (type == "1"){
                                                                     $$->nodetype = $1->nodetype;
                                                                   }
-                                                                  else if ($1->nodetype == "void"){
+                                                                  else if (tmp == "void"){
+                                                                    $$->nodetype = $1->nodetype;
                                                                     error_throw = true;
                                                                     fprintf(stderr, "%d |\t Error : Variable or field %s of type void is being assigned a value\n", line, ($1->symbol));
                                                                   }
@@ -1314,7 +1385,8 @@ assignment_expression
                                                                     error_throw = true;
                                                                     $$->nodetype = new char[type.size()+1];
                                                                     strcpy($$->nodetype, type.c_str());
-                                                                    fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype), ($1->nodetype));
+                                                                    string tmp($3->nodetype);
+                                                                    if (tmp != "null") fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype), ($1->nodetype));
                                                                   }
 
                                                                   if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
@@ -1363,6 +1435,7 @@ assignment_expression
                                                                       }
                                                                     }
                                                                   }
+                                                                  // cout << "ass exit\n";
                                                                 }
   ;
 
@@ -1399,6 +1472,7 @@ declaration
                                                         t_name = "";
                                                       }
   | declaration_specifiers init_declarator_list ';'   {$$ = non_terminal(0, "declaration", $1, $2);
+                                                        // cout << "entered declaration\n";
                                                         t_name = "";
                                                         if ($2->expr_type == 2){
                                                           if (decl_track.find($2->symbol) != decl_track.end()){
@@ -1412,6 +1486,7 @@ declaration
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                                           $$->nextlist = copy($2->nextlist);
                                                         }
+                                                        // cout << "exited declaration\n";
                                                       }
   ;
 
@@ -1448,6 +1523,7 @@ init_declarator_list
 
 init_declarator
   : declarator                  {$$ = $1;
+                                  // cout << "entered declarator\n";
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
                                     string type = $1->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
@@ -1459,8 +1535,7 @@ init_declarator
                                       fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
                                     }
                                     else {
-                                      unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
-                                      insert_entry($1->symbol, $1->nodetype, size, 0, false, level, level_id[level]);
+                                      insert_entry($1->symbol, $1->nodetype, $1->size, 0, false, level, level_id[level]);
                                       $$->init = false;
                                     }
                                     if (!error_throw){
@@ -1468,6 +1543,7 @@ init_declarator
                                       $$->place = t;
                                     }
                                   }
+                                  // cout << "exited declarator\n";
                                 }
   | declarator '=' initializer  {$$ = non_terminal(0, $2, $1, $3);
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
@@ -1493,13 +1569,13 @@ init_declarator
                                     }
                                     else {
                                       if (chk == "0") fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
-                                      unsigned long long size = $1->expr_type == 15 ? $1->size + get_size($1->nodetype, level, level_id) : $1->size;
-                                      insert_entry($1->symbol, $1->nodetype, size, 0, $3->init, level, level_id[level]);
+                                      insert_entry($1->symbol, $1->nodetype, $1->size, 0, $3->init, level, level_id[level]);
                                       $$->nodetype = new char[type.size()+1];
                                       strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
                                     }
-                                    if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
+                                    if (!error_throw){ 
+                                      $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
                                       qid t = lookup_use($$->symbol, level, level_id);
                                       $$->place = t;
                                       if ($1->expr_type == 15){
@@ -1569,72 +1645,71 @@ type_specifier
                     error_throw = true;
                     fprintf(stderr, "%d |\t Error : Enum not implemented yet\n", line);
                     }
-  | TYPE_NAME       {$$ = terminal($1);
-                      t_name = (t_name=="") ? $1 : t_name+" "+$1;
-                    }
   ;
 
 struct_or_union_specifier
   : struct_or_union IDENTIFIER struct_op_brace struct_declaration_list '}'  {$$ = non_terminal(1, "struct_or_union_specifier", $1, $4, terminal($2));
-                                                                              if (lookup_type_decl($1->label + string(" ") + $2, level, level_id[level])){
+                                                                              if (lookup_type_decl(string("struct ") + string($2), level, level_id[level])){
                                                                                 $$->nodetype = "null";
                                                                                 error_throw = true;
-                                                                                fprintf(stderr, "%d |\t Error : Struct/Union %s is already defined\n", line, $2);
+                                                                                fprintf(stderr, "%d |\t Error : Struct %s is already defined\n", line, $2);
                                                                               }
                                                                               else {
-                                                                                string temp = $1->label + string(" ") + $2;
+                                                                                string temp = string("struct ") + string($2);
                                                                                 $$->nodetype = new char[temp.size()+1];
                                                                                 strcpy($$->nodetype, temp.c_str());
-                                                                                int size = $1->label == "struct" ? $4->size : $4->max_size;
-                                                                                insert_type_entry($$->nodetype, $1->label, size, level, level_id[level]);
-                                                                                // insert type names
+                                                                                insert_type_entry($$->nodetype, $4->size, level, level_id[level]);
                                                                               }
+                                                                              t_name = "";
                                                                             }
   | struct_or_union struct_op_brace struct_declaration_list '}'             {$$ = non_terminal(0, "struct_or_union_specifier", $1, $3);
                                                                               struct_id++;
-                                                                              string temp = $1->label + string(" ") + to_string(struct_id);
+                                                                              string temp = string("struct ") + to_string(struct_id);
                                                                               $$->nodetype = new char[temp.size()+1];
                                                                               strcpy($$->nodetype, temp.c_str());
-                                                                              int size = $1->label == "struct" ? $3->size : $3->max_size;
-                                                                              insert_type_entry($$->nodetype, $1->label, size, level, level_id[level]);
-                                                                              // insert type names
+                                                                              insert_type_entry($$->nodetype, $3->size, level, level_id[level]);
+                                                                              t_name = "";
                                                                             }
   | struct_or_union IDENTIFIER                                  {$$ = non_terminal(0, "struct_or_union_specifier", $1, terminal($2));
-                                                                  if (lookup_type_use($1->label + string(" ") + $2, level, level_id)){
-                                                                    string temp = $1->label + string(" ") + $2;
+                                                                  if (lookup_type_use(string("struct ") + string($2), level, level_id)){
+                                                                    string temp = string("struct ") + string($2);
                                                                     $$->nodetype = new char[temp.size()+1];
                                                                     strcpy($$->nodetype, temp.c_str());
                                                                   }
                                                                   else {
                                                                     $$->nodetype = "null";
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Struct/Union %s not defined\n", line, $2);
+                                                                    fprintf(stderr, "%d |\t Error : Struct %s not defined\n", line, $2);
                                                                   }
+                                                                  t_name = "";
                                                                 }
   ;
 
 struct_op_brace
   : '{'   {
             t_name = "";
+            set_struct_scope();
           }
 
 struct_or_union
   : STRUCT    {$$ = terminal($1);}
-  | UNION     {$$ = terminal($1);}
+  | UNION     {$$ = terminal($1);
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : Union declaration not allowed, do you mean struct ?\n", line);
+              }
   ;
 
 struct_declaration_list
   : struct_declaration                          {$$ = $1;}
   | struct_declaration_list struct_declaration  {$$ = non_terminal(0, "struct_declaration_list", $1, $2);
                                                   $$->size = $1->size + $2->size;
-                                                  $$->max_size = $1->max_size > $2->size ? $1->max_size : $2->size;
                                                 }
   ;
 
 struct_declaration
   : specifier_qualifier_list struct_declarator_list ';' {$$ = non_terminal(0, "struct_declaration", $1, $2);
                                                           t_name = "";
-                                                          $$->size = 8;
+                                                          $$->size = $2->size;
                                                         }
   ;
 
@@ -1661,13 +1736,19 @@ specifier_qualifier_list
 
 struct_declarator_list
 	: struct_declarator                             {$$ = $1;}
-	| struct_declarator_list ',' struct_declarator  {$$ = non_terminal(0, "struct_declarator_list", $1, $3);}
+	| struct_declarator_list ',' struct_declarator  {$$ = non_terminal(0, "struct_declarator_list", $1, $3);
+                                                    $$->size = $1->size + $3->size;
+                                                  }
 	;
 
 struct_declarator
-  : declarator                          {$$ = $1;} // insert struct types
-	| ':' constant_expression             {$$ = $2;}
-	| declarator ':' constant_expression  {$$ = non_terminal(0, "struct_declarator", $1, $3);} // insert struct types
+  : declarator                          {$$ = $1;
+                                          if (!insert_struct_symbol($$->symbol, $$->nodetype, $$->size)){
+                                            error_throw = true;
+                                            fprintf(stderr, "$d |\t Error : Redeclaration of symbol \'%s\' in struct\n", line, $$->symbol);
+                                          }
+                                          // handle common struct errors
+                                        }
 	;
 
 enum_specifier
@@ -1731,6 +1812,7 @@ declarator
                                 }
                               }
 	| direct_declarator         {
+                                // cout << "entered direct decl\n";
                                 $$ = $1;
                                 if($1->expr_type == 2){
                                   func_name = string($1->symbol);
@@ -1742,11 +1824,13 @@ declarator
                                 if (!error_throw){
                                   $$->place = lookup_use($$->symbol, level, level_id);
                                 }
+                                // cout << "exited direct decl\n";
                               }
 	;
 
 direct_declarator
 	: IDENTIFIER            {
+                            // cout << "entered id\n";
 														$$ = terminal($1);
                             $$->expr_type = 1;
                             string id($1);
@@ -1767,6 +1851,7 @@ direct_declarator
                               qid t = NULL;
                               $$->place = t;
                             }
+                            // cout << "exited id\n";
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
@@ -1777,10 +1862,6 @@ direct_declarator
                                                         strcpy($$->nodetype, temp.c_str());
                                                       }
                                                       if ($1->expr_type == 1){
-                                                        if ($1->nodetype == "void"){
-                                                          error_throw = true;
-                                                          fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
-                                                        }
                                                         $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
                                                       }
                                                       else if ($1->expr_type == 15){
@@ -1945,36 +2026,27 @@ type_name
 
 initializer
 	: assignment_expression         {$$ = $1; }
-	| '{' initializer_list '}'      {$$ = $2; string temp = string($2->nodetype) + "*"; $$->nodetype = new char[temp.size()+1];
-                                      strcpy($$->nodetype, temp.c_str());}
-	| '{' initializer_list ',' '}'  {$$ = non_terminal(0, "initializer", $2, NULL, NULL, NULL, NULL, $3);
-                                  string temp = string($2->nodetype) + "*";
-                                  $$->nodetype = new char[temp.size()+1];
-                                  strcpy($$->nodetype, temp.c_str());
-                                  $$->expr_type = $2->expr_type;
-                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL;
-                                    $$->place = $2->place;
-                                    $$->nextlist = copy($2->nextlist);
+	| '{' initializer_list '}'      {$$ = $2;
+                                    string temp = string($2->nodetype) + "*"; 
+                                    $$->nodetype = new char[temp.size()+1];
+                                    strcpy($$->nodetype, temp.c_str());
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Initializer lists not allowed for array/struct initialisation\n", line);
                                   }
+	| '{' initializer_list ',' '}'  {$$ = non_terminal(0, "initializer", $2, NULL, NULL, NULL, NULL, $3);
+                                    string temp = string($2->nodetype) + "*"; 
+                                    $$->nodetype = new char[temp.size()+1];
+                                    strcpy($$->nodetype, temp.c_str());
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Initializer lists not allowed for array/struct initialisation\n", line);
                                   }
 	;
 
 initializer_list
-	: initializer                       {$$ = $1; $$->expr_type = 1;}
-	| initializer_list ',' M initializer  {
-                                        $$ = non_terminal(0, "initializer_list", $1, $4);
+	: initializer                       {$$ = $1; }
+	| initializer_list ',' initializer  {
+                                        $$ = non_terminal(0, "initializer_list", $1, $3);
                                         $$->nodetype = $1->nodetype;
-                                        string chk = is_valid($1->nodetype, $4->nodetype);
-                                        if(chk == "0"){
-                                          fprintf(stderr, "%d |\t Warning : Assignment with incompatible pointer types\n", line);
-                                        }
-                                        else if (chk == "null"){
-                                          error_throw = true;
-                                          fprintf(stderr, "%d |\t Error : Incompatible types when initializing type %s to %s\n", line, $1->nodetype, $4->nodetype);
-                                        }
-                                        $$->expr_type = $1->expr_type+1;
-                                        backpatch($1->nextlist, $3);
-                                        $$->nextlist = copy($4->nextlist);
                                       }
 	;
 
@@ -2334,14 +2406,14 @@ function_definition
 
 empty2
   : %empty{
-          set_current_sym_tab(func_name);
+          set_current_tab(func_name);
           t_name = "";
         }
   ;
 
 empty3
   :  %empty{
-          set_current_sym_tab("#");
+          set_current_tab("#");
           t_name = "";
         }
   ;
@@ -2418,25 +2490,32 @@ int main (int argc, char* argv[]){
       exit(0);
     }
     dump_tables();
-    dump_3ac();
-    code_gen();
+    dump_type_tables();
+    // dump_3ac();
+    // code_gen();
     fclose (yyin);
     fclose (ast);
     return 0;
 }
 // exhaustive code review
 
-// incomplete and buggy structs implementation (semantics + 3ac)
+// incomplete structs implementation (3ac)
 // incomplete array (3ac)
 // string literal initialisation
+// constants issue
+// 3ac test1 test10
+// same struct within struct
+// arr[exp] truelist falselist
 
 // how is actual typecasting happening ??? signed unsigned float int pointer short long etc
+// error on calling undefined funcs
+// scanf printf math string
 
 // init errors ??
 // normal syntax errors ??
-// aggressive error propagation
 // add more warnings
 // propagate symbol names
 // else of reqd expr type condn
 // set up software like flow (dump relevant stuff)
 // documentation and readme
+// make test cases to display special stuff

@@ -2,8 +2,8 @@
 
 int main(){
     int a, b, c, k, res = 30, j;
-    a = 10, b = 10, c = 2;
     int i = 10;
+    a = 10, b = 10, c = 2;
     switch (i+a+b*c)
     {
     case 10:

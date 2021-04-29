@@ -5,23 +5,36 @@ map<string, sym_tab*> func_sym_tab_map;
 map<string, string> func_args_map; 
 sym_tab global_sym_tab;
 sym_tab waste;
+map<string, type_tab*> func_type_tab_map;
 type_tab global_type_tab;
+type_tab waste_type;
 map<sym_tab*, long long> offsets;
+map<struct_sym_tab*, long long> offsets_struct;
 sym_tab* curr;
+type_tab* curr_type;
+stack<struct_sym_tab*> curr_struct_stack;
 // total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
 void tab_init(){
     curr = &global_sym_tab;
+    curr_type = &global_type_tab;
     offsets[curr] = 0;
 }
 
-void set_current_sym_tab(string func_name){
+void set_current_tab(string func_name){
     if (func_name == "#"){
         curr = &global_sym_tab;
+        curr_type = &global_type_tab;
     }
     else {
-        if (func_sym_tab_map.find(func_name) != func_sym_tab_map.end()) curr = func_sym_tab_map[func_name];
-        else curr = &waste;
+        if (func_sym_tab_map.find(func_name) != func_sym_tab_map.end()){
+            curr = func_sym_tab_map[func_name];
+            curr_type = func_type_tab_map[func_name];
+        } 
+        else {
+            curr = &waste;
+            curr_type = &waste_type;
+        }
     }
 }
 
@@ -29,6 +42,8 @@ int make_symbol_table(string func_name){
     if (global_sym_tab.find(make_tuple(func_name, 0, 0)) != global_sym_tab.end()){
         return -1;
     }
+    type_tab* new_type_tab = new type_tab;
+    func_type_tab_map[func_name] = new_type_tab;
     sym_tab* new_tab = new sym_tab;
     func_sym_tab_map[func_name] = new_tab;
     offsets[new_tab] = 0;
@@ -68,27 +83,53 @@ sym_tab_entry* lookup_use(string sym_name, unsigned long long level, unsigned lo
     return NULL;
 }
 
-void insert_type_entry(string type_name, string type, unsigned long long size, unsigned long long level, unsigned long long level_id){
+void set_struct_scope(){
+    struct_sym_tab* tab = new struct_sym_tab;
+    offsets_struct[tab] = 0;
+    curr_struct_stack.push(tab);
+}
+
+bool insert_struct_symbol(string sym_name, string type, unsigned long long size){
+    struct_sym_tab* curr;
+    if (curr_struct_stack.size()) curr = curr_struct_stack.top();
+    else return true;
+    if ((*curr).find(sym_name) == (*curr).end()){
+        struct_sym_entry* entry = new struct_sym_entry;
+        entry->sym_name = sym_name;
+        entry->type = type;
+        entry->size = size;
+        entry->offset = offsets_struct[curr];
+        offsets_struct[curr] += size;
+        (*curr)[sym_name] = entry;
+        return true;
+    }
+    return false;
+}
+
+void insert_type_entry(string type_name, unsigned long long size, unsigned long long level, unsigned long long level_id){
     type_tab_entry* entry = new type_tab_entry();
     entry->type_name = type_name;
-    entry->type = type;
     entry->size = size;
     entry->level = level;
     entry->level_id = level_id;
-    global_type_tab[make_tuple(entry->type_name, entry->level, entry->level_id)] = entry;
+    if (curr_struct_stack.size()){
+        entry->symbols = curr_struct_stack.top();
+        curr_struct_stack.pop();
+    }
+    (*curr_type)[make_tuple(entry->type_name, entry->level, entry->level_id)] = entry;
 }
 
 type_tab_entry* lookup_type_decl(string type_name, unsigned long long level, unsigned long long level_id){
-    if (global_type_tab.find(make_tuple(type_name, level, level_id)) != global_type_tab.end()){
-        return global_type_tab[make_tuple(type_name, level, level_id)];
+    if ((*curr_type).find(make_tuple(type_name, level, level_id)) != (*curr_type).end()){
+        return (*curr_type)[make_tuple(type_name, level, level_id)];
     }
     return NULL;
 }
 
 type_tab_entry* lookup_type_use(string type_name, unsigned long long level, unsigned long long* level_id){
     while (level){
-        if (global_type_tab.find(make_tuple(type_name, level, level_id[level])) != global_type_tab.end()){
-            return global_type_tab[make_tuple(type_name, level, level_id[level])];
+        if ((*curr_type).find(make_tuple(type_name, level, level_id[level])) != (*curr_type).end()){
+            return (*curr_type)[make_tuple(type_name, level, level_id[level])];
         }
         level--;
     }
@@ -96,6 +137,17 @@ type_tab_entry* lookup_type_use(string type_name, unsigned long long level, unsi
         return global_type_tab[make_tuple(type_name, 0, level_id[0])];
     }
     return NULL;
+}
+
+
+string struct_sym_type(string type, string sym_name, unsigned long long level, unsigned long long* level_id){
+    type_tab_entry* entry = lookup_type_use(type, level, level_id);
+    struct_sym_tab* tmp;
+    if (entry && entry->symbols) tmp = entry->symbols;
+    else return "null";
+
+    if ((*tmp).find(sym_name) == (*tmp).end()) return "null";
+    return (*tmp)[sym_name]->type;
 }
 
 unsigned long long get_size(string type, unsigned long long level, unsigned long long* level_id){
@@ -148,7 +200,7 @@ bool is_valid_type(string type, unsigned long long level, unsigned long long* le
 }
 
 bool args_to_scope(string func_name, string func_args, string func_symbols, unsigned long long level, unsigned long long* level_id){
-    set_current_sym_tab(func_name);
+    set_current_tab(func_name);
     string delim = ",";
     size_t f1 = 1;
     size_t f2 = 1;
@@ -163,14 +215,14 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
         temp2 = temp2.substr(f2+1);
         
         if (lookup_decl(symbol, level, level_id[level])){
-            set_current_sym_tab("#");
+            set_current_tab("#");
             return false;   
         }
         else {
             insert_entry(symbol, type, get_size(type, level, level_id), 0, false, 1, 0);
         }
     }
-    set_current_sym_tab("#");
+    set_current_tab("#");
     return true;
 }
 
@@ -206,19 +258,38 @@ string get_func_ret_type(string func_name){
 }
 
 void dump_tables(){
-    string glob = "global_sym_table.csv";
-    ofstream out_file(glob);
+    cout << "\nGLOBAL SYMBOL TABLE\n";
+    // string glob = "global_sym_table.csv";
+    // ofstream out_file(glob);
     cout << "sym_name,type,size,offset,init,level,level_id\n";
     for (auto itr : global_sym_tab){
         cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
     }
     cout << endl;
     for (auto table : func_sym_tab_map){
-        string filename = table.first + "_table.csv";
-        ofstream out_file(filename);
+        cout << "\nFUNCTION : " << table.first << " SYMBOL TABLE\n";
+        // string filename = table.first + "_table.csv";
+        // ofstream out_file(filename);
         cout << "sym_name,type,size,offset,init,level,level_id\n";
         for (auto itr : *(table.second)){
             cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
+        }
+        cout << endl;
+    }
+}
+
+void dump_type_tables(){
+    cout << "\nGLOBAL TYPE TABLE\n";
+    cout << "sym_name,size,level,level_id\n";
+    for (auto itr : global_type_tab){
+        cout << itr.second->type_name  << "," << itr.second->size << "," << itr.second->level << "," << itr.second->level_id << "\n";
+    }
+    cout << endl;
+    for (auto table : func_type_tab_map){
+        cout << "\nFUNCTION : " << table.first << " TYPE TABLE\n";
+        cout << "sym_name,size,level,level_id\n";
+        for (auto itr : *(table.second)){
+            cout << itr.second->type_name  << "," << itr.second->size << "," << itr.second->level << "," << itr.second->level_id << "\n";
         }
         cout << endl;
     }

@@ -18,7 +18,6 @@ using namespace std;
 void comment();
 void count(char* token);
 void yyerror(char* s);
-int is_type();
 void get_float_info();
 void get_int_info();
 
@@ -68,7 +67,7 @@ int line = 1;
 "volatile"		{ yylval.str=strdup(yytext); count("VOLATILE"); return(VOLATILE); }
 "while"			{ yylval.str=strdup(yytext); count("WHILE"); return(WHILE); }
 
-{L}({L}|{D})*		{ return is_type(); }
+{L}({L}|{D})*		{ yylval.str=strdup(yytext); count("IDENTIFIER"); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?		{ sscanf(yytext+2,"%llx", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); get_int_info(); count("INT_C"); return(INT_C); }
 0{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); get_int_info(); count("INT_C"); return(INT_C); }
@@ -166,20 +165,6 @@ void count(char* token){
         //     column = column + 8 - (column%8);
         // }
         else column++;
-    }
-}
-
-int is_type(){
-    count("IDENTIFIER");
-    type_tab_entry* entry = lookup_type_use(yytext, level, level_id);
-    if (entry){
-        string s = entry->type + string(" ") + yytext;
-        yylval.str = &s[0];
-        return TYPE_NAME;
-    }
-    else {
-        yylval.str=strdup(yytext);
-        return IDENTIFIER;
     }
 }
 
