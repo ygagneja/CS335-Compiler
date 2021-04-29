@@ -1,4 +1,5 @@
 #include<bits/stdc++.h>
+#include<vector>
 #include "sym_table.h"
 
 using namespace std;
@@ -13,6 +14,10 @@ typedef struct{
     int goto_label; // should be in arg2
     string constant; // should be in arg2
 } quad;
+
+extern vector <quad> code_arr;
+extern unordered_map <string, int> user_goto;
+
 
 void init_lists(char* nextlist, char* truelist, char* falselist, char* breaklist, char* continuelist, char* caselist);
 string new_symbol();

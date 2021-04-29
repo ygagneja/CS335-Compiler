@@ -43,3 +43,5 @@ string get_func_args(string func_name);
 void update_func_type(string func_name, unsigned long long level, unsigned long long level_id, string type);
 string get_func_ret_type(string func_name);
 void dump_tables();
+int get_func_size(string func_name);
+int get_sym_size(string func_name, string sym);

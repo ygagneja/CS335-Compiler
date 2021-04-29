@@ -223,3 +223,16 @@ void dump_tables(){
         cout << endl;
     }
 }
+
+int get_func_size(string func_name){
+    sym_tab_entry* entry = global_sym_tab[make_tuple(func_name, 0, 0)];
+    if(entry) return entry->size;
+    return -1;
+}
+
+int get_sym_size(string func_name, string sym){
+    curr = func_sym_tab_map[func_name];
+    sym_tab_entry* tmp = lookup_decl(sym, 0, 0);
+    if(tmp) return tmp->size;
+    return -1;
+}
