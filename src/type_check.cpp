@@ -1,9 +1,6 @@
 #include "type_check.h"
 #include "sym_table.h"
 
-// set scope variables in sym table, we dont have to make a nester sym table
-// sym table schema (id, name, size, offsets, init, scope_id, scope_offset)
-
 // total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
 bool is_type_int(string str){
@@ -70,7 +67,6 @@ string postfix_type(string str, string exp_type, int label){
         else return string("null");
     }
     else if (label == 2 || label == 3){
-        // cout << str << endl;
         if (str.substr(0, 5) == "func "){
             ret_type.erase(0, 5);
             return ret_type;
