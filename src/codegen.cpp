@@ -23,7 +23,9 @@ void asmb_label(string s){
 }
 
 void dump_asm_code(){
-  for(string it : assembly_code) printf("%s\n", it.c_str());
+  ofstream out_file("test.asm");
+  for(string it : assembly_code) out_file << it << endl;//printf("%s\n", it.c_str());
+  out_file.close();
 }
 
 int typecheck(string type){
@@ -459,8 +461,8 @@ void code_gen(){
           string res_reg = get_reg(code_arr[i].res);
           string arg1_reg = get_reg(code_arr[i].arg1);
           string arg2_reg = get_reg(code_arr[i].arg2);
-          if(code_arr[i].op == "int") asmb_line("sub " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
-          else asmb_line("sub.s" + res_reg + " , " + arg1_reg + " , " + arg2_reg);
+          if(code_arr[i].op == "-int") asmb_line("sub " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
+          else asmb_line("sub.s " + res_reg + " , " + arg1_reg + " , " + arg2_reg);
       }
       // Integer multiplication
       else if(code_arr[i].op == "*int" || code_arr[i].op == "*float"){
@@ -589,7 +591,7 @@ void code_gen(){
 
     // ==
     else if(code_arr[i].op == "==int" || code_arr[i].op == "==float"){
-      cout << "Checking Equality\n";
+      // cout << "Checking Equality\n";
        if(code_arr[i].arg2 == NULL){
            if(code_arr[i].op == "==int")
             asmb_line("addi $t9, $0, " + code_arr[i].constant);
@@ -654,7 +656,7 @@ void code_gen(){
           asmb_line("move $v0, " + arg_reg);
           asmb_line("b " + func + "_end_"); // Branch to function end directive
 
-          asmb_line(func + "_end_: "); // Assembly for end directive
+          asmb_label(func + "_end_: "); // Assembly for end directive
           asmb_line("addi $sp, $sp, " + to_string(func_size)); // Pop local data
 
           asmb_line("lw $ra, 0($sp)");
@@ -747,7 +749,7 @@ void code_gen(){
       }
       else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
         string arg_reg = get_reg(code_arr[i].arg2);
-        asmb_line("bneq $0, " + arg_reg + " , Label" + to_string(code_arr[i].goto_label));
+        asmb_line("bne $0, " + arg_reg + ", Label" + to_string(code_arr[i].goto_label));
       }
 
     }
