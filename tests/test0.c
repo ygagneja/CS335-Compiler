@@ -18,14 +18,17 @@ struct point* func(float x, float y){
 }
 
 int main(){
-	struct point {int x;} p;
-	{
-		struct test0{
-			int x1;
-		};
-	}
+	// struct point {int x;} p;
+	// {
+	// 	struct test0{
+	// 		int x1;
+	// 	};
+	// }
 	// {
 	// 	struct test0 x;
 	// }
+	int arr[10][2];
+	int p = arr[1][0];
+	arr[3][1] = p;
 	return 0;
 }

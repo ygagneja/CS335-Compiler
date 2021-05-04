@@ -37,6 +37,7 @@ typedef map<tuple<string, unsigned long long, unsigned long long>, type_tab_entr
 void tab_init();
 void set_current_tab(string func_name);
 int make_symbol_table(string func_name);
+void restore_offset(string type, unsigned long long level, unsigned long long* level_id);
 void insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id);
 sym_tab_entry* lookup_decl(string sym_name, unsigned long long level, unsigned long long level_id);
 sym_tab_entry* lookup_use(string sym_name, unsigned long long level, unsigned long long* level_id);

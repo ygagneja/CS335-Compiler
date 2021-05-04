@@ -50,6 +50,10 @@ int make_symbol_table(string func_name){
     return 0;
 }
 
+void restore_offset(string type, unsigned long long level, unsigned long long* level_id){
+    offsets[curr] -= get_size(type, level, level_id);
+}
+
 void insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
     sym_tab_entry* entry = new sym_tab_entry();
     entry->sym_name = sym_name;

@@ -184,6 +184,12 @@ postfix_expression
                                                   qid t = newtmp($1->nodetype, level, level_id);
                                                   $$->place = t;
                                                   emit("[+]", $1->place, $3->place, $$->place);
+                                                  // qid t = newtmp($$->nodetype, level, level_id);
+                                                  // $$->place = t;
+                                                  // restore_offset($$->nodetype, level, level_id);
+                                                  // $$->place->offset = $1->place->offset;
+                                                  // $$->place->size = $3->place->offset;
+                                                  // emit("[]", $$->place, $3->place, NULL);   
                                                 }
                                                 // cout << "exit\n";
                                               }
@@ -193,7 +199,6 @@ postfix_expression
                                                 strcpy($$->nodetype, type.c_str());
                                                 fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension or array index is not an integer\n", line, ($1->symbol));
                                               }
-                                              $$->expr_type = 10;
                                               // cout << "exit\n";
                                              }
   | postfix_expression '(' ')'               {qid tmp = $1->place;
