@@ -155,50 +155,20 @@ string struct_sym_type(string type, string sym_name, unsigned long long level, u
 }
 
 unsigned long long get_size(string type, unsigned long long level, unsigned long long* level_id){
-    if(type == "int") return sizeof(int);
-    if(type == "long") return sizeof(long);
-    if(type == "long int") return sizeof(long int);
-    if(type == "long long") return sizeof(long long);
-    if(type == "long long int") return sizeof(long long int);
-    if(type == "unsigned int") return sizeof(unsigned int);
-    if(type == "unsigned long int") return sizeof(unsigned long int);
-    if(type == "unsigned long") return sizeof(unsigned long);
-    if(type == "unsigned long long") return sizeof(unsigned long long);
-    if(type == "unsigned long long int") return sizeof(unsigned long long int);
-    if(type == "signed int") return sizeof(signed int);
-    if(type == "signed long int") return sizeof(signed long int);
-    if(type == "signed long") return sizeof(signed long);
-    if(type == "signed long long") return sizeof(signed long long);
-    if(type == "signed long long int") return sizeof(signed long long int);
-    if(type == "short") return sizeof(short);
-    if(type == "short int") return sizeof(short int);
-    if(type == "unsigned short int") return sizeof(unsigned short int);
-    if(type == "signed short int") return sizeof(signed short int);
-    if(type == "unsigned short") return sizeof(unsigned short);
-    if(type == "signed short") return sizeof(signed short);
-
-    if(type == "float") return sizeof(float);
-    if(type == "double") return sizeof(double);
-    if(type == "long double") return sizeof(long double);
-
-    if(type == "char") return sizeof(char);
-
+    if(type == "int") return 4;
+    if(type == "float") return 4;
+    if(type == "char") return 1;
     if(type == "bool") return 1;
-
     if (type == "void") return 1;
-
-    if (type[type.length()-1] == '*') return 8;
-
+    if (type[type.length()-1] == '*') return 4;
     if (lookup_type_use(type, level, level_id)) return lookup_type_use(type, level, level_id)->size;
-
     if (type == "null") return 0;
-
-    return 8;
+    return 4;
 }
 
 bool is_valid_type(string type, unsigned long long level, unsigned long long* level_id){
-    while (type[type.length()-1] == '*') type.pop_back();
-    if (is_type_int(type) || is_type_float(type) || type == "void") return true;
+    while (is_type_ptr(type)) type.pop_back();
+    if (is_type_int(type) || is_type_float(type) || is_type_char(type) || is_type_bool(type) || type == "void") return true;
     if (lookup_type_use(type, level, level_id)) return true;
     return false;
 }
@@ -297,17 +267,4 @@ void dump_type_tables(){
         }
         cout << endl;
     }
-}
-
-int get_func_size(string func_name){
-    sym_tab_entry* entry = global_sym_tab[make_tuple(func_name, 0, 0)];
-    if(entry) return entry->size;
-    return -1;
-}
-
-int get_sym_size(string func_name, string sym){
-    curr = func_sym_tab_map[func_name];
-    sym_tab_entry* tmp = lookup_decl(sym, 0, 0);
-    if(tmp) return tmp->size;
-    return -1;
 }

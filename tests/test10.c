@@ -15,7 +15,7 @@ int tmp2(){
 }
 
 void tmp3(){
-    tmp(1, 2); // why error at this line, 1 is of type int
+    tmp(1, 2);
     tmp2();
     return 11;
 }
@@ -45,22 +45,15 @@ int main(){
     i = 2.5<<3;
     d = 1;
 
-    //  switch case results into segfault
-    //switch (1)
-    // {
-    //     case 1:
-    //         continue;
-    //         break;
+    switch (1)
+    {
+        case 1:
+            continue;
+            break;
         
-    //     case 2:
-    //         a = 10;
-    //         break;
-    // }
-
-    if(1){
-        continue; // add condition where continue is allowed only if this is in loop
-    }else{
-        break; // add condition where break is allowed only if this is in loop
+        case 2:
+            a = 10;
+            break;
     }
 
     goto uv;

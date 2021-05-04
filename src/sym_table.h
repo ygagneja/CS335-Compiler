@@ -57,5 +57,3 @@ void update_func_type(string func_name, unsigned long long level, unsigned long 
 string get_func_ret_type(string func_name);
 void dump_tables();
 void dump_type_tables();
-int get_func_size(string func_name);
-int get_sym_size(string func_name, string sym);

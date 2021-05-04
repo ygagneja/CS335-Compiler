@@ -48,7 +48,7 @@ extern int line;
 %token <str> STRUCT UNION ENUM ELLIPSIS
 %token <str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN TRUE FALSE
 %token <str> '>' '<' '&' '|' '^' '=' '*' ',' ';'
-%token <constant> INT_C FLOAT_C
+%token <constant> INT_C FLOAT_C CHAR_LITERAL
 
 %start translation_unit
 
@@ -97,9 +97,7 @@ primary_expression
                                   }
   | INT_C                        {$$ = terminal("INT_C");
                                     $$->init = true;
-                                    string type = const_type($1->type);
-                                    $$->nodetype = new char[type.size()+1];
-                                    strcpy($$->nodetype, type.c_str());
+                                    $$->nodetype = "int";
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
@@ -112,9 +110,7 @@ primary_expression
                                   }
   | FLOAT_C                      {$$ = terminal("FLOAT_C");
                                     $$->init = true;
-                                    string type = const_type($1->type);
-                                    $$->nodetype = new char[type.size()+1];
-                                    strcpy($$->nodetype, type.c_str());
+                                    $$->nodetype = "float";
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
 
@@ -161,6 +157,19 @@ primary_expression
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
                                       patch_constant($1, k);
+                                    }
+                                  }
+  | CHAR_LITERAL                  {$$ = terminal("CHAR_LITERAL");
+                                    $$->nodetype = "char";
+                                    $$->init = true;
+                                    $$->int_val = $1->int_val;
+                                    $$->expr_type = 5;
+
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      int k = emit("=", NULL, NULL, $$->place);
+                                      patch_constant(to_string($$->int_val), k);
                                     }
                                   }
   | '(' expression ')'            {$$ = $2; }
@@ -486,21 +495,23 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      $$ -> place = newtmp($$->nodetype, level, level_id);
-                                      emit($1->label, NULL, $2 -> place, $$ -> place);
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit($1->label, NULL, $2->place, $$->place);
                                     }
                                   }
   | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2);
                                     if ($2->init) $$->init = true;
-                                    $$->nodetype = "unsigned int";
+                                    $$->nodetype = "int";
                                     string type = $2->nodetype;
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      $$ -> place = newtmp($$->nodetype, level, level_id);
-                                      emit("SIZEOF", NULL, $2 -> place, $$ -> place);
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      emit("SIZEOF", NULL, $2->place, $$->place);
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3);
@@ -514,13 +525,14 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Cannot typecast into void type\n", line);
                                     }
                                     if ($3->init) $$->init = true;
-                                    $$->nodetype = "unsigned int";
+                                    $$->nodetype = "int";
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      $$ -> place = newtmp($$->nodetype, level, level_id);
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
                                       int k = emit("SIZEOF", NULL, NULL, $$->place);
                                       patch_constant($3->nodetype, k);
                                     }
@@ -584,36 +596,27 @@ multiplicative_expression
                                                           if (type != "null"){
                                                             if (type == "int"){
                                                               $$ = non_terminal(0, "* int", $1, $3);
-                                                              $$->nodetype = "long long";
+                                                              $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                emit("*int", $1->place, $3->place, $$->place);
+                                                                emit("*int", p1, p2, $$->place);
                                                               }
                                                             }
                                                             else if (type == "float"){
                                                               $$ = non_terminal(0, "* float", $1, $3);
-                                                              $$->nodetype = "long double";
+                                                              $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                if (is_type_int($1->nodetype)){
-                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $1->place, tmp);
-                                                                  emit("*float", tmp, $3->place, $$->place);
-                                                                }
-                                                                else if (is_type_int($3->nodetype)){
-                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $3->place, tmp);
-                                                                  emit("*float", $1->place, tmp, $$->place);
-                                                                }
-                                                                else {
-                                                                  emit("*float", $1->place, $3->place, $$->place);
-                                                                }
+                                                                emit("*float", p1, p2, $$->place);
                                                               }
-
                                                             }
                                                           }
                                                           else {
@@ -628,34 +631,26 @@ multiplicative_expression
                                                           if (type != "null"){
                                                             if (type == "int"){
                                                               $$ = non_terminal(0, "/ int", $1, $3);
-                                                              $$->nodetype = "long long";
+                                                              $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                emit("/int", $1->place, $3->place, $$->place);
+                                                                emit("/int", p1, p2, $$->place);
                                                               }
                                                             }
                                                             else if (type == "float"){
                                                               $$ = non_terminal(0, "/ float", $1, $3);
-                                                              $$->nodetype = "long double";
+                                                              $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                if (is_type_int($1->nodetype)){
-                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $1->place, tmp);
-                                                                  emit("/float", tmp, $3->place, $$->place);
-                                                                }
-                                                                else if (is_type_int($3->nodetype)){
-                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $3->place, tmp);
-                                                                  emit("/float", $1->place, tmp, $$->place);
-                                                                }
-                                                                else {
-                                                                  emit("/float", $1->place, $3->place, $$->place);
-                                                                }
+                                                                emit("/float", p1, p2, $$->place);
                                                               }
 
                                                             }
@@ -671,12 +666,14 @@ multiplicative_expression
                                                           string type = mul_type($1->nodetype, $3->nodetype, '%');
                                                           if (type != "null"){
                                                             $$ = non_terminal(0, "% int", $1, $3);
-                                                            $$->nodetype = "long long";
+                                                            $$->nodetype = "int";
 
                                                             if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                              qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                               qid t = newtmp($$->nodetype, level, level_id);
                                                               $$->place = t;
-                                                              emit("%int", $1->place, $3->place, $$->place);
+                                                              emit("%int", p1, p2, $$->place);
                                                             }
                                                           }
                                                           else {
@@ -696,35 +693,27 @@ additive_expression
                                                             if (type == "int"){
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
-                                                              $$->nodetype = "long long";
+                                                              $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                emit("+int", $1->place, $3->place, $$->place);
+                                                                emit("+int", p1, p2, $$->place);
                                                               }
                                                             }
                                                             else if (type == "float"){
                                                               char* label; string tmp = "+ " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
-                                                              $$->nodetype = "long double";
+                                                              $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                if (is_type_int($1->nodetype)){
-                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $1->place, tmp);
-                                                                  emit("+float", tmp, $3->place, $$->place);
-                                                                }
-                                                                else if (is_type_int($3->nodetype)){
-                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $3->place, tmp);
-                                                                  emit("+float", $1->place, tmp, $$->place);
-                                                                }
-                                                                else {
-                                                                  emit("+float", $1->place, $3->place, $$->place);
-                                                                }
+                                                                emit("+float", p1, p2, $$->place);
                                                               }
                                                             }
                                                             else {
@@ -741,7 +730,7 @@ additive_expression
                                                                   string tp($3->nodetype); tp.pop_back();
                                                                   int k = emit("*int", $1->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
-                                                                  emit("+int", tmp, $3->place, $$->place);
+                                                                  emit("+ptr", tmp, $3->place, $$->place);
                                                                 }
                                                                 else {
                                                                   qid t = newtmp($$->nodetype, level, level_id);
@@ -750,7 +739,7 @@ additive_expression
                                                                   string tp($1->nodetype); tp.pop_back();
                                                                   int k = emit("*int", $3->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
-                                                                  emit("+int", $1->place, tmp, $$->place);
+                                                                  emit("+ptr", $1->place, tmp, $$->place);
                                                                 }
                                                               }
                                                             }
@@ -768,35 +757,27 @@ additive_expression
                                                             if (type == "int"){
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
-                                                              $$->nodetype = "long long";
+                                                              $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                emit("-int", $1->place, $3->place, $$->place);
+                                                                emit("-int", p1, p2, $$->place);
                                                               }
                                                             }
                                                             else if (type == "float"){
                                                               char* label; string tmp = "- " + type; label = &tmp[0];
                                                               $$ = non_terminal(0, label, $1, $3);
-                                                              $$->nodetype = "long double";
+                                                              $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
-                                                                if (is_type_int($1->nodetype)){
-                                                                  qid tmp = newtmp($3->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $1->place, tmp);
-                                                                  emit("-float", tmp, $3->place, $$->place);
-                                                                }
-                                                                else if (is_type_int($3->nodetype)){
-                                                                  qid tmp = newtmp($1->nodetype, level, level_id);
-                                                                  emit("inttofloat", NULL, $3->place, tmp);
-                                                                  emit("-float", $1->place, tmp, $$->place);
-                                                                }
-                                                                else {
-                                                                  emit("-float", $1->place, $3->place, $$->place);
-                                                                }
+                                                                emit("-float", p1, p2, $$->place);
                                                               }
                                                             }
                                                             else {
@@ -813,7 +794,7 @@ additive_expression
                                                                   string tp($3->nodetype); tp[tp.size()-1] = '\0';
                                                                   int k = emit("*int", $1->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
-                                                                  emit("-int", tmp, $3->place, $$->place);
+                                                                  emit("-ptr", tmp, $3->place, $$->place);
                                                                 }
                                                                 else {
                                                                   qid t = newtmp($$->nodetype, level, level_id);
@@ -822,7 +803,7 @@ additive_expression
                                                                   string tp($1->nodetype); tp[tp.size()-1] = '\0';
                                                                   int k = emit("*int", $3->place, NULL, tmp);
                                                                   patch_constant(to_string(get_size(tp, level, level_id)), k);
-                                                                  emit("-int", $1->place, tmp, $$->place);
+                                                                  emit("-ptr", $1->place, tmp, $$->place);
                                                                 }
                                                               }
                                                             }
@@ -847,11 +828,14 @@ shift_expression
                                                     if (type == "null"){
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
-                                                    }else{
+                                                    }
+                                                    else {
                                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                        qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                         qid t = newtmp($$->nodetype, level, level_id);
                                                         $$->place = t;
-                                                        emit("<<", $1->place, $3->place, $$->place);
+                                                        emit("<<", p1, p2, $$->place);
                                                       }
                                                     }
                                                   }
@@ -863,11 +847,14 @@ shift_expression
                                                     if (type == "null"){
                                                       error_throw = true;
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
-                                                    }else{
+                                                    }
+                                                    else {
                                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                        qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                         qid t = newtmp($$->nodetype, level, level_id);
                                                         $$->place = t;
-                                                        emit(">>", $1->place, $3->place, $$->place);
+                                                        emit(">>", p1, p2, $$->place);
                                                       }
                                                     }
                                                   }
@@ -886,30 +873,29 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if (type == "*" || type == "int"){
+                                                      if (type == "*"){
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          emit("<int", $1->place, $3->place, $$->place);
+                                                          emit("<ptr", $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "int"){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit("<int", p1, p2, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          if (is_type_int($1->nodetype)){
-                                                            qid tmp = newtmp($3->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $1->place, tmp);
-                                                            emit("<float", tmp, $3->place, $$->place);
-                                                          }
-                                                          else if (is_type_int($3->nodetype)){
-                                                            qid tmp = newtmp($1->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $3->place, tmp);
-                                                            emit("<float", $1->place, tmp, $$->place);
-                                                          }
-                                                          else {
-                                                              emit("<float", $1->place, $3->place, $$->place);
-                                                          }
+                                                          emit("<float", p1, p2, $$->place);
                                                         }
                                                       }
                                                     }
@@ -932,31 +918,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if (type == "*" || type == "int"){
+                                                      if (type == "*"){
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          emit(">int", $1->place, $3->place, $$->place);
+                                                          emit(">ptr", $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "int"){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit(">int", p1, p2, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                          qid t = newtmp($$->nodetype, level, level_id);
-                                                          $$->place = t;
-                                                          if (is_type_int($1->nodetype)){
-                                                            qid tmp = newtmp($3->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $1->place, tmp);
-                                                            emit(">float", tmp, $3->place, $$->place);
-                                                          }
-                                                          else if (is_type_int($3->nodetype)){
-                                                            qid tmp = newtmp($1->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $3->place, tmp);
-                                                            emit(">float", $1->place, tmp, $$->place);
-                                                          }
-                                                          else {
-                                                              emit(">float", $1->place, $3->place, $$->place);
-                                                          }
-                                                        }
+                                                        qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                        qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                        qid t = newtmp($$->nodetype, level, level_id);
+                                                        $$->place = t;
+                                                        emit(">float", p1, p2, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -978,31 +961,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if (type == "*" || type == "int"){
+                                                      if (type == "*"){
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          emit("<=int", $1->place, $3->place, $$->place);
+                                                          emit("<=ptr", $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "int"){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit("<=int", p1, p2, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                          qid t = newtmp($$->nodetype, level, level_id);
-                                                          $$->place = t;
-                                                          if (is_type_int($1->nodetype)){
-                                                            qid tmp = newtmp($3->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $1->place, tmp);
-                                                            emit("<=float", tmp, $3->place, $$->place);
-                                                          }
-                                                          else if (is_type_int($3->nodetype)){
-                                                            qid tmp = newtmp($1->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $3->place, tmp);
-                                                            emit("<=float", $1->place, tmp, $$->place);
-                                                          }
-                                                          else {
-                                                              emit("<=float", $1->place, $3->place, $$->place);
-                                                          }
-                                                        }
+                                                        qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                        qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                        qid t = newtmp($$->nodetype, level, level_id);
+                                                        $$->place = t;
+                                                        emit("<=float", p1, p2, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -1024,31 +1004,28 @@ relational_expression
                                                       $$ = non_terminal(0, label, $1, $3);
                                                       $$->nodetype = "bool";
 
-                                                      if (type == "*" || type == "int"){
+                                                      if (type == "*"){
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          emit(">=int", $1->place, $3->place, $$->place);
+                                                          emit(">=ptr", $1->place, $3->place, $$->place);
+                                                        }
+                                                      }
+                                                      else if (type == "int"){
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit(">=int", p1, p2, $$->place);
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                          qid t = newtmp($$->nodetype, level, level_id);
-                                                          $$->place = t;
-                                                          if (is_type_int($1->nodetype)){
-                                                            qid tmp = newtmp($3->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $1->place, tmp);
-                                                            emit(">=float", tmp, $3->place, $$->place);
-                                                          }
-                                                          else if (is_type_int($3->nodetype)){
-                                                            qid tmp = newtmp($1->nodetype, level, level_id);
-                                                            emit("inttofloat", NULL, $3->place, tmp);
-                                                            emit(">=float", $1->place, tmp, $$->place);
-                                                          }
-                                                          else {
-                                                              emit(">=float", $1->place, $3->place, $$->place);
-                                                          }
-                                                        }
+                                                        qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                        qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                        qid t = newtmp($$->nodetype, level, level_id);
+                                                        $$->place = t;
+                                                        emit(">=float", p1, p2, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -1074,31 +1051,28 @@ equality_expression
                                                         $$ = non_terminal(0, label, $1, $3);
                                                         $$->nodetype = "bool";
 
-                                                        if (type == "*" || type == "int"){
+                                                        if (type == "*"){
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
-                                                            emit("==int", $1->place, $3->place, $$->place);
+                                                            emit("==ptr", $1->place, $3->place, $$->place);
+                                                          }
+                                                        }
+                                                        else if (type == "int"){
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            emit("==int", p1, p2, $$->place);
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                            qid t = newtmp($$->nodetype, level, level_id);
-                                                            $$->place = t;
-                                                            if (is_type_int($1->nodetype)){
-                                                              qid tmp = newtmp($3->nodetype, level, level_id);
-                                                              emit("inttofloat", NULL, $1->place, tmp);
-                                                              emit("==float", tmp, $3->place, $$->place);
-                                                            }
-                                                            else if (is_type_int($3->nodetype)){
-                                                              qid tmp = newtmp($1->nodetype, level, level_id);
-                                                              emit("inttofloat", NULL, $3->place, tmp);
-                                                              emit("==float", $1->place, tmp, $$->place);
-                                                            }
-                                                            else {
-                                                                emit("==float", $1->place, $3->place, $$->place);
-                                                            }
-                                                          }
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit("==float", p1, p2, $$->place);
                                                         }
                                                       }
                                                       else {
@@ -1120,31 +1094,28 @@ equality_expression
                                                         $$ = non_terminal(0, label, $1, $3);
                                                         $$->nodetype = "bool";
 
-                                                        if (type == "*" || type == "int"){
+                                                        if (type == "*"){
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
-                                                            emit("!=int", $1->place, $3->place, $$->place);
+                                                            emit("!=ptr", $1->place, $3->place, $$->place);
+                                                          }
+                                                        }
+                                                        else if (type == "int"){
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            emit("!=int", p1, p2, $$->place);
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                            qid t = newtmp($$->nodetype, level, level_id);
-                                                            $$->place = t;
-                                                            if (is_type_int($1->nodetype)){
-                                                              qid tmp = newtmp($3->nodetype, level, level_id);
-                                                              emit("inttofloat", NULL, $1->place, tmp);
-                                                              emit("!=float", tmp, $3->place, $$->place);
-                                                            }
-                                                            else if (is_type_int($3->nodetype)){
-                                                              qid tmp = newtmp($1->nodetype, level, level_id);
-                                                              emit("inttofloat", NULL, $3->place, tmp);
-                                                              emit("!=float", $1->place, tmp, $$->place);
-                                                            }
-                                                            else {
-                                                                emit("!=float", $1->place, $3->place, $$->place);
-                                                            }
-                                                          }
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit("!=float", p1, p2, $$->place);
                                                         }
                                                       }
                                                       else {
@@ -1163,12 +1134,15 @@ and_expression
                                               string type = bit_type($1->nodetype, $3->nodetype);
                                               if (type != "null"){
                                                 $$ = non_terminal(0, "& int", $1, $3);
-                                                $$->nodetype = "long long";
+                                                $$->nodetype = new char[type.size()+1];
+                                                strcpy($$->nodetype, type.c_str());
 
                                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                  qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                  qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                   $$->place = t;
-                                                  emit("&", $1->place, $3->place, $$->place);
+                                                  emit("&", p1, p2, $$->place);
                                                 }
                                               }
                                               else {
@@ -1187,12 +1161,15 @@ exclusive_or_expression
                                                   string type = bit_type($1->nodetype, $3->nodetype);
                                                   if (type != "null"){
                                                     $$ = non_terminal(0, "^ int", $1, $3);
-                                                    $$->nodetype = "long long";
+                                                    $$->nodetype = new char[type.size()+1];
+                                                    strcpy($$->nodetype, type.c_str());
 
                                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                      qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                      qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                       qid t = newtmp($$->nodetype, level, level_id);
                                                       $$->place = t;
-                                                      emit("^", $1->place, $3->place, $$->place);
+                                                      emit("^", p1, p2, $$->place);
                                                     }
                                                   }
                                                   else {
@@ -1211,12 +1188,15 @@ inclusive_or_expression
                                                           string type = bit_type($1->nodetype, $3->nodetype);
                                                           if (type != "null"){
                                                             $$ = non_terminal(0, "| int", $1, $3);
-                                                            $$->nodetype = "long long";
+                                                            $$->nodetype = new char[type.size()+1];
+                                                            strcpy($$->nodetype, type.c_str());
 
                                                             if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
+                                                              qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                               qid t = newtmp($$->nodetype, level, level_id);
                                                               $$->place = t;
-                                                              emit("|", $1->place, $3->place, $$->place);
+                                                              emit("|", p1, p2, $$->place);
                                                             }
                                                           }
                                                           else {
@@ -1317,6 +1297,8 @@ conditional_expression
                                                                           backpatch($1->truelist, $2);
                                                                           backpatch($1->falselist, $6);
 
+                                                                          qid p1 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                          qid p2 = emit_assignment($$->nodetype, $7->nodetype, $7->place, level, level_id);
                                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                                           $$->place = t;
 
@@ -1346,7 +1328,7 @@ conditional_expression
                                                                             }
                                                                           }
                                                                           else {
-                                                                            k0 = emit("=", NULL, $7->place, $$->place);
+                                                                            k0 = emit("=", NULL, p2, $$->place);
                                                                             k1 = emit("GOTO", NULL, NULL, NULL);
                                                                             $$->nextlist = insert($$->nextlist, k1);
                                                                           }
@@ -1376,7 +1358,7 @@ conditional_expression
                                                                             }
                                                                           }
                                                                           else {
-                                                                            k4 = emit("=", NULL, $3->place, $$->place);
+                                                                            k4 = emit("=", NULL, p1, $$->place);
                                                                           }
                                                                           backpatch($3->truelist, k4);
                                                                           backpatch($3->falselist, k6);
@@ -1451,7 +1433,7 @@ assignment_expression
                                                                         int k = emit("=", NULL, tmp1, $$->place);
                                                                       }
                                                                       else {
-                                                                        int k = emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, level, level_id);
+                                                                        emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, level, level_id);
                                                                       }
                                                                     }
                                                                     else {
@@ -1461,7 +1443,7 @@ assignment_expression
                                                                         int k = emit("=", NULL, tmp, $$->place);
                                                                       }
                                                                       else {
-                                                                        int k = emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                        emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
                                                                       }
                                                                     }
                                                                   }
@@ -1670,13 +1652,28 @@ type_specifier
   : VOID     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "void";}
   | BOOL     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "bool";}
   | CHAR     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "char";}
-  | SHORT    {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "short";}
+  | SHORT    {$$ = terminal($1);
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : \'short'\ datatypes not allowed\n", line);
+              }
   | INT      {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "int";}
-  | LONG     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "long";}
+  | LONG     {$$ = terminal($1);
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : \'long'\ datatypes not allowed\n", line);
+              }
   | FLOAT    {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "float";}
-  | DOUBLE   {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "double";}
-  | SIGNED   {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "signed";}
-  | UNSIGNED {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "unsigned";}
+  | DOUBLE   {$$ = terminal($1);
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : \'double'\ datatypes not allowed\n", line);
+              }
+  | SIGNED   {$$ = terminal($1);
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : \'signed'\ datatypes not allowed, try using native int or float, they are signed\n", line);
+              }
+  | UNSIGNED {$$ = terminal($1);
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : \'unsigned'\ datatypes not allowed\n", line);
+              }
   | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? $1->nodetype : t_name+" "+string($1->nodetype);}
   | enum_specifier  {$$ = $1;
                     error_throw = true;
@@ -2101,7 +2098,8 @@ switch_case_marker
                                                     qid res = newtmp("bool", level, level_id);
                                                     string type = relat_type(switch_type, $2->place->type);
                                                     int tmp;
-                                                    if (type == "int" || (is_type_float(switch_type) && is_type_float($2->place->type))) tmp = emit("==int", $2->place, NULL, res);
+                                                    if (type == "int") tmp = emit("==int", $2->place, NULL, res);
+                                                    else if (is_type_float(switch_type) && is_type_float($2->place->type)) tmp = emit("==float", $2->place, NULL, res);
                                                     else {
                                                       if (is_type_int(switch_type)){
                                                         qid mid = newtmp($2->place->type, level, level_id);
@@ -2165,6 +2163,11 @@ compound_statement
                                                               $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                               backpatch($2->nextlist, $3);
                                                               $$->nextlist = copy($4->nextlist);
+                                                              $$->truelist = copy($4->truelist);
+                                                              $$->falselist = copy($4->falselist);
+                                                              $$->caselist = copy($4->caselist);
+                                                              $$->continuelist = copy($4->continuelist);
+                                                              $$->breaklist = copy($4->breaklist);
                                                             }
                                                           }
 	;
@@ -2253,10 +2256,7 @@ selection_statement
             if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
               patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
-              if ($5->continuelist){
-                error_throw = true;
-                fprintf(stderr, "%d |\t Error : continue statement not allowed inside a switch case\n", line);
-              }
+              $$->continuelist = copy($5->continuelist);
             }
           }
 	;
@@ -2532,7 +2532,7 @@ int main (int argc, char* argv[]){
     dump_tables();
     dump_type_tables();
     dump_3ac();
-    code_gen();
+    // code_gen();
     fclose (yyin);
     fclose (ast);
     return 0;
@@ -2542,12 +2542,11 @@ int main (int argc, char* argv[]){
 // incomplete structs implementation (3ac)
 // incomplete array (3ac) and pointer dereferencing (3ac)
 // string literal initialisation
-// constants issue
-// 3ac test1 test10
 // same struct within struct
 // arr[exp] truelist falselist
+// typecasting for func call
+// correct switch case (types + switch_type nested bug)
 
-// how is actual typecasting happening ??? signed unsigned float int pointer short long etc
 // error on calling undefined funcs
 // scanf printf math string
 

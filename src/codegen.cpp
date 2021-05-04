@@ -773,3 +773,5 @@ void code_gen(){
       // dump_asm_code();
 }
 // res <= "%d\n" not handled
+// add these typecasts : inttofloat inttobool inttochar, floattoint floattochar floattobool, chartofloat chartoint chartobool, booltofloat booltoint booltochar
+// add these ops : *int *float, /int /float, %int, +int +float +ptr, -int -float -ptr, >int >float >ptr, <int <float <ptr, >=int >=float >=ptr, <=int <=float <=ptr, ==int ==float ==ptr, !=int !=float !=ptr

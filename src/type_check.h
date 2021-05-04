@@ -4,9 +4,14 @@ using namespace std;
 
 bool is_type_int(string str);
 bool is_type_float(string str);
+bool is_type_bool(string str);
+bool is_type_char(string str);
+bool is_type_ptr(string str);
+bool is_type_func(string str);
+bool is_type_struct(string str);
+bool is_type_structptr(string str);
 string is_valid(string str1, string str2);
 string id_type(string str, unsigned long long level, unsigned long long* level_id);
-string const_type(int label);
 string postfix_type(string str, string exp_type, int label);
 string args_type(string str1, string str2);
 string unary_type(char* op, string str);

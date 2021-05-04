@@ -6,12 +6,13 @@ int main() {
     int num = 5;
     int x = 0, y = 1, z = 0;
     int res;
+    int i;
     if(num == 1)
     res = 0;
     else if(num == 2)
     res = 1;
     else{
-        for (int i = 0; i < num; i++) {
+        for (i = 0; i < num; i++) {
             z = x + y;
             x = y;
             y = z;

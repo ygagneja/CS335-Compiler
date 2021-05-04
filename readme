@@ -11,3 +11,8 @@ cannot initialise arrays and structs during declaration itself (can initialise c
 user is assumed to use arrays responsibly
 simple declarations only allowed inside structs
 structs direct equality not allowed
+types supported : int, float, char, bool, pointer, struct, function, void, (think about multi ptr)
+document all type requirements for expression operations
+very nice and extensive typecasting mechanism employed
+can add/equate only integers to pointers, so do explicit typecasting if reqd
+do not use break/continue in if stmt (without loop) and continue in switch stmt (without loop)

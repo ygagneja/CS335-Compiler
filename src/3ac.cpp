@@ -154,94 +154,149 @@ void patch_caselist(char* li, qid arg2){
 }
 
 qid emit_assignment(string str1, string str2, qid place2, unsigned long long level, unsigned long long* level_id){
-    if(is_type_int(str1) && is_type_int(str2)){
+    if (str1 == str2){
         return place2;
-	}
-	else if(is_type_float(str1) && is_type_int(str2)){
-		qid tmp = newtmp(str1, level, level_id);
-		emit("inttofloat", NULL, place2, tmp);
+    }
+    if ((is_type_int(str1) || is_type_float(str1) || is_type_char(str1) || is_type_bool(str1)) && (is_type_int(str2) || is_type_float(str2) || is_type_char(str2) || is_type_bool(str2))){
+        // inttofloat inttobool inttochar, floattoint floattochar floattobool, chartofloat chartoint chartobool, booltofloat booltoint booltochar
+        if (is_type_int(str2)){
+            if (is_type_float(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("inttofloat", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_bool(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("inttobool", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_char(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("inttochar", NULL, place2, tmp);
+                return tmp;
+            }
+        }
+        else if (is_type_float(str2)){
+            if (is_type_int(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("floattoint", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_bool(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("floattobool", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_char(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("floattochar", NULL, place2, tmp);
+                return tmp;
+            }
+        }
+        else if (is_type_bool(str2)){
+            if (is_type_float(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("booltofloat", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_int(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("booltoint", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_char(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("booltochar", NULL, place2, tmp);
+                return tmp;
+            }
+        }
+        else if (is_type_char(str2)){
+            if (is_type_float(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("chartofloat", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_bool(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("chartobool", NULL, place2, tmp);
+                return tmp;
+            }
+            else if (is_type_int(str1)){
+                qid tmp = newtmp(str1, level, level_id);
+                emit("chartoint", NULL, place2, tmp);
+                return tmp;
+            }
+        }
+    }
+    else if ((is_type_ptr(str1) && is_type_int(str2)) || (is_type_ptr(str2) && is_type_int(str1)) || is_type_ptr(str1) && is_type_ptr(str2)){
+        qid tmp = newtmp(str1, level, level_id);
+        emit("=", NULL, place2, tmp);
         return tmp;
-	}
-	else if(is_type_int(str1) && is_type_float(str2)){
-		qid tmp = newtmp(str1, level, level_id);
-		emit("floattoint", NULL, place2, tmp);
-        return tmp;
-	}
-	else if(is_type_float(str1) && is_type_float(str2)){
-        return place2;
-	}
-    else { // handles ptr to int and int to ptr and ptr to ptr
-        return place2;
     }
 }
 
-int emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id){
+void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id){
     if (op == "*=" || op == "/=" || op == "%="){
         op = op.substr(0, 1);
-        if (is_type_int(str1) && is_type_int(str2)){
-            return emit(op + "int", place1, place2, place1);
-        }   
-        else if (is_type_int(str1) && is_type_float(str2)){
-            qid tmp = newtmp(str2, level, level_id);
-            emit("inttofloat", NULL, place1, tmp);
-            emit(op + "float", tmp, place2, tmp);
-            return emit("floattoint", NULL, tmp, place1);
-        }
-        else if (is_type_float(str1) && is_type_int(str2)){
-            qid tmp = newtmp(str1, level, level_id);
-            emit("inttofloat", NULL, place2, tmp);
-            return emit(op + "float", place1, tmp, place2);
-        }
-        else {
-            return emit(op + "float", place1, place2, place1);
-        }
+        string type = mul_type(str1, str2, op[0]);
+        qid p1 = emit_assignment(type, str1, place1, level, level_id);
+        qid p2 = emit_assignment(type, str2, place2, level, level_id);
+        qid t = newtmp(type, level, level_id);
+        emit(op+type, p1, p2, t);
+        qid f = emit_assignment(str1, type, t, level, level_id);
+        emit("=", NULL, f, place1);
     }
     else if (op == "+=" || op == "-="){
         op = op.substr(0, 1);
         string type = add_type(str1, str2);
-        if (type == "int"){
-            return emit(op + "int", place1, place2, place1);
-        }
-        else if (type == "float"){
-            if (is_type_int(str1)){
-                qid tmp = newtmp(str2, level, level_id);
-                emit("inttofloat", NULL, place1, tmp);
-                emit(op + "float", tmp, place2, tmp);
-                return emit("floattoint", NULL, tmp, place1);
-            }
-            else if (is_type_int(str2)){
-                qid tmp = newtmp(str1, level, level_id);
-                emit("inttofloat", NULL, place2, tmp);
-                return emit(op + "float", place1, tmp, place2);
-            }
-            else {
-                return emit(op + "float", place1, place2, place1);
-            }
+        if (type == "int" || type == "float"){
+            qid p1 = emit_assignment(type, str1, place1, level, level_id);
+            qid p2 = emit_assignment(type, str2, place2, level, level_id);
+            qid t = newtmp(type, level, level_id);
+            emit(op+type, p1, p2, t);
+            qid f = emit_assignment(str1, type, t, level, level_id);
+            emit("=", NULL, f, place1);
         }
         else {
             if (is_type_int(str1)){
-                string tp(str2); tp.pop_back();
+                qid res = newtmp(str1, level, level_id);
                 qid tmp = newtmp(str1, level, level_id);
+                string tp(str2); tp.pop_back();
                 int k = emit("*int", place1, NULL, tmp);
                 patch_constant(to_string(get_size(tp, level, level_id)), k);
-                return emit(op + "int", tmp, place2, place1);
+                emit(op+"ptr", tmp, place2, res);
+                emit("=", NULL, res, place1);
             }
             else {
-                string tp(str1); tp.pop_back();
+                qid res = newtmp(str1, level, level_id);
                 qid tmp = newtmp(str2, level, level_id);
+                string tp(str1); tp.pop_back();
                 int k = emit("*int", place2, NULL, tmp);
                 patch_constant(to_string(get_size(tp, level, level_id)), k);
-                return emit(op + "int", place1, tmp, place1);
+                emit(op+"ptr", place1, tmp, res);
+                emit("=", NULL, res, place1);
             }
         }
     }
     else if (op == ">>=" || op == "<<="){
         op = op.substr(0, 2);
-        return emit(op, place1, place2, place1);
+        string type = shift_type(str1, str2);
+        qid p1 = emit_assignment(type, str1, place1, level, level_id);
+        qid p2 = emit_assignment(type, str2, place2, level, level_id);
+        qid t = newtmp(type, level, level_id);
+        emit(op, p1, p2, t);
+        qid f = emit_assignment(str1, type, t, level, level_id);
+        emit("=", NULL, f, place1);
     }
     else if (op == "&=" || op == "^=" || op == "|="){
         op = op.substr(0, 1);
-        return emit(op, place1, place2, place1);
+        string type = bit_type(str1, str2);
+        qid p1 = emit_assignment(type, str1, place1, level, level_id);
+        qid p2 = emit_assignment(type, str2, place2, level, level_id);
+        qid t = newtmp(type, level, level_id);
+        emit(op, p1, p2, t);
+        qid f = emit_assignment(str1, type, t, level, level_id);
+        emit("=", NULL, f, place1);
     }
 }
 

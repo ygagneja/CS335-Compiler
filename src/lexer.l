@@ -18,8 +18,6 @@ using namespace std;
 void comment();
 void count(char* token);
 void yyerror(char* s);
-void get_float_info();
-void get_int_info();
 
 extern unsigned long long level;
 extern unsigned long long level_id[MAX_LEVELS];
@@ -69,15 +67,16 @@ int line = 1;
 
 {L}({L}|{D})*		{ yylval.str=strdup(yytext); count("IDENTIFIER"); return(IDENTIFIER); }
 
-0[xX]{H}+{IS}?		{ sscanf(yytext+2,"%llx", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); get_int_info(); count("INT_C"); return(INT_C); }
-0{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); get_int_info(); count("INT_C"); return(INT_C); }
-{D}+{IS}?		{ sscanf(yytext,"%lld", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); get_int_info(); count("INT_C"); return(INT_C); }
+0[xX]{H}+   		{ sscanf(yytext+2,"%x", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); count("INT_C"); return(INT_C); }
+0{D}+       		{ sscanf(yytext,"%d", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); count("INT_C"); return(INT_C); }
+{D}+        		{ sscanf(yytext,"%d", &yylval.constant->int_val); yylval.constant->str = strdup(yytext); count("INT_C"); return(INT_C); }
 
-{D}+{E}{FS}?		{ yylval.constant->str = strdup(yytext); get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
-{D}*"."{D}+({E})?{FS}?	{ yylval.constant->str = strdup(yytext); get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
-{D}+"."{D}*({E})?{FS}?	{ yylval.constant->str = strdup(yytext); get_float_info(); count("FLOAT_C"); return(FLOAT_C); }
+{D}+{E}{FS}?		{ sscanf (yytext, "%f", &yylval.constant->float_val); yylval.constant->str = strdup(yytext); count("FLOAT_C"); return(FLOAT_C); }
+{D}*"."{D}+({E})?	{ sscanf (yytext, "%f", &yylval.constant->float_val); yylval.constant->str = strdup(yytext); count("FLOAT_C"); return(FLOAT_C); }
+{D}+"."{D}*({E})?	{ sscanf (yytext, "%f", &yylval.constant->float_val); yylval.constant->str = strdup(yytext); count("FLOAT_C"); return(FLOAT_C); }
 
 L?\"(\\.|[^\\"])*\"	{ yylval.str=strdup(yytext); count("STRING_LITERAL"); return(STRING_LITERAL); }
+\'.\'               { sscanf (yytext+1, "%c", &yylval.constant->int_val); yylval.constant->str=strdup(yytext); count("CHAR_LITERAL"); return(CHAR_LITERAL); }
 
 "..."			{ yylval.str=strdup(yytext); count("ELLIPSIS"); return(ELLIPSIS); }
 ">>="			{ yylval.str=strdup(yytext); count("RIGHT_ASSIGN"); return(RIGHT_ASSIGN); }
@@ -165,27 +164,5 @@ void count(char* token){
         //     column = column + 8 - (column%8);
         // }
         else column++;
-    }
-}
-
-void get_float_info(){
-    int i = yyleng - 1;
-    sscanf (yytext, "%Lf", &yylval.constant->float_val);
-    if (yytext[i] == 'f' || yytext[i] == 'F')
-        yylval.constant->type = 3;
-    else if (yytext[i] == 'l' || yytext[i] == 'L')
-        yylval.constant->type = 5;
-    else
-        yylval.constant->type = 4;
-}
-
-void get_int_info(){
-    int i;
-    yylval.constant->type = 0;
-    yylval.constant->is_unsigned = true;
-    for (i=yyleng-1; ; i--){
-        if (yytext[i] == 'l' || yytext[i] == 'L')
-            yylval.constant->type = yylval.constant->type == 2 ? yylval.constant->type : yylval.constant->type + 1;
-        else break;
     }
 }

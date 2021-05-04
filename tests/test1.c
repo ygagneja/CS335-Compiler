@@ -10,7 +10,7 @@ int main(int i){
     float x = 1.2;
     char arr[10];
     int z = 5;
-    // a = x ? 1 : 2;
+    a = x ? 1 : 2;
     while (b == 2){
         if (x >= 10){
             x = y();
@@ -24,7 +24,7 @@ int main(int i){
         case 1 : {break;}
         case 2 : {break;}
         case 3 : {
-            // a = x ? 1 : 2; // gives stoi() error
+            a = x ? 1 : 2;
             break;
             }
         default : {break;}

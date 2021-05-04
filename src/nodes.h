@@ -26,10 +26,8 @@ typedef struct {
 } node;
 
 typedef struct {
-    int type; /* 0 int, 1 long, 2 long long, 3 float, 4 double, 5 long double */
-    bool is_unsigned = false;
-    long long int int_val;
-    long double float_val;
+    int int_val;
+    float float_val;
     char* str;
 } number;
 
