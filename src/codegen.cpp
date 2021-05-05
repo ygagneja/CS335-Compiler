@@ -28,11 +28,13 @@ void asmb_label(string s){
 }
 
 void dump_asm_code(){
-  for(string it : assembly_code) printf("%s\n", it.c_str());
+  ofstream out_file("test.asm");
+  for(string it : assembly_code) out_file << it << endl;//printf("%s\n", it.c_str());
+  out_file.close();
 }
 
 int typecheck(string type){
-  if(type == "float" || type == "double" || type == "long double") return 1;
+  if(type == "float") return 1;
   return 0;
 }
 
@@ -47,90 +49,90 @@ string get_reg(qid t){
     if(check) return alloc_reg; // register has been allocated for this symbol t
     else{
       if(!typecheck(t -> type)){
-      if(free_regs.empty()){
-        pair <string, sym_tab_entry*> popped_reg = used_regs.front();
-        used_regs.pop();
+        if(free_regs.empty()){
+          pair <string, sym_tab_entry*> popped_reg = used_regs.front();
+          used_regs.pop();
 
-        // Save the content of popped_reg into memory
-        long long offset = (popped_reg.second) -> offset;
-        if(func != "main") offset += 148;
-        else offset += 4;
-        asmb_line("addi $s7, $fp, " + to_string(-offset));
-        asmb_line("sw " + popped_reg.first + " , " + "0($s7)");
-        saved[popped_reg.second] = 1;
-
-        // Load the fresh value
-        offset = t -> offset;
-        if(func != "main") offset += 148;
-        else offset += 4;
-        if(saved[t]){
+          // Save the content of popped_reg into memory
+          long long offset = (popped_reg.second) -> offset;
+          if(func != "main") offset += 148;
+          else offset += 4;
           asmb_line("addi $s7, $fp, " + to_string(-offset));
-          asmb_line("lw " + popped_reg.first + ", 0($s7)");
+          asmb_line("sw " + popped_reg.first + " , " + "0($s7)");
+          saved[popped_reg.second] = 1;
+
+          // Load the fresh value
+          offset = t -> offset;
+          if(func != "main") offset += 148;
+          else offset += 4;
+          if(saved[t]){
+            asmb_line("addi $s7, $fp, " + to_string(-offset));
+            asmb_line("lw " + popped_reg.first + ", 0($s7)");
+          }
+
+          regs[popped_reg.first] = t;
+          used_regs.push({popped_reg.first, t});
+          alloc_reg = popped_reg.first;
         }
-
-        regs[popped_reg.first] = t;
-        used_regs.push({popped_reg.first, t});
-        alloc_reg = popped_reg.first;
+        else{
+          pair <string, sym_tab_entry*> f = free_regs.front();
+          free_regs.pop();
+          long long offset = t -> offset;
+          if(func != "main") offset += 148;
+          else offset += 4;
+          if(saved[t]){
+            // Load the fresh value from memory
+            asmb_line("addi $s7, $fp, " + to_string(-offset));
+            asmb_line("lw " + f.first + " , " + "0($s7)");
+          }
+          regs[f.first] = t;
+          used_regs.push({f.first, t});
+          alloc_reg = f.first;
+        }
       }
-      else{
-        pair <string, sym_tab_entry*> f = free_regs.front();
-        free_regs.pop();
-        long long offset = t -> offset;
-        if(func != "main") offset += 148;
-        else offset += 4;
-        if(saved[t]){
-          // Load the fresh value from memory
+      else if(typecheck(t -> type)){
+        if(f_free_regs.empty()){
+          pair <string, sym_tab_entry*> popped_reg = f_used_regs.front();
+          f_used_regs.pop();
+
+          // Save the content of popped_reg into memory
+          long long offset = (popped_reg.second) -> offset;
+          if(func != "main") offset += 148;
+          else offset += 4; // Handle the edge case offset = 0 one should not allocate at the base
           asmb_line("addi $s7, $fp, " + to_string(-offset));
-          asmb_line("lw " + f.first + " , " + "0($s7)");
-      }
-        regs[f.first] = t;
-        used_regs.push({f.first, t});
-        alloc_reg = f.first;
+          asmb_line("swc1 " + popped_reg.first + " , " + "0($s7)");
+          saved[popped_reg.second] = 1;
+
+          // Load the fresh value
+          offset = t -> offset;
+          if(func != "main") offset += 148;
+          else offset += 4;
+          if(saved[t]){
+            asmb_line("addi $s7, $fp, " + to_string(-offset));
+            asmb_line("lwc1 " + popped_reg.first + ", 0($s7)");
+          }
+
+          regs[popped_reg.first] = t;
+          f_used_regs.push({popped_reg.first, t});
+          alloc_reg = popped_reg.first;
+        }
+        else{
+          pair <string, sym_tab_entry*> f = f_free_regs.front();
+          f_free_regs.pop();
+          long long offset = t -> offset;
+          if(func != "main") offset += 148;
+          else offset += 4;
+          if(saved[t]){
+            // Load the fresh value from memory
+            asmb_line("addi $s7, $fp, " + to_string(-offset));
+            asmb_line("lwc1 " + f.first + " , " + "0($s7)");
+          }
+          regs[f.first] = t;
+          f_used_regs.push({f.first, t});
+          alloc_reg = f.first;
+        }
       }
     }
-    else if(typecheck(t -> type)){
-    if(f_free_regs.empty()){
-      pair <string, sym_tab_entry*> popped_reg = f_used_regs.front();
-      f_used_regs.pop();
-
-      // Save the content of popped_reg into memory
-      long long offset = (popped_reg.second) -> offset;
-      if(func != "main") offset += 148;
-      else offset += 4; // Handle the edge case offset = 0 one should not allocate at the base
-      asmb_line("addi $s7, $fp, " + to_string(-offset));
-      asmb_line("swc1 " + popped_reg.first + " , " + "0($s7)");
-      saved[popped_reg.second] = 1;
-
-      // Load the fresh value
-      offset = t -> offset;
-      if(func != "main") offset += 148;
-      else offset += 4;
-      if(saved[t]){
-        asmb_line("addi $s7, $fp, " + to_string(-offset));
-        asmb_line("lwc1 " + popped_reg.first + ", 0($s7)");
-      }
-
-      regs[popped_reg.first] = t;
-      f_used_regs.push({popped_reg.first, t});
-      alloc_reg = popped_reg.first;
-  }
-  else{
-      pair <string, sym_tab_entry*> f = f_free_regs.front();
-      f_free_regs.pop();
-      long long offset = t -> offset;
-      if(func != "main") offset += 148;
-      else offset += 4;
-      if(saved[t]){
-        // Load the fresh value from memory
-        asmb_line("addi $s7, $fp, " + to_string(-offset));
-        asmb_line("lwc1 " + f.first + " , " + "0($s7)");
-    }
-      regs[f.first] = t;
-      f_used_regs.push({f.first, t});
-      alloc_reg = f.first;
-  }
-  }
-}
     return alloc_reg;
 }
 
@@ -388,7 +390,7 @@ void code_gen(){
           // cout << "Printing params assembly \n";
           string arg_reg = get_reg(code_arr[i].arg2);
           if(!typecheck(code_arr[i].arg2 -> type)) asmb_line("move $a" + to_string(i_n_param) + " , " + arg_reg), i_n_param++;
-          else if(typecheck(code_arr[i].arg2 -> type)) asmb_line("mov.x f" + to_string(12 + 2 * f_n_param) + " , " + arg_reg), f_n_param++;
+          else if(typecheck(code_arr[i].arg2 -> type)) asmb_line("mov.x $f" + to_string(12 + 2 * f_n_param) + " , " + arg_reg), f_n_param++;
       }
 
       else if(code_arr[i].op == "="){  // res <- = arg2, arg2 could be a constant(num) or a temporary
@@ -397,7 +399,7 @@ void code_gen(){
         if(code_arr[i].arg2){
             string arg_reg = get_reg(code_arr[i].arg2); // arg2 is a temporary
             if(!typecheck(code_arr[i].arg2 -> type)) asmb_line("move " + res_reg + " , " + arg_reg);
-            else asmb_line("mov.x" + res_reg + " , " + arg_reg);
+            else asmb_line("mov.x " + res_reg + " , " + arg_reg);
         }
         else {
           asmb_line("addi " + res_reg + ", $0, " + code_arr[i].constant); // arg2 constant
@@ -412,7 +414,7 @@ void code_gen(){
         if(!typecheck(code_arr[i].arg2 -> type)) asmb_line("addi " + res_reg + ", $fp, " + to_string(offset));
         else  {
           asmb_line("li.x " + res_reg + " , " + to_string(offset));
-          asmb_line("add.x" + res_reg + " , $fp, " + to_string(offset));
+          asmb_line("add.x " + res_reg + " , $fp, " + to_string(offset));
         }
       }
       else if(code_arr[i].op == "*"){ // res <- *arg2
@@ -451,7 +453,7 @@ void code_gen(){
         // cout << "Printing type conversion floattoint assembly\n";
         string res_reg = get_reg(code_arr[i].res);
         string arg2_reg = get_reg(code_arr[i].arg2);
-        asmb_line("cvt.x.w" + res_reg + " , " + arg2_reg);
+        asmb_line("cvt.x.w " + res_reg + " , " + arg2_reg);
       }
       else if(code_arr[i].op == "inttofloat"){ // res <- inttofloat arg2
         // cout << "Printing type conversion inttofloat assembly\n";
@@ -459,23 +461,25 @@ void code_gen(){
         string arg2_reg = get_reg(code_arr[i].arg2);
         asmb_line("cvt.w.x " + res_reg + " , " + arg2_reg);
       }
-      // Integer addition
-      else if(code_arr[i].op == "+int" || code_arr[i].op == "+float"){
+      // addition
+      else if(code_arr[i].op == "+int" || code_arr[i].op == "+float" || code_arr[i].op == "+ptr"){
           // cout << "Printing addition assembly\n";
           string res_reg = get_reg(code_arr[i].res);
           string arg1_reg = get_reg(code_arr[i].arg1);
           string arg2_reg = get_reg(code_arr[i].arg2);
           if(code_arr[i].op == "+int") asmb_line("add " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
+          else if(code_arr[i].op == "+ptr") asmb_line("addu " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
           else asmb_line("add.s " + res_reg + " , " + arg1_reg + " , " + arg2_reg);
       }
-      // Integer subtraction
-      else if(code_arr[i].op == "-int" || code_arr[i].op == "-float"){
+      // subtraction
+      else if(code_arr[i].op == "-int" || code_arr[i].op == "-float" || code_arr[i].op == "-ptr"){
           // cout << "Printing subtraction assembly\n";
           string res_reg = get_reg(code_arr[i].res);
           string arg1_reg = get_reg(code_arr[i].arg1);
           string arg2_reg = get_reg(code_arr[i].arg2);
-          if(code_arr[i].op == "int") asmb_line("sub " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
-          else asmb_line("sub.s" + res_reg + " , " + arg1_reg + " , " + arg2_reg);
+          if(code_arr[i].op == "-int") asmb_line("sub " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
+          else if(code_arr[i].op == "-ptr") asmb_line("subu " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
+          else asmb_line("sub.s " + res_reg + " , " + arg1_reg + " , " + arg2_reg);
       }
       // Integer multiplication
       else if(code_arr[i].op == "*int" || code_arr[i].op == "*float"){
@@ -485,7 +489,7 @@ void code_gen(){
           if (code_arr[i].arg2){
               string arg2_reg = get_reg(code_arr[i].arg2);
               if(code_arr[i].op == "*int") asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
-              else if(code_arr[i].op == "*float") asmb_line("mul.s" + res_reg + " , " + arg1_reg + " , " + arg2_reg);
+              else if(code_arr[i].op == "*float") asmb_line("mul.s " + res_reg + " , " + arg1_reg + " , " + arg2_reg);
           }
           else{
               if(code_arr[i].op == "*int"){
@@ -493,20 +497,20 @@ void code_gen(){
                 asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + arg1_reg);
               }
               else if(code_arr[i].op == "*float"){
-                  asmb_line("li.s" + res_reg + " , " + code_arr[i].constant);
-                  asmb_line("mul.s" + res_reg + ", " + arg1_reg + ", " + res_reg);
+                  asmb_line("li.s " + res_reg + " , " + code_arr[i].constant);
+                  asmb_line("mul.s " + res_reg + ", " + arg1_reg + ", " + res_reg);
               }
           }
       }
       // Integer division
       else if(code_arr[i].op == "/int" || code_arr[i].op == "/float"){
-         cout << "Printing division assembly\n";
+        //  cout << "Printing division assembly\n";
           string res_reg = get_reg(code_arr[i].res);
           string arg1_reg = get_reg(code_arr[i].arg1);
           if (code_arr[i].arg2){
             string arg2_reg = get_reg(code_arr[i].arg2);
             if(code_arr[i].op == "/int") asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + arg2_reg);
-            else if(code_arr[i].op == "/float") asmb_line("mul.s" + res_reg + " , " + arg1_reg + " , " + arg2_reg);
+            else if(code_arr[i].op == "/float") asmb_line("mul.s " + res_reg + " , " + arg1_reg + " , " + arg2_reg);
           }
           // Else shouldn't occur as not in parser
           else{
@@ -515,8 +519,8 @@ void code_gen(){
               asmb_line("div " + res_reg + ", " + res_reg + ", " + arg1_reg);
             }
             else if(code_arr[i].op == "/float"){
-                asmb_line("li.s" + res_reg + " , " + code_arr[i].constant);
-                asmb_line("div.s" + res_reg + ", " + arg1_reg + ", " + res_reg);
+                asmb_line("li.s " + res_reg + " , " + code_arr[i].constant);
+                asmb_line("div.s " + res_reg + ", " + arg1_reg + ", " + res_reg);
             }
           }
       }
@@ -529,90 +533,107 @@ void code_gen(){
           asmb_line("div " + arg1_reg +", " + arg2_reg);
           asmb_line("mfhi " + res_reg);
       }
-      else if(code_arr[i].op == "<int" || code_arr[i].op == "<float"){
-         if(code_arr[i].arg2 == NULL){
-          if(code_arr[i].op == "<int"){
-              asmb_line("addi $t9, $0, " + code_arr[i].constant);
-              reg1 = "$t9";
-            }
-          else{
-              asmb_line("li.s $t9, " + code_arr[i].constant);
-              reg1 = "$f16";
-            }
-         }
-         else reg1 = get_reg(code_arr[i].arg2);
-         reg2 = get_reg(code_arr[i].arg1);
-         reg3 = get_reg(code_arr[i].res);
-         if(code_arr[i].op == "<int") asmb_line("slt " + reg3 + ", " + reg2 + ", " + reg1);
-         else asmb_line("c.lt.s " + reg3 + ", " + reg2 + ", " + reg1);
+      else if(code_arr[i].op == "<int" || code_arr[i].op == "<float" || code_arr[i].op == "<ptr"){
+        // NOT REQUIRED ( arg2 is never null )
+        
+        // if(code_arr[i].arg2 == NULL){
+        //   if(code_arr[i].op == "<int"){
+        //       asmb_line("addi $t9, $0, " + code_arr[i].constant);
+        //       reg1 = "$t9";
+        //   }
+        //   else{
+        //       asmb_line("li.s $t9, " + code_arr[i].constant);
+        //       reg1 = "$f16";
+        //   }
+        // }
+        // else
+        reg1 = get_reg(code_arr[i].arg2);
+        reg2 = get_reg(code_arr[i].arg1);
+        reg3 = get_reg(code_arr[i].res);
+        if(code_arr[i].op == "<int") asmb_line("slt " + reg3 + ", " + reg2 + ", " + reg1);
+        else if(code_arr[i].op == "<ptr") asmb_line("sltu " + reg3 + ", " + reg2 + ", " + reg1);
+        else asmb_line("c.lt.s " + reg3 + ", " + reg2 + ", " + reg1);
      }
 
      // >
-     else if(code_arr[i].op == ">int" || code_arr[i].op == ">float"){
-         if(code_arr[i].arg2 == NULL){ // t9 can be used directly as a temp register
-          if(code_arr[i].op == ">int"){
-            asmb_line("addi $t9, $0, " + code_arr[i].constant);
-            reg1 = "$t9";
-          }
-          else {
-            asmb_line("li.s $t, " + code_arr[i].constant);
-            reg1 = "$f16";
-          }
-         }
-         else reg1 = get_reg(code_arr[i].arg2);
-         reg2 = get_reg(code_arr[i].arg1);
-         reg3 = get_reg(code_arr[i].res);
-         if(code_arr[i].op == ">int") asmb_line("sgt " + reg3 + ", " + reg2 + ", " + reg1);
-         else asmb_line("c.gt.s " + reg3 + ", " + reg2 + ", " + reg1);
+     else if(code_arr[i].op == ">int" || code_arr[i].op == ">float" || code_arr[i].op == ">ptr"){
+        // NOT REQUIRED ( arg2 is never null )
+        
+        // if(code_arr[i].arg2 == NULL){ // t9 can be used directly as a temp register
+        //   if(code_arr[i].op == ">int"){
+        //     asmb_line("addi $t9, $0, " + code_arr[i].constant);
+        //     reg1 = "$t9";
+        //   }
+        //   else {
+        //     asmb_line("li.s $t, " + code_arr[i].constant);
+        //     reg1 = "$f16";
+        //   }
+        // }
+        // else
+        reg1 = get_reg(code_arr[i].arg2);
+        reg2 = get_reg(code_arr[i].arg1);
+        reg3 = get_reg(code_arr[i].res);
+        if(code_arr[i].op == ">int") asmb_line("sgt " + reg3 + ", " + reg2 + ", " + reg1);
+        else if(code_arr[i].op == ">ptr") asmb_line("sgtu " + reg3 + ", " + reg2 + ", " + reg1);
+        else asmb_line("c.gt.s " + reg3 + ", " + reg2 + ", " + reg1);
      }
 
      // >=
-     else if(code_arr[i].op == ">=int" || code_arr[i].op == ">=float"){
-         if(code_arr[i].arg2 == NULL){
-          if(code_arr[i].op == ">=int"){
-            asmb_line("addi $t9, $0, " + code_arr[i].constant);
-            reg1 = "$t9";
-          }
-          else{
-            asmb_line("li.s $t9, " + code_arr[i].constant);
-            reg1 = "$f16";
-          }
-         }
-         else reg1 = get_reg(code_arr[i].arg2);
-         reg2 = get_reg(code_arr[i].arg1);
-         reg3 = get_reg(code_arr[i].res);
-         if(code_arr[i].op == ">=int") asmb_line("sge " + reg3 + ", " + reg2 + ", " + reg1);
-         else asmb_line("c.ge.s " + reg3 + ", " + reg2 + ", " + reg1);
+     else if(code_arr[i].op == ">=int" || code_arr[i].op == ">=float" || code_arr[i].op == ">=ptr"){
+        // NOT REQUIRED ( arg2 is never null )
+        
+        // if(code_arr[i].arg2 == NULL){
+        //   if(code_arr[i].op == ">=int"){
+        //     asmb_line("addi $t9, $0, " + code_arr[i].constant);
+        //     reg1 = "$t9";
+        //   }
+        //   else{
+        //     asmb_line("li.s $t9, " + code_arr[i].constant);
+        //     reg1 = "$f16";
+        //   }
+        // }
+        // else
+        reg1 = get_reg(code_arr[i].arg2);
+        reg2 = get_reg(code_arr[i].arg1);
+        reg3 = get_reg(code_arr[i].res);
+        if(code_arr[i].op == ">=int") asmb_line("sge " + reg3 + ", " + reg2 + ", " + reg1);
+        else if(code_arr[i].op == ">=ptr") asmb_line("sgeu " + reg3 + ", " + reg2 + ", " + reg1);
+        else asmb_line("c.ge.s " + reg3 + ", " + reg2 + ", " + reg1);
      }
 
        // <=
-    else if(code_arr[i].op == "<=int" || code_arr[i].op == "<=float"){
-       if(code_arr[i].arg2 == NULL){
-          if(code_arr[i].op == "<=int"){
-            asmb_line("addi $t9, $0, " + code_arr[i].constant);
-            reg1 = "$t9";
-          }
-          else{
-            asmb_line("li.s $t9, " + code_arr[i].constant);
-            reg1 = "$f16";
-          }
-       }
-       else reg1 = get_reg(code_arr[i].arg2);
+    else if(code_arr[i].op == "<=int" || code_arr[i].op == "<=float" || code_arr[i].op == "<=ptr"){
+      // NOT REQUIRED ( arg2 is never null )
+        
+      //  if(code_arr[i].arg2 == NULL){
+      //     if(code_arr[i].op == "<=int"){
+      //       asmb_line("addi $t9, $0, " + code_arr[i].constant);
+      //       reg1 = "$t9";
+      //     }
+      //     else{
+      //       asmb_line("li.s $t9, " + code_arr[i].constant);
+      //       reg1 = "$f16";
+      //     }
+      //  }
+      //  else
+       reg1 = get_reg(code_arr[i].arg2);
        reg2 = get_reg(code_arr[i].arg1);
        reg3 = get_reg(code_arr[i].res);
        if(code_arr[i].op == "<=int") asmb_line("sle " + reg3 + ", " + reg2 + ", " + reg1);
+       else if(code_arr[i].op == "<=ptr") asmb_line("sleu " + reg3 + ", " + reg2 + ", " + reg1);
        else asmb_line("c.le.s " + reg3 + ", " + reg2 + ", " + reg1);
     }
 
     // ==
-    else if(code_arr[i].op == "==int" || code_arr[i].op == "==float"){
+    else if(code_arr[i].op == "==int" || code_arr[i].op == "==float" || code_arr[i].op == "==ptr"){
       // cout << "Checking Equality\n";
        if(code_arr[i].arg2 == NULL){
-           if(code_arr[i].op == "==int"){
+         // arg2 is never NULL for ==ptr (for now)
+          if(code_arr[i].op == "==int"){
             asmb_line("addi $t9, $0, " + code_arr[i].constant);
             reg1 = "$t9";
           }
-            else {
+          else {
             asmb_line("li.s $t9, " + code_arr[i].constant);
             reg1 = "$f16";
           }
@@ -621,25 +642,30 @@ void code_gen(){
        reg2 = get_reg(code_arr[i].arg1);
        reg3 = get_reg(code_arr[i].res);
        if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg2 + ", " + reg1);
+       else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg2 + ", " + reg1);
        else asmb_line("c.eq.s " + reg3 + ", " + reg2 + ", " + reg1);
     }
 
     // !=
-    else if(code_arr[i].op == "!=int" || code_arr[i].op == "!=float"){
-       if(code_arr[i].arg2 == NULL){
-            if(code_arr[i].op == "!=int"){
-              asmb_line("addi $t9, $0, " + code_arr[i].constant);
-              reg1 = "$t9";
-            }
-            else {
-              asmb_line("li.s $t9, " + code_arr[i].constant);
-              reg1 = "$f16";
-            }
-       }
-       else reg1 = get_reg(code_arr[i].arg2);
+    else if(code_arr[i].op == "!=int" || code_arr[i].op == "!=float" || code_arr[i].op == "!=ptr"){
+      // NOT REQUIRED ( arg2 is never null )
+
+      //  if(code_arr[i].arg2 == NULL){
+      //       if(code_arr[i].op == "!=int"){
+      //         asmb_line("addi $t9, $0, " + code_arr[i].constant);
+      //         reg1 = "$t9";
+      //       }
+      //       else {
+      //         asmb_line("li.s $t9, " + code_arr[i].constant);
+      //         reg1 = "$f16";
+      //       }
+      //  }
+      //  else 
+       reg1 = get_reg(code_arr[i].arg2);
        reg2 = get_reg(code_arr[i].arg1);
        reg3 = get_reg(code_arr[i].res);
        if(code_arr[i].op == "!=int") asmb_line("sne " + reg3 + ", " + reg2 + ", " + reg1);
+       else if(code_arr[i].op == "!=ptr") asmb_line("sneu " + reg3 + ", " + reg2 + ", " + reg1);
        else asmb_line("c.ne.s " + reg3 + ", " + reg2 + ", " + reg1);
     }
 
@@ -673,7 +699,7 @@ void code_gen(){
           asmb_line("move $v0, " + arg_reg);
           asmb_line("b " + func + "_end_"); // Branch to function end directive
 
-          asmb_line(func + "_end_: "); // Assembly for end directive
+          asmb_label(func + "_end_: "); // Assembly for end directive
           asmb_line("addi $sp, $sp, " + to_string(func_size)); // Pop local data
 
           asmb_line("lw $ra, 0($sp)");
@@ -766,7 +792,7 @@ void code_gen(){
       }
       else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
         string arg_reg = get_reg(code_arr[i].arg2);
-        asmb_line("bneq $0, " + arg_reg + " , Label" + to_string(code_arr[i].goto_label));
+        asmb_line("bne $0, " + arg_reg + " , Label" + to_string(code_arr[i].goto_label));
       }
 
     }
@@ -774,4 +800,4 @@ void code_gen(){
 }
 // res <= "%d\n" not handled
 // add these typecasts : inttofloat inttobool inttochar, floattoint floattochar floattobool, chartofloat chartoint chartobool, booltofloat booltoint booltochar
-// add these ops : *int *float, /int /float, %int, +int +float +ptr, -int -float -ptr, >int >float >ptr, <int <float <ptr, >=int >=float >=ptr, <=int <=float <=ptr, ==int ==float ==ptr, !=int !=float !=ptr
+// [ DONE, someone pls review ] add these ops : *int *float, /int /float, %int, +int +float +ptr, -int -float -ptr, >int >float >ptr, <int <float <ptr, >=int >=float >=ptr, <=int <=float <=ptr, ==int ==float ==ptr, !=int !=float !=ptr
