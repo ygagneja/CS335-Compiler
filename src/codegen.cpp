@@ -5,27 +5,30 @@
 
 extern sym_tab global_sym_tab;
 extern map<string, sym_tab*> func_sym_tab_map;
-// string reg1, reg2, reg3;
-// int i_n_param = 0, f_n_param = 0; // keep track of the number of params when a func is called inside main
-map <string, sym_tab_entry*> reg_to_sym;
-map <sym_tab_entry*, pair<string, bool>> sym_to_place;
+
+map <string, qid> reg_to_sym;
+map <qid, pair<string, bool>> sym_to_place;
+queue <string> regs_in_use;
+queue <string> fregs_in_use;
+
+string reg1, reg2, reg3;
+int i_n_param = 0, f_n_param = 0; // keep track of the number of params when a func is called inside main
+string func_name;
+
 vector <string> assembly_code;
-// map <string, sym_tab_entry*> regs; // Map a reg to the allocated symbol table entry pointers
-// map <string, string> f_regs;
-// string func;
-// int func_size;
 
-map <sym_tab_entry*, int> saved;
-
-
-void asmb_line(string s){
-  // assembly_code.push_back("\t"+s);
-  cout << "\t" + s << endl;
+void asmb_header(string s){
+  cout << s << endl;
 }
 
 void asmb_label(string s){
   // assembly_code.push_back(s);
-  cout << s << endl;
+  cout << "\t" << s << endl;
+}
+
+void asmb_line(string s){
+  // assembly_code.push_back("\t"+s);
+  cout << "\t\t" << s << endl;
 }
 
 void dump_asm_code(){
@@ -33,110 +36,6 @@ void dump_asm_code(){
   for(string it : assembly_code) out_file << it << endl;//printf("%s\n", it.c_str());
   out_file.close();
 }
-
-int typecheck(string type){
-  if(type == "float") return 1;
-  return 0;
-}
-
-// Allocates a reg if available if not then free a used reg
-string get_reg(qid t){
-    // cout << t -> sym_name << " " << t -> offset << endl;
-    int check = 0;
-    string alloc_reg;
-    for(auto it : regs){
-      if(it.second == t) {alloc_reg = it.first, check = 1; break;}
-    }
-    if(check) return alloc_reg; // register has been allocated for this symbol t
-    else{
-      if(!typecheck(t -> type)){
-        if(free_regs.empty()){
-          pair <string, sym_tab_entry*> popped_reg = used_regs.front();
-          used_regs.pop();
-
-          // Save the content of popped_reg into memory
-          long long offset = (popped_reg.second) -> offset;
-          if(func != "main") offset += 148;
-          else offset += 4;
-          asmb_line("addi $s7, $fp, " + to_string(-offset));
-          asmb_line("sw " + popped_reg.first + " , " + "0($s7)");
-          saved[popped_reg.second] = 1;
-
-          // Load the fresh value
-          offset = t -> offset;
-          if(func != "main") offset += 148;
-          else offset += 4;
-          if(saved[t]){
-            asmb_line("addi $s7, $fp, " + to_string(-offset));
-            asmb_line("lw " + popped_reg.first + ", 0($s7)");
-          }
-
-          regs[popped_reg.first] = t;
-          used_regs.push({popped_reg.first, t});
-          alloc_reg = popped_reg.first;
-        }
-        else{
-          pair <string, sym_tab_entry*> f = free_regs.front();
-          free_regs.pop();
-          long long offset = t -> offset;
-          if(func != "main") offset += 148;
-          else offset += 4;
-          if(saved[t]){
-            // Load the fresh value from memory
-            asmb_line("addi $s7, $fp, " + to_string(-offset));
-            asmb_line("lw " + f.first + " , " + "0($s7)");
-          }
-          regs[f.first] = t;
-          used_regs.push({f.first, t});
-          alloc_reg = f.first;
-        }
-      }
-      else if(typecheck(t -> type)){
-        if(f_free_regs.empty()){
-          pair <string, sym_tab_entry*> popped_reg = f_used_regs.front();
-          f_used_regs.pop();
-
-          // Save the content of popped_reg into memory
-          long long offset = (popped_reg.second) -> offset;
-          if(func != "main") offset += 148;
-          else offset += 4; // Handle the edge case offset = 0 one should not allocate at the base
-          asmb_line("addi $s7, $fp, " + to_string(-offset));
-          asmb_line("swc1 " + popped_reg.first + " , " + "0($s7)");
-          saved[popped_reg.second] = 1;
-
-          // Load the fresh value
-          offset = t -> offset;
-          if(func != "main") offset += 148;
-          else offset += 4;
-          if(saved[t]){
-            asmb_line("addi $s7, $fp, " + to_string(-offset));
-            asmb_line("lwc1 " + popped_reg.first + ", 0($s7)");
-          }
-
-          regs[popped_reg.first] = t;
-          f_used_regs.push({popped_reg.first, t});
-          alloc_reg = popped_reg.first;
-        }
-        else{
-          pair <string, sym_tab_entry*> f = f_free_regs.front();
-          f_free_regs.pop();
-          long long offset = t -> offset;
-          if(func != "main") offset += 148;
-          else offset += 4;
-          if(saved[t]){
-            // Load the fresh value from memory
-            asmb_line("addi $s7, $fp, " + to_string(-offset));
-            asmb_line("lwc1 " + f.first + " , " + "0($s7)");
-          }
-          regs[f.first] = t;
-          f_used_regs.push({f.first, t});
-          alloc_reg = f.first;
-        }
-      }
-    }
-    return alloc_reg;
-}
-
 
 void initialise_regs(){
   for (auto itr : global_sym_tab){
@@ -211,51 +110,113 @@ void initialise_regs(){
   reg_to_sym["$f31"] = NULL;
 }
 
+string get_reg(qid sym){
+  // cout << t -> sym_name << " " << t -> offset << endl;
+  if (sym_to_place[sym].first != ""){
+    return sym_to_place[sym].first;
+  }
+
+  if (is_type_float(sym->type)){
+    for (auto itr : reg_to_sym){
+      long long offset = func_name == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
+      if (itr.first.substr(0, 2) == "$f" && itr.second == NULL){
+        // free reg available
+        fregs_in_use.push(itr.first);
+        itr.second = sym;
+        sym_to_place[sym].first = itr.first;
+        // load val from memory to reg
+        offset += sym->offset;
+        asmb_line("lwc1 " + itr.first + " , " + to_string(-offset) + "($fp)");
+        
+        return itr.first;
+      }
+      // no free reg available
+      string reg = fregs_in_use.front();
+      fregs_in_use.pop();
+      // store val from reg to memory
+      offset += reg_to_sym[reg]->offset;
+      asmb_line("swc1 " + reg + " , " + to_string(-offset) + "($fp)");
+      sym_to_place[reg_to_sym[reg]].first = "";
+      // load val from memory to reg
+      offset -= reg_to_sym[reg]->offset;
+      offset += sym->offset;
+      asmb_line("lwc1 " + reg + " , " + to_string(-offset) + "($fp)");
+      sym_to_place[sym].first = reg;
+      fregs_in_use.push(reg);
+      reg_to_sym[reg] = sym;
+      return reg;
+    }
+  }
+  else {
+    for (auto itr : reg_to_sym){
+      long long offset = func_name == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
+      if (itr.first.substr(0, 2) != "$f" && itr.second == NULL){
+        // free reg available
+        regs_in_use.push(itr.first);
+        itr.second = sym;
+        sym_to_place[sym].first = itr.first;
+        // load val from memory to reg
+        offset += sym->offset;
+        asmb_line("lw " + itr.first + " , " + to_string(-offset) + "($fp)");
+        
+        return itr.first;
+      }
+      // no free reg available
+      string reg = regs_in_use.front();
+      regs_in_use.pop();
+      // store val from reg to memory
+      offset += reg_to_sym[reg]->offset;
+      asmb_line("sw " + reg + " , " + to_string(-offset) + "($fp)");
+      sym_to_place[reg_to_sym[reg]].first = "";
+      // load val from memory to reg
+      offset -= reg_to_sym[reg]->offset;
+      offset += sym->offset;
+      asmb_line("lw " + reg + " , " + to_string(-offset) + "($fp)");
+      sym_to_place[sym].first = reg;
+      regs_in_use.push(reg);
+      reg_to_sym[reg] = sym;
+      return reg;
+    }
+  }
+}
+
 void code_gen(){
     initialise_regs();
 
-    asmb_line(".data");
+    asmb_header(".data\n");
     for (auto itr : global_sym_tab){
       if (itr.second->type.substr(0, 5) != "func "){
         string append = itr.second->sym_name + " :\t .space " + to_string(itr.second->size); 
-        asmb_line(append);
+        asmb_label(append);
       }
     }
 
-    asmb_line(".text\n");
+    asmb_header(".text\n");
 
     // Store goto label locations to create label in assembly
-    bool jump_line[code_arr.size()];
-    memset(jump_line, false, sizeof(jump_line));
-    for(int i = 0; i < (int) code_arr.size(); i++){
-      if(code_arr[i].op == "GOTO" || code_arr[i].op == "GOTO IF"){
+    unordered_set<int> label_lines;
+    for (int i=0; i<code_arr.size(); i++){
+      if (code_arr[i].op == "GOTO" || code_arr[i].op == "GOTO IF"){
         int tmp = code_arr[i].goto_label;
-        while(code_arr[tmp].op == "GOTO"){
-          tmp = code_arr[tmp].goto_label;
-        }
-        jump_line[tmp] = true;
-        code_arr[i].goto_label = tmp;
+        while (code_arr[tmp].op == "GOTO") tmp = code_arr[tmp].goto_label;
+        label_lines.insert(tmp);
       }
     }
 
-    for(int i = 0; i < (int) code_arr.size(); i++){
+    for (int i=0; i<code_arr.size(); i++){
       // cout << "op : " << code_arr[i].op << endl;
-
-      if(jump_line[i]){
-        asmb_label("Label"+to_string(i)+":");
+      if(label_lines.count(i)){
+        asmb_label("Label " + to_string(i) + " :\n");
       }
 
-
-      if(code_arr[i].op.substr(0, 15) == "*function start"){
+      if(code_arr[i].op.substr(0, 17) == "*function start*"){
         // cout << "Assembly for function start\n";
         // Extract the name of the func from op
-        if(!func.empty()) func.clear();
-        string tmp = code_arr[i].op;
-        int pos = (int) tmp.size() - 1;
-        --pos; // skip ')'
-        while(tmp[pos] != '(') func += tmp[pos], --pos;
-        reverse(func.begin(), func.end());
-        if(func == "main"){
+        
+        func_name = code_arr[i].op.substr(18);
+        func_name.pop_back();
+
+        if(func_name == "main"){
             asmb_label("main:");
             asmb_line("move $fp, $sp");
             // func_size = get_func_size(func);
