@@ -18,6 +18,7 @@ struct point* func(float x, float y){
 }
 
 int main(){
+	int arr[10][20];
 	// struct point {int x;} p;
 	// {
 	// 	struct test0{
@@ -30,21 +31,21 @@ int main(){
 	// int arr[10][2];
 	// int p = arr[1][0];
 	// arr[3][1] = p;
-	int x = 1;
-	float y = 2;
-	char z = 'a';
-	char* p = &z;
-	bool a = true;
+	// int x = 1;
+	// float y = 2;
+	// char z = 'a';
+	// char* p = &z;
+	// bool a = true;
 
-	int m = x*y + z/a - a;
-	char* q = p + (int)a;
-	int b = p + 1;
-	b += y;
+	// int m = x*y + z/a - a;
+	// char* q = p + (int)a;
+	// int b = p + 1;
+	// b += y;
 
-	switch (x){
-		case 1 : {break;}
-		case 2 : {continue;}
-	}
-	if ('c');
+	// switch (x){
+	// 	case 1 : {break;}
+	// 	case 2 : {continue;}
+	// }
+	// if ('c');
 	return 0;
 }

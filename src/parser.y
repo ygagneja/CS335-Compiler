@@ -19,6 +19,7 @@ string func_args;
 string func_symbols;
 string t_name;
 string switch_type;
+vector<int> dims;
 int struct_id = 0;
 unsigned long long level_id[MAX_LEVELS];
 unsigned long long level = 0;
@@ -353,6 +354,10 @@ postfix_expression
 
                                                   if (!error_throw){
                                                     $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                    qid t = newtmp(type, level, level_id);
+                                                    $$->place = t;
+                                                    restore_offset(type, level, level_id);
+                                                    $$->place->offset = $1->place->offset + get_struct_sym_offset($1->nodetype, $3, level, level_id);
                                                   }
                                                 }
                                               }
@@ -383,6 +388,10 @@ postfix_expression
 
                                                   if (!error_throw){
                                                     $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                    qid t = newtmp(type, level, level_id);
+                                                    $$->place = t;
+                                                    restore_offset(type, level, level_id);
+                                                    $$->place->offset = $1->place->offset + get_struct_sym_offset(tmp, $3, level, level_id);
                                                   }
                                                 }
                                               }
@@ -1556,6 +1565,9 @@ init_declarator
                                     else {
                                       insert_entry($1->symbol, $1->nodetype, $1->size, 0, false, level, level_id[level]);
                                       $$->init = false;
+                                      if ($1->expr_type == 15){
+                                        insert_arr_dims($$->symbol, level, level_id[level], dims);
+                                      }
                                     }
                                     if (!error_throw){
                                       qid t = lookup_use($$->symbol, level, level_id);
@@ -1592,6 +1604,9 @@ init_declarator
                                       $$->nodetype = new char[type.size()+1];
                                       strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
+                                      if ($1->expr_type == 15){
+                                        insert_arr_dims($1->symbol, level, level_id[level], dims);
+                                      }
                                     }
                                     if (!error_throw){ 
                                       $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
@@ -1777,6 +1792,9 @@ struct_declarator
                                             error_throw = true;
                                             fprintf(stderr, "$d |\t Error : Redeclaration of symbol \'%s\' in struct\n", line, $$->symbol);
                                           }
+                                          if ($1->expr_type == 15){
+                                            insert_struct_arr_dims($$->symbol, dims);
+                                          }
                                           // handle common struct errors
                                         }
 	;
@@ -1813,10 +1831,12 @@ declarator
                                   $$->nodetype = new char[temp.size()+1];
                                   strcpy($$->nodetype, temp.c_str());
                                   if ($2->expr_type == 15){
-                                    unsigned long long size = get_size(t_name, level, level_id);
-                                    if (size){
-                                      $$->size = ($2->size/size) * get_size($$->nodetype, level, level_id);
-                                    }
+                                    // unsigned long long size = get_size(t_name, level, level_id);
+                                    // if (size){
+                                    //   $$->size = ($2->size/size) * get_size($$->nodetype, level, level_id);
+                                    // }
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Array of pointers not allowed\n", line);
                                   }
                                   else {
                                     $$->size = get_size($$->nodetype, level, level_id);
@@ -1892,10 +1912,18 @@ direct_declarator
                                                         strcpy($$->nodetype, temp.c_str());
                                                       }
                                                       if ($1->expr_type == 1){
+                                                        string type($1->nodetype);
+                                                        if (type == "void"){
+                                                          error_throw = true;
+                                                          fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
+                                                        }
+                                                        dims.clear();
+                                                        dims.push_back($3->int_val);
                                                         $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
                                                       }
                                                       else if ($1->expr_type == 15){
                                                         $$->size = $1->size * $3->int_val;
+                                                        dims.push_back($3->int_val);
                                                       }
                                                       if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                         qid t = NULL;
@@ -2539,8 +2567,7 @@ int main (int argc, char* argv[]){
 }
 // exhaustive code review
 
-// incomplete structs implementation (3ac)
-// incomplete array (3ac) and pointer dereferencing (3ac)
+// incomplete array (3ac) and pointer dereferencing (3ac), understand how to handle ptrs in func calls etc
 // string literal initialisation
 // same struct within struct
 // arr[exp] truelist falselist

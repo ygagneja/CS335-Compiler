@@ -16,3 +16,6 @@ document all type requirements for expression operations
 very nice and extensive typecasting mechanism employed
 can add/equate only integers to pointers, so do explicit typecasting if reqd
 do not use break/continue in if stmt (without loop) and continue in switch stmt (without loop)
+array of pointers not allowed
+// array must be dereferenced till max dimensions and cannot be accessed using * op but only [] !!
+// pointers cannot be dereferenced using [] but only * op
