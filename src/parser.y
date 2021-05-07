@@ -85,7 +85,13 @@ primary_expression
 
                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                         qid t = lookup_use($1, level, level_id);
-                                        $$->place = t;
+                                        if (is_type_ptr(type) && t->dims.size()){
+                                          $$->place = newtmp(type, level, level_id);
+                                          emit("&", NULL, t, $$->place);
+                                        }
+                                        else {
+                                          $$->place = lookup_use($1, level, level_id);
+                                        }
                                       }
                                     }
                                     else {
@@ -178,39 +184,39 @@ primary_expression
 
 postfix_expression
   : primary_expression                       {$$ = $1; }
-  | postfix_expression '[' expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
-                                              // cout << "enter\n";
-                                              if ($1->init && $3->init){
-                                                $$->init = true;
-                                              }
-                                              $$->symbol = $1->symbol;
-                                              string type = postfix_type($1->nodetype, $3->nodetype, 1);
-                                              // cout << "exit\n";
-                                              if (type != "null"){
-                                                $$->nodetype = new char[type.size()+1];
-                                                strcpy($$->nodetype, type.c_str());
-                                                // cout << "exit\n";
-                                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                  qid t = newtmp($1->nodetype, level, level_id);
-                                                  $$->place = t;
-                                                  emit("[+]", $1->place, $3->place, $$->place);
-                                                  // qid t = newtmp($$->nodetype, level, level_id);
-                                                  // $$->place = t;
-                                                  // restore_offset($$->nodetype, level, level_id);
-                                                  // $$->place->offset = $1->place->offset;
-                                                  // $$->place->size = $3->place->offset;
-                                                  // emit("[]", $$->place, $3->place, NULL);   
-                                                }
-                                                // cout << "exit\n";
-                                              }
-                                              else {
-                                                error_throw = true;
-                                                $$->nodetype = new char[type.size()+1];
-                                                strcpy($$->nodetype, type.c_str());
-                                                fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension or array index is not an integer\n", line, ($1->symbol));
-                                              }
-                                              // cout << "exit\n";
-                                             }
+  | postfix_expression '[' inclusive_or_expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
+                                                            // cout << "enter\n";
+                                                            if ($1->init && $3->init){
+                                                              $$->init = true;
+                                                            }
+                                                            $$->symbol = $1->symbol;
+                                                            string type = postfix_type($1->nodetype, $3->nodetype, 1);
+                                                            // cout << "exit\n";
+                                                            if (type != "null"){
+                                                              $$->nodetype = new char[type.size()+1];
+                                                              strcpy($$->nodetype, type.c_str());
+                                                              // cout << "exit\n";
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                qid t = newtmp($1->nodetype, level, level_id);
+                                                                $$->place = t;
+                                                                emit("[+]", $1->place, $3->place, $$->place);
+                                                                // qid t = newtmp($$->nodetype, level, level_id);
+                                                                // $$->place = t;
+                                                                // restore_offset($$->nodetype, level, level_id);
+                                                                // $$->place->offset = $1->place->offset;
+                                                                // $$->place->size = $3->place->offset;
+                                                                // emit("[]", $$->place, $3->place, NULL);   
+                                                              }
+                                                              // cout << "exit\n";
+                                                            }
+                                                            else {
+                                                              error_throw = true;
+                                                              $$->nodetype = new char[type.size()+1];
+                                                              strcpy($$->nodetype, type.c_str());
+                                                              fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension or array index is not an integer\n", line, ($1->symbol));
+                                                            }
+                                                            // cout << "exit\n";
+                                                          }
   | postfix_expression '(' ')'               {qid tmp = $1->place;
                                               $$ = $1;
                                               $$->init = true;
@@ -2570,11 +2576,11 @@ int main (int argc, char* argv[]){
 // incomplete array (3ac) and pointer dereferencing (3ac), understand how to handle ptrs in func calls etc
 // string literal initialisation
 // same struct within struct
-// arr[exp] truelist falselist
 // typecasting for func call
 // correct switch case (types + switch_type nested bug)
 
 // error on calling undefined funcs
+// no return error
 // scanf printf math string
 
 // init errors ??

@@ -10,15 +10,21 @@ struct aa {
 	struct point* a;
 };
 
-struct point* func(float x, float y){
-	struct point* ret;
-	ret->x = x;
-	ret->y = y;
-	return ret;
+void chng(int* p){
+	*p = 1;
+}
+
+struct point* func(struct point* p){
+	p->x = 1;
+	p->y = 2;
+	return p;
 }
 
 int main(){
-	int arr[10][20];
+	int i = 0;
+	struct point p;
+	struct point* q = func(&p);
+	chng(&i);
 	// struct point {int x;} p;
 	// {
 	// 	struct test0{

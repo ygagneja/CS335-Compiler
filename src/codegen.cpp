@@ -1,18 +1,19 @@
 #include "codegen.h"
 #include "3ac.h"
 #include "type_check.h"
+#include "sym_table.h"
 
-string reg1, reg2, reg3;
-int i_n_param = 0, f_n_param = 0; // keep track of the number of params when a func is called inside main
-queue <pair <string, sym_tab_entry*> > used_regs;
-queue <pair <string, sym_tab_entry*> > free_regs;
-queue <pair <string, sym_tab_entry*> > f_free_regs;
-queue <pair <string, sym_tab_entry*> > f_used_regs;
+extern sym_tab global_sym_tab;
+extern map<string, sym_tab*> func_sym_tab_map;
+// string reg1, reg2, reg3;
+// int i_n_param = 0, f_n_param = 0; // keep track of the number of params when a func is called inside main
+map <string, sym_tab_entry*> reg_to_sym;
+map <sym_tab_entry*, pair<string, bool>> sym_to_place;
 vector <string> assembly_code;
-map <string, sym_tab_entry*> regs; // Map a reg to the allocated symbol table entry pointers
-map <string, string> f_regs;
-string func;
-int func_size;
+// map <string, sym_tab_entry*> regs; // Map a reg to the allocated symbol table entry pointers
+// map <string, string> f_regs;
+// string func;
+// int func_size;
 
 map <sym_tab_entry*, int> saved;
 
@@ -137,129 +138,91 @@ string get_reg(qid t){
 }
 
 
-void initialise(){
-  pair <string, sym_tab_entry*> t0({"$t0", NULL});
-  pair <string, sym_tab_entry*> t1({"$t1", NULL});
-  pair <string, sym_tab_entry*> t2({"$t2", NULL});
-  pair <string, sym_tab_entry*> t3({"$t3", NULL});
-  pair <string, sym_tab_entry*> t4({"$t4", NULL});
-  pair <string, sym_tab_entry*> t5({"$t5", NULL});
-  pair <string, sym_tab_entry*> t6({"$t6", NULL});
-  pair <string, sym_tab_entry*> t7({"$t7", NULL});
-  pair <string, sym_tab_entry*> t8({"$t8", NULL});
-  pair <string, sym_tab_entry*> t9({"$t9", NULL});
-  pair <string, sym_tab_entry*> s0({"$s0", NULL});
-  pair <string, sym_tab_entry*> s1({"$s1", NULL});
-  pair <string, sym_tab_entry*> s2({"$s2", NULL});
-  pair <string, sym_tab_entry*> s3({"$s3", NULL});
-  pair <string, sym_tab_entry*> s4({"$s4", NULL});
-  pair <string, sym_tab_entry*> s5({"$s5", NULL});
-  pair <string, sym_tab_entry*> s6({"$s6", NULL});
-  pair <string, sym_tab_entry*> s7({"$s7", NULL});
-  free_regs.push(t0);
-  free_regs.push(t1);
-  free_regs.push(t2);
-  free_regs.push(t3);
-  free_regs.push(t4);
-  free_regs.push(t5);
-  free_regs.push(t6);
-  free_regs.push(t7);
-  free_regs.push(t8);
-  // free_regs.push(t9); // t9 is used directly
-  free_regs.push(s0);
-  free_regs.push(s1);
-  free_regs.push(s2);
-  free_regs.push(s3);
-  free_regs.push(s4);
+void initialise_regs(){
+  for (auto itr : global_sym_tab){
+    sym_to_place[itr.second] = {"", true};
+  }
+  for (auto table : func_sym_tab_map){
+    for (auto itr : *(table.second)){
+      sym_to_place[itr.second] = {"", true};
+    }
+  }
 
-  // free_regs.push(s5); // Regs would be used for storing offsets and performing temporary operations so don't push them to free queue
-  // free_regs.push(s6);
-  // free_regs.push(s7);
-  regs["$t0"] = NULL;
-  regs["$t1"] = NULL;
-  regs["$t2"] = NULL;
-  regs["$t3"] = NULL;
-  regs["$t4"] = NULL;
-  regs["$t5"] = NULL;
-  regs["$t6"] = NULL;
-  regs["$t7"] = NULL;
-  regs["$t8"] = NULL;
-  // regs["$t9"] = NULL;
-  regs["$s0"] = NULL;
-  regs["$s1"] = NULL;
-  regs["$s2"] = NULL;
-  regs["$s3"] = NULL;
-  regs["$s4"] = NULL;
-  regs["$s5"] = NULL;
-  regs["$s6"] = NULL;
-  regs["$s7"] = NULL;
-}
+  // f0 and f2 -> return values
+  // f4, f6, f8, f10 -> temp regs preseved by callee
+  // f12, f14 -> args
+  // f16, f18 -> more temp regs, not preserved by callee
+  // f20, f22, f24, f26, f28, f30 -> saved regs, prserved by caller
 
-// f0 and f2 -> return values
-// f4, f6, f8, f10 -> temp regs preseved by callee
-// f12, f14 -> args
-// f16, f18 -> more temp regs, not preserved by callee
-// f20, f22, f24, f26, f28, f30 -> saved regs, prserved by caller
+  // We will use the convention that f16, f18 will be used for calcs
+  // Similary for occassional storing into memory will use the regs f28, f30(akin to s6, s7 in int case)
 
-// We will use the convention that f16, f18 will be used for calcs
-// Similary for occassional storing into memory will use the regs f28, f30(akin to s6, s7 in int case)
-void initialise_f_regs(){
-  pair <string, sym_tab_entry*> f4({"$f4", NULL});
-  pair <string, sym_tab_entry*> f6({"$f6", NULL});
-  pair <string, sym_tab_entry*> f8({"$f8", NULL});
-  pair <string, sym_tab_entry*> f10({"$f10", NULL});
-  pair <string, sym_tab_entry*> f20({"$f20", NULL});
-  pair <string, sym_tab_entry*> f22({"$f22", NULL});
-  pair <string, sym_tab_entry*> f24({"$f24", NULL});
-  pair <string, sym_tab_entry*> f26({"$f26", NULL});
-  f_free_regs.push(f4);
-  f_free_regs.push(f6);
-  f_free_regs.push(f8);
-  f_free_regs.push(f10);
-  f_free_regs.push(f20);
-  f_free_regs.push(f22);
-  f_free_regs.push(f24);
-  f_free_regs.push(f26);
-  regs["$f0"] = NULL;
-  regs["$f1"] = NULL;
-  regs["$f2"] = NULL;
-  regs["$f3"] = NULL;
-  regs["$f4"] = NULL;
-  regs["$f5"] = NULL;
-  regs["$f6"] = NULL;
-  regs["$f7"] = NULL;
-  regs["$f8"] = NULL;
-  regs["$f9"] = NULL;
-  regs["$f10"] = NULL;
-  regs["$f11"] = NULL;
-  regs["$f12"] = NULL;
-  regs["$f13"] = NULL;
-  regs["$f14"] = NULL;
-  regs["$f15"] = NULL;
-  regs["$f16"] = NULL;
-  regs["$f17"] = NULL;
-  regs["$f18"] = NULL;
-  regs["$f19"] = NULL;
-  regs["$f20"] = NULL;
-  regs["$f21"] = NULL;
-  regs["$f22"] = NULL;
-  regs["$f23"] = NULL;
-  regs["$f24"] = NULL;
-  regs["$f25"] = NULL;
-  regs["$f26"] = NULL;
-  regs["$f27"] = NULL;
-  regs["$f28"] = NULL;
-  regs["$f29"] = NULL;
-  regs["$f30"] = NULL;
-  regs["$f31"] = NULL;
+  reg_to_sym["$t0"] = NULL;
+  reg_to_sym["$t1"] = NULL;
+  reg_to_sym["$t2"] = NULL;
+  reg_to_sym["$t3"] = NULL;
+  reg_to_sym["$t4"] = NULL;
+  reg_to_sym["$t5"] = NULL;
+  reg_to_sym["$t6"] = NULL;
+  reg_to_sym["$t7"] = NULL;
+  reg_to_sym["$t8"] = NULL;
+  reg_to_sym["$t9"] = NULL;
+  reg_to_sym["$s0"] = NULL;
+  reg_to_sym["$s1"] = NULL;
+  reg_to_sym["$s2"] = NULL;
+  reg_to_sym["$s3"] = NULL;
+  reg_to_sym["$s4"] = NULL;
+  reg_to_sym["$s5"] = NULL;
+  reg_to_sym["$s6"] = NULL;
+  reg_to_sym["$s7"] = NULL;
+  reg_to_sym["$t0"] = NULL;
+  reg_to_sym["$t1"] = NULL;
+  reg_to_sym["$f0"] = NULL;
+  reg_to_sym["$f1"] = NULL;
+  reg_to_sym["$f2"] = NULL;
+  reg_to_sym["$f3"] = NULL;
+  reg_to_sym["$f4"] = NULL;
+  reg_to_sym["$f5"] = NULL;
+  reg_to_sym["$f6"] = NULL;
+  reg_to_sym["$f7"] = NULL;
+  reg_to_sym["$f8"] = NULL;
+  reg_to_sym["$f9"] = NULL;
+  reg_to_sym["$f10"] = NULL;
+  reg_to_sym["$f11"] = NULL;
+  reg_to_sym["$f12"] = NULL;
+  reg_to_sym["$f13"] = NULL;
+  reg_to_sym["$f14"] = NULL;
+  reg_to_sym["$f15"] = NULL;
+  reg_to_sym["$f16"] = NULL;
+  reg_to_sym["$f17"] = NULL;
+  reg_to_sym["$f18"] = NULL;
+  reg_to_sym["$f19"] = NULL;
+  reg_to_sym["$f20"] = NULL;
+  reg_to_sym["$f21"] = NULL;
+  reg_to_sym["$f22"] = NULL;
+  reg_to_sym["$f23"] = NULL;
+  reg_to_sym["$f24"] = NULL;
+  reg_to_sym["$f25"] = NULL;
+  reg_to_sym["$f26"] = NULL;
+  reg_to_sym["$f27"] = NULL;
+  reg_to_sym["$f28"] = NULL;
+  reg_to_sym["$f29"] = NULL;
+  reg_to_sym["$f30"] = NULL;
+  reg_to_sym["$f31"] = NULL;
 }
 
 void code_gen(){
+    initialise_regs();
+
     asmb_line(".data");
-    asmb_line("reservedspace: .space 1024");
-    asmb_line("_newline: .asciiz \"\\n\"");
+    for (auto itr : global_sym_tab){
+      if (itr.second->type.substr(0, 5) != "func "){
+        string append = itr.second->sym_name + " :\t .space " + to_string(itr.second->size); 
+        asmb_line(append);
+      }
+    }
+
     asmb_line(".text\n");
-    initialise();
 
     // Store goto label locations to create label in assembly
     bool jump_line[code_arr.size()];
@@ -275,7 +238,6 @@ void code_gen(){
       }
     }
 
-    initialise_f_regs();
     for(int i = 0; i < (int) code_arr.size(); i++){
       // cout << "op : " << code_arr[i].op << endl;
 
