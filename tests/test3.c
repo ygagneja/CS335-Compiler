@@ -1,7 +1,7 @@
 void printf(char* str, ...);
 void scanf(char* str, ...);
 
-long int multiplyNumbers(int n);
+int multiplyNumbers(int n);
 int main() {
     int n;
     printf("Enter a positive integer: ");
@@ -10,7 +10,7 @@ int main() {
     return 0;
 }
 
-long int multiplyNumbers(int n) {
+int multiplyNumbers(int n) {
     if (n>=1)
         return n*multiplyNumbers(n-1);
     else

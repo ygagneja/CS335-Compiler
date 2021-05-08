@@ -19,7 +19,6 @@ string func_args;
 string func_symbols;
 string t_name;
 string switch_type;
-vector<int> dims;
 int struct_id = 0;
 unsigned long long level_id[MAX_LEVELS];
 unsigned long long level = 0;
@@ -85,13 +84,7 @@ primary_expression
 
                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                         qid t = lookup_use($1, level, level_id);
-                                        if (is_type_ptr(type) && t->dims.size()){
-                                          $$->place = newtmp(type, level, level_id);
-                                          emit("&", NULL, t, $$->place);
-                                        }
-                                        else {
-                                          $$->place = lookup_use($1, level, level_id);
-                                        }
+                                        $$->place = t;
                                       }
                                     }
                                     else {
@@ -308,16 +301,6 @@ postfix_expression
                                                                 }
                                                               }
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                                string arguments($3->curr_args_types);
-                                                                int curr_args = 0;
-                                                                size_t f = 1;
-                                                                string delim = string(",");
-                                                                while(f != string::npos){
-                                                                    curr_args++;
-                                                                    f = arguments.find_first_of(delim);
-                                                                    if(f == string::npos) break;
-                                                                    else arguments = arguments.substr(f+1);
-                                                                }
                                                                 if (type == "void"){
                                                                   qid t = NULL;
                                                                   $$->place = t;
@@ -327,7 +310,6 @@ postfix_expression
                                                                   $$->place = t;
                                                                 }
                                                                 int k = emit("call", NULL, $1->place, $$->place);
-                                                                patch_constant(to_string(curr_args), k);
                                                               }
                                                             }
                                                             else {
@@ -481,7 +463,7 @@ unary_expression
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                         qid t = newtmp($$->nodetype, level, level_id);
                                         $$->place = t;
-                                        emit("++E", NULL, $2->place, $$->place);
+                                        emit("++E", $2->place, NULL, $$->place);
                                     }
                                   }
 
@@ -497,7 +479,7 @@ unary_expression
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
-                                      emit("--E", NULL, $2->place, $$->place);
+                                      emit("--E", $2->place, NULL, $$->place);
                                     }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2);
@@ -950,11 +932,13 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                        qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
-                                                        qid t = newtmp($$->nodetype, level, level_id);
-                                                        $$->place = t;
-                                                        emit(">float", p1, p2, $$->place);
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit(">float", p1, p2, $$->place);
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -993,11 +977,13 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                        qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
-                                                        qid t = newtmp($$->nodetype, level, level_id);
-                                                        $$->place = t;
-                                                        emit("<=float", p1, p2, $$->place);
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit("<=float", p1, p2, $$->place);
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -1036,11 +1022,13 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                        qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
-                                                        qid t = newtmp($$->nodetype, level, level_id);
-                                                        $$->place = t;
-                                                        emit(">=float", p1, p2, $$->place);
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid t = newtmp($$->nodetype, level, level_id);
+                                                          $$->place = t;
+                                                          emit(">=float", p1, p2, $$->place);
+                                                        }
                                                       }
                                                     }
                                                     else {
@@ -1083,11 +1071,13 @@ equality_expression
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
-                                                          qid t = newtmp($$->nodetype, level, level_id);
-                                                          $$->place = t;
-                                                          emit("==float", p1, p2, $$->place);
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            emit("==float", p1, p2, $$->place);
+                                                          }
                                                         }
                                                       }
                                                       else {
@@ -1126,11 +1116,13 @@ equality_expression
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
-                                                          qid t = newtmp($$->nodetype, level, level_id);
-                                                          $$->place = t;
-                                                          emit("!=float", p1, p2, $$->place);
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid t = newtmp($$->nodetype, level, level_id);
+                                                            $$->place = t;
+                                                            emit("!=float", p1, p2, $$->place);
+                                                          }
                                                         }
                                                       }
                                                       else {
@@ -1571,9 +1563,9 @@ init_declarator
                                     else {
                                       insert_entry($1->symbol, $1->nodetype, $1->size, 0, false, level, level_id[level]);
                                       $$->init = false;
-                                      if ($1->expr_type == 15){
-                                        insert_arr_dims($$->symbol, level, level_id[level], dims);
-                                      }
+                                      // if ($1->expr_type == 15){
+                                      //   insert_arr_dims($$->symbol, level, level_id[level], dims);
+                                      // }
                                     }
                                     if (!error_throw){
                                       qid t = lookup_use($$->symbol, level, level_id);
@@ -1610,9 +1602,9 @@ init_declarator
                                       $$->nodetype = new char[type.size()+1];
                                       strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
-                                      if ($1->expr_type == 15){
-                                        insert_arr_dims($1->symbol, level, level_id[level], dims);
-                                      }
+                                      // if ($1->expr_type == 15){
+                                      //   insert_arr_dims($1->symbol, level, level_id[level], dims);
+                                      // }
                                     }
                                     if (!error_throw){ 
                                       $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
@@ -1676,24 +1668,34 @@ type_specifier
   | SHORT    {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'short'\ datatypes not allowed\n", line);
+                $$->nodetype = "null";
+                t_name = "null";
               }
   | INT      {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "int";}
   | LONG     {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'long'\ datatypes not allowed\n", line);
+                $$->nodetype = "null";
+                t_name = "null";
               }
   | FLOAT    {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "float";}
   | DOUBLE   {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'double'\ datatypes not allowed\n", line);
+                $$->nodetype = "null";
+                t_name = "null";
               }
   | SIGNED   {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'signed'\ datatypes not allowed, try using native int or float, they are signed\n", line);
+                $$->nodetype = "null";
+                t_name = "null";
               }
   | UNSIGNED {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'unsigned'\ datatypes not allowed\n", line);
+                $$->nodetype = "null";
+                t_name = "null";
               }
   | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? $1->nodetype : t_name+" "+string($1->nodetype);}
   | enum_specifier  {$$ = $1;
@@ -1798,9 +1800,9 @@ struct_declarator
                                             error_throw = true;
                                             fprintf(stderr, "$d |\t Error : Redeclaration of symbol \'%s\' in struct\n", line, $$->symbol);
                                           }
-                                          if ($1->expr_type == 15){
-                                            insert_struct_arr_dims($$->symbol, dims);
-                                          }
+                                          // if ($1->expr_type == 15){
+                                          //   insert_struct_arr_dims($$->symbol, dims);
+                                          // }
                                           // handle common struct errors
                                         }
 	;
@@ -1923,13 +1925,13 @@ direct_declarator
                                                           error_throw = true;
                                                           fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
                                                         }
-                                                        dims.clear();
-                                                        dims.push_back($3->int_val);
+                                                        // dims.clear();
+                                                        // dims.push_back($3->int_val);
                                                         $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
                                                       }
                                                       else if ($1->expr_type == 15){
                                                         $$->size = $1->size * $3->int_val;
-                                                        dims.push_back($3->int_val);
+                                                        // dims.push_back($3->int_val);
                                                       }
                                                       if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                         qid t = NULL;
@@ -1982,8 +1984,6 @@ direct_declarator
                                                               if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                                 qid t = NULL;
                                                                 $$->place = t;
-                                                                string start = "*function start*\t(" + string($$->symbol) + ")";
-                                                                emit(start, NULL, NULL, NULL);
                                                               }
                                                             }
                                                           }
@@ -2024,8 +2024,6 @@ direct_declarator
                                                             if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
                                                               qid t = NULL;
                                                               $$->place = t;
-                                                              string start = "*function start*\t(" + string($$->symbol) + ")";
-                                                              emit(start, NULL, NULL, NULL);
                                                             }
                                                           }
 	;
@@ -2482,6 +2480,8 @@ empty2
   : %empty{
           set_current_tab(func_name);
           t_name = "";
+          string start = "*function start*\t(" + func_name + ")";
+          emit(start, NULL, NULL, NULL);
         }
   ;
 
@@ -2566,7 +2566,7 @@ int main (int argc, char* argv[]){
     dump_tables();
     dump_type_tables();
     dump_3ac();
-    // code_gen();
+    code_gen();
     fclose (yyin);
     fclose (ast);
     return 0;
@@ -2579,9 +2579,8 @@ int main (int argc, char* argv[]){
 // typecasting for func call
 // correct switch case (types + switch_type nested bug)
 
-// error on calling undefined funcs
-// no return error
 // scanf printf math string
+// remove ellipsis
 
 // init errors ??
 // normal syntax errors ??
@@ -2591,3 +2590,8 @@ int main (int argc, char* argv[]){
 // set up software like flow (dump relevant stuff)
 // documentation and readme
 // make test cases to display special stuff
+
+// file io
+// dynamic memory
+// register/code optimizations
+// large params

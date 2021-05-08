@@ -5,7 +5,7 @@ int y(){
     return 1;
 }
 int main(int i){
-    char* ptr[0] = 1;
+    char* ptr = 1;
     bool a = 1, b = false;
     float x = 1.2;
     char arr[10];

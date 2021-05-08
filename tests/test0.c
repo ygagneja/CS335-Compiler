@@ -1,30 +1,36 @@
-struct point {
-	int x;
-	int y;
-	struct {int z; float p;} m;
-};
+// struct point {
+// 	int x;
+// 	int y;
+// 	struct {int z; float p;} m;
+// };
 
-struct aa {
-	int s;
-	char arr[10];
-	struct point* a;
-};
+// struct aa {
+// 	int s;
+// 	char arr[10];
+// 	struct point* a;
+// };
 
-void chng(int* p){
-	*p = 1;
-}
+// void chng(int* p){
+// 	*p = 1;
+// }
 
-struct point* func(struct point* p){
-	p->x = 1;
-	p->y = 2;
-	return p;
-}
+// struct point* func(struct point* p){
+// 	p->x = 1;
+// 	p->y = 2;
+// 	return p;
+// }
+// int glob;
+// int func(){}
+int func();
+// int func(){
 
+// }
+int x();
 int main(){
-	int i = 0;
-	struct point p;
-	struct point* q = func(&p);
-	chng(&i);
+	float x = 2;
+	int i = 10;
+	bool p = true;
+	int m = i*i + p/i + x*10 - (-p+x);
 	// struct point {int x;} p;
 	// {
 	// 	struct test0{
@@ -55,3 +61,4 @@ int main(){
 	// if ('c');
 	return 0;
 }
+int y(){}

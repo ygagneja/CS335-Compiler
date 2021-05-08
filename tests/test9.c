@@ -5,7 +5,7 @@ int main(){
 
     //Testing IF ELSE type statements
     int i = 5;
-    long t = 50;
+    int t = 50;
     int j;
     if(!i)
         if(i == 5)

@@ -2,7 +2,8 @@
 #include "type_check.h"
 
 map<string, sym_tab*> func_sym_tab_map;
-map<string, string> func_args_map; 
+map<string, string> func_args_map;
+map<string, vector<sym_tab_entry*>> func_syms_map;
 sym_tab global_sym_tab;
 sym_tab waste;
 map<string, type_tab*> func_type_tab_map;
@@ -54,7 +55,7 @@ void restore_offset(string type, unsigned long long level, unsigned long long* l
     offsets[curr] -= get_size(type, level, level_id);
 }
 
-void insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
+sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
     sym_tab_entry* entry = new sym_tab_entry();
     entry->sym_name = sym_name;
     entry->type = type;
@@ -65,13 +66,14 @@ void insert_entry(string sym_name, string type, unsigned long long size, long lo
     entry->level = level;
     entry->level_id = level_id;
     (*curr)[make_tuple(entry->sym_name, entry->level, entry->level_id)] = entry;
+    return entry;
 }
 
-void insert_arr_dims(string sym_name, unsigned long long level, unsigned long long level_id, vector<int> dims){
-    for (int i : dims){
-        (*curr)[make_tuple(sym_name, level, level_id)]->dims.push_back(i);
-    }
-}
+// void insert_arr_dims(string sym_name, unsigned long long level, unsigned long long level_id, vector<int> dims){
+//     for (int i : dims){
+//         (*curr)[make_tuple(sym_name, level, level_id)]->dims.push_back(i);
+//     }
+// }
 
 sym_tab_entry* lookup_decl(string sym_name, unsigned long long level, unsigned long long level_id){
     if ((*curr).find(make_tuple(sym_name, level, level_id)) != (*curr).end()){
@@ -116,16 +118,16 @@ bool insert_struct_symbol(string sym_name, string type, unsigned long long size)
     return false;
 }
 
-void insert_struct_arr_dims(string sym_name, vector<int> dims){
-    struct_sym_tab* curr;
-    if (curr_struct_stack.size()) curr = curr_struct_stack.top();
-    else return;
-    if ((*curr).find(sym_name) != (*curr).end()){
-        for (int i : dims){
-            (*curr)[sym_name]->dims.push_back(i);
-        }
-    }
-}
+// void insert_struct_arr_dims(string sym_name, vector<int> dims){
+//     struct_sym_tab* curr;
+//     if (curr_struct_stack.size()) curr = curr_struct_stack.top();
+//     else return;
+//     if ((*curr).find(sym_name) != (*curr).end()){
+//         for (int i : dims){
+//             (*curr)[sym_name]->dims.push_back(i);
+//         }
+//     }
+// }
 
 void insert_type_entry(string type_name, unsigned long long size, unsigned long long level, unsigned long long level_id){
     type_tab_entry* entry = new type_tab_entry();
@@ -218,7 +220,8 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
             return false;   
         }
         else {
-            insert_entry(symbol, type, get_size(type, level, level_id), 0, false, 1, 0);
+            sym_tab_entry* entry = insert_entry(symbol, type, get_size(type, level, level_id), 0, false, 1, 0);
+            func_syms_map[func_name].push_back(entry);
         }
     }
     set_current_tab("#");

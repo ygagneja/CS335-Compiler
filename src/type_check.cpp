@@ -117,7 +117,7 @@ string unary_type(char* op, string str){
         if (is_type_bool(str) || is_type_char(str)) return "int";
     }
     else if (*op == '~'){
-        if (is_type_int(str) || is_type_char(str) || is_type_bool(str) || is_type_float(str)) return string(str);
+        if (is_type_int(str) || is_type_char(str) || is_type_bool(str)) return string(str);
     }
     else if (*op == '!'){
         if (is_type_int(str) || is_type_char(str) || is_type_bool(str) || is_type_float(str)) return string(str);

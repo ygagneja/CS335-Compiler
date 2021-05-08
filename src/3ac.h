@@ -1,5 +1,4 @@
 #include<bits/stdc++.h>
-#include<vector>
 #include "sym_table.h"
 
 using namespace std;

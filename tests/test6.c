@@ -1,5 +1,5 @@
 void printf(char* str, ...);
-void scanf(char* str, ...);
+void scanf(char* str, ...){return;}
 
 int MAX_SIZE = 500;
 
