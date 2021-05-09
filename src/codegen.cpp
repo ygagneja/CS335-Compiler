@@ -214,6 +214,7 @@ void code_gen(){
         int tmp = code_arr[i].goto_label;
         while (code_arr[tmp].op == "GOTO") tmp = code_arr[tmp].goto_label;
         label_lines.insert(tmp);
+        code_arr[i].goto_label = tmp;
       }
     }
 
@@ -648,6 +649,54 @@ void code_gen(){
       asmb_line("cvt.w.s $f0, " + arg_reg); // convert floating point value to integer value
       asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
     }
+    else if(code_arr[i].op == "floattobool"){
+      reg1 = get_reg(code_arr[i].arg2);
+      reg2 = get_reg(code_arr[i].res, false);
+      asmb_line("li.s $f0, 0");
+      asmb_line("c.ne.s " + reg1 + ", $f0");
+      asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+      asmb_line("li " + reg2 + ", 0");
+      asmb_line("b fp_cond_end_" + to_string(fp_cond));
+      asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+      asmb_line("li " + reg2 + ", 1");
+      asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+      fp_cond++;
+    }
+    else if(code_arr[i].op == "[+]"){
+      //TODO
+    }
+    else if(code_arr[i].op == "SIZEOF"){
+      reg2 = get_reg(code_arr[i].res, false);
+      if(code_arr[i].arg2){
+        //TODO
+      }else{
+        //TODO
+      }
+    }
+    else if(code_arr[i].op == "<<"){
+      reg1 = get_reg(code_arr[i].arg1);
+      reg2 = get_reg(code_arr[i].arg2);
+      reg3 = get_reg(code_arr[i].res, false);
+      asmb_line("sll " + reg3 + ", " + reg1 + ", " + reg2);
+    }
+    else if(code_arr[i].op == ">>"){
+      reg1 = get_reg(code_arr[i].arg1);
+      reg2 = get_reg(code_arr[i].arg2);
+      reg3 = get_reg(code_arr[i].res, false);
+      asmb_line("sra " + reg3 + ", " + reg1 + ", " + reg2); // Arithmetic or logical shift?
+    }
+    else if(code_arr[i].op == "^"){
+      reg1 = get_reg(code_arr[i].arg1);
+      reg2 = get_reg(code_arr[i].arg2);
+      reg3 = get_reg(code_arr[i].res, false);
+      asmb_line("xor " + reg3 + ", " + reg1 + ", " + reg2);
+    }
+    else if(code_arr[i].op == "|"){
+      reg1 = get_reg(code_arr[i].arg1);
+      reg2 = get_reg(code_arr[i].arg2);
+      reg3 = get_reg(code_arr[i].res, false);
+      asmb_line("or " + reg3 + ", " + reg1 + ", " + reg2);
+    }
   }
   dump_asm_code();
 }
@@ -657,6 +706,6 @@ void code_gen(){
 // currently assuming max 2 float params and max 4 non float params
 // global vars not handled
 // dont gen code corresponding to global stuff
-// remaining ops from 3ac
+// remaining ops from 3ac [ DONE ]
 // can sort and align offsets, for now just aligned but that leads to stack holes
 // BIG PROBLEM WITH REGS !!!!
