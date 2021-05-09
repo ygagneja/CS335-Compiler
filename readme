@@ -21,3 +21,6 @@ array of pointers not allowed
 // pointers cannot be dereferenced using [] but only * op
 do not call main or recurse in main
 user has to be responsible with adding return stmts in funcs, if not added properly, garbage will be returned in case of non-void funcs
+DO NOT PASS POINTERS AS ARGUMENTS
+CAN RETURN ONLY 4 BYTE VALUES
+ellipsis not allowed

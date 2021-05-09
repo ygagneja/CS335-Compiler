@@ -71,12 +71,6 @@ sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long siz
     return entry;
 }
 
-// void insert_arr_dims(string sym_name, unsigned long long level, unsigned long long level_id, vector<int> dims){
-//     for (int i : dims){
-//         (*curr)[make_tuple(sym_name, level, level_id)]->dims.push_back(i);
-//     }
-// }
-
 sym_tab_entry* lookup_decl(string sym_name, unsigned long long level, unsigned long long level_id){
     if ((*curr).find(make_tuple(sym_name, level, level_id)) != (*curr).end()){
         return (*curr)[make_tuple(sym_name, level, level_id)];
@@ -119,17 +113,6 @@ bool insert_struct_symbol(string sym_name, string type, unsigned long long size)
     }
     return false;
 }
-
-// void insert_struct_arr_dims(string sym_name, vector<int> dims){
-//     struct_sym_tab* curr;
-//     if (curr_struct_stack.size()) curr = curr_struct_stack.top();
-//     else return;
-//     if ((*curr).find(sym_name) != (*curr).end()){
-//         for (int i : dims){
-//             (*curr)[sym_name]->dims.push_back(i);
-//         }
-//     }
-// }
 
 void insert_type_entry(string type_name, unsigned long long size, unsigned long long level, unsigned long long level_id){
     type_tab_entry* entry = new type_tab_entry();

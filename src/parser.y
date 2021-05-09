@@ -178,29 +178,22 @@ primary_expression
 postfix_expression
   : primary_expression                       {$$ = $1; }
   | postfix_expression '[' inclusive_or_expression ']'    {$$ = non_terminal(0, "postfix_expression[expression]", $1, $3);
-                                                            // cout << "enter\n";
                                                             if ($1->init && $3->init){
                                                               $$->init = true;
                                                             }
                                                             $$->symbol = $1->symbol;
                                                             string type = postfix_type($1->nodetype, $3->nodetype, 1);
-                                                            // cout << "exit\n";
                                                             if (type != "null"){
                                                               $$->nodetype = new char[type.size()+1];
                                                               strcpy($$->nodetype, type.c_str());
-                                                              // cout << "exit\n";
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                                qid t = newtmp($1->nodetype, level, level_id);
-                                                                $$->place = t;
-                                                                emit("[+]", $1->place, $3->place, $$->place);
-                                                                // qid t = newtmp($$->nodetype, level, level_id);
-                                                                // $$->place = t;
-                                                                // restore_offset($$->nodetype, level, level_id);
-                                                                // $$->place->offset = $1->place->offset;
-                                                                // $$->place->size = $3->place->offset;
-                                                                // emit("[]", $$->place, $3->place, NULL);   
+                                                                qid t = emit_assignment("int", $3->nodetype, $3->place, level, level_id);
+                                                                int k = emit("*int", t, NULL, t);
+                                                                patch_constant(to_string(get_size($$->nodetype, level, level_id)), k);
+                                                                qid s = newtmp($1->nodetype, level, level_id);
+                                                                emit("+ptr", $1->place, t, s);
+                                                                
                                                               }
-                                                              // cout << "exit\n";
                                                             }
                                                             else {
                                                               error_throw = true;
@@ -208,7 +201,6 @@ postfix_expression
                                                               strcpy($$->nodetype, type.c_str());
                                                               fprintf(stderr, "%d |\t Error : Array \"%s\" indexed with more indices than its dimension or array index is not an integer\n", line, ($1->symbol));
                                                             }
-                                                            // cout << "exit\n";
                                                           }
   | postfix_expression '(' ')'               {qid tmp = $1->place;
                                               $$ = $1;
@@ -497,20 +489,6 @@ unary_expression
                                       emit($1->label, NULL, $2->place, $$->place);
                                     }
                                   }
-  | SIZEOF unary_expression       {$$ = non_terminal(0, $1, $2);
-                                    if ($2->init) $$->init = true;
-                                    $$->nodetype = "int";
-                                    string type = $2->nodetype;
-                                    if (type == "null"){
-                                      error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
-                                    }
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      qid t = newtmp($$->nodetype, level, level_id);
-                                      $$->place = t;
-                                      emit("SIZEOF", NULL, $2->place, $$->place);
-                                    }
-                                  }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3);
                                     string type = $3->nodetype;
                                     if (!is_valid_type(type, level, level_id)){
@@ -531,7 +509,7 @@ unary_expression
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("SIZEOF", NULL, NULL, $$->place);
-                                      patch_constant($3->nodetype, k);
+                                      patch_constant(get_size($3->nodetype, level, level_id), k);
                                     }
                                   }
   ;
@@ -1878,6 +1856,10 @@ declarator
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Conflicting return types for function %s\n", line, ($1->symbol));
                                   }
+                                  if (is_type_struct($1->nodetype)){
+                                    error_throw = true;
+                                    fprintf(stderr, "%d |\t Error : Return type of a function cannot be struct\n", line);
+                                  }
                                 }
                                 if (!error_throw){
                                   $$->place = lookup_use($$->symbol, level, level_id);
@@ -2049,6 +2031,8 @@ pointer
   | '*' pointer                     {$$ = non_terminal(0, $1, $2); string temp = "*" + string($2->nodetype);
                                       $$->nodetype = new char[temp.size()+1];
                                       strcpy($$->nodetype, temp.c_str());
+                                      error_throw = true;
+                                      fprintf(stderr, "%d |\t Error : Multi-level pointers not allowed\n", line);
                                     }
   | '*' type_qualifier_list pointer {$$ = non_terminal(0, $1, $2, $3);
                                       error_throw = true;
@@ -2063,9 +2047,6 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list                {$$ = $1;}
-	| parameter_list ',' ELLIPSIS   {$$ = non_terminal(0, "parameter_type_list", $1, terminal($3));
-                                    func_args += ",...";
-                                  }
 	;
 
 parameter_list
@@ -2080,6 +2061,10 @@ parameter_declaration
                                             if($2->expr_type == 1){
                                               func_symbols = (func_symbols == "") ? string($2->symbol) : func_symbols + "," + string($2->symbol);
                                               func_args = (func_args == "") ?  string($2->nodetype) : func_args + "," + string($2->nodetype);
+                                              if (!is_type_int($2->nodetype) && !is_type_float($2->nodetype) && !is_type_bool($2->nodetype) && !is_type_char($2->nodetype) && !lookup_type_use($2->nodetype, level, level_id)){
+                                                error_throw = true;
+                                                fprintf(stderr, "%d |\t Error : Passing invalid type or a pointer as argument to a function\n", line);
+                                              }
                                             }
                                           }
 	;
@@ -2578,7 +2563,6 @@ int main (int argc, char* argv[]){
 // same struct within struct
 // typecasting for func call
 // correct switch case (types + switch_type nested bug)
-// remove ellipsis
 
 // init errors ??
 // normal syntax errors ??

@@ -250,14 +250,14 @@ void code_gen(){
           asmb_label("main:");
           asmb_line("subu $sp, $sp, " + to_string(MAIN_AR_SIZE));
           asmb_line("sw $fp, " + to_string(MAIN_AR_SIZE-4) + "($sp) \t # preserve frame pointer");
-          asmb_line("addu $fp, $sp, " + to_string(MAIN_AR_SIZE) + "\t set frame pointer");
+          asmb_line("addu $fp, $sp, " + to_string(MAIN_AR_SIZE) + "\t # set frame pointer");
         }
         else{
           asmb_label(curr_func + ":");
           asmb_line("subu $sp, $sp, " + to_string(FUNC_AR_SIZE));
           asmb_line("sw $fp, " + to_string(FUNC_AR_SIZE-4) + "($sp) \t # preserve frame pointer");
           asmb_line("sw $ra, " + to_string(FUNC_AR_SIZE-8) + "($sp) \t # preserve return address");
-          asmb_line("addu $fp, $sp, " + to_string(FUNC_AR_SIZE) + "\t set frame pointer");
+          asmb_line("addu $fp, $sp, " + to_string(FUNC_AR_SIZE) + "\t # set frame pointer");
 
           // move args to temp regs
           int non_f_args = 0, f_args = 0;
@@ -333,10 +333,18 @@ void code_gen(){
       }
       else if(code_arr[i].op == "&"){ // res <- &arg2
         // cout << "Printing unary& assembly\n";
-        string res_reg = get_reg(code_arr[i].res, false);
-        long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
-        offset += code_arr[i].arg2->offset;
-        asmb_line("subu " + res_reg + ", $fp, " + to_string(offset) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
+        if (code_arr[i].arg1){
+          reg1 = get_reg(code_arr[i].arg1);
+          reg2 = get_reg(code_arr[i].arg2);
+          reg3 = get_reg(code_arr[i].res, false);
+          asmb_line("and " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " & " + code_arr[i].arg2->sym_name);
+        }
+        else {
+          string res_reg = get_reg(code_arr[i].res, false);
+          long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
+          offset += code_arr[i].arg2->offset;
+          asmb_line("subu " + res_reg + ", $fp, " + to_string(offset) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
+        }
       }
       else if(code_arr[i].op == "*"){ // res <- *arg2
           // cout << "Printing unary* assembly\n";
@@ -688,28 +696,15 @@ void code_gen(){
       asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
     }
     else if(code_arr[i].op == "floattobool"){
-      reg1 = get_reg(code_arr[i].arg2);
-      reg2 = get_reg(code_arr[i].res, false);
-      asmb_line("li.s $f0, 0");
-      asmb_line("c.ne.s " + reg1 + ", $f0");
-      asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
-      asmb_line("li " + reg2 + ", 0");
-      asmb_line("b fp_cond_end_" + to_string(fp_cond));
-      asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
-      asmb_line("li " + reg2 + ", 1");
-      asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
-      fp_cond++;
-    }
-    else if(code_arr[i].op == "[+]"){
-      //TODO
+      string res_reg = get_reg(code_arr[i].res, false);
+      string arg_reg = get_reg(code_arr[i].arg2);
+      asmb_line("cvt.w.s $f0, " + arg_reg); // convert floating point value to integer value
+      asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
+      asmb_line("sne " + res_reg + ", " + res_reg + ", 0"); // arg != 0 implies res = 1
     }
     else if(code_arr[i].op == "SIZEOF"){
-      reg2 = get_reg(code_arr[i].res, false);
-      if(code_arr[i].arg2){
-        //TODO
-      }else{
-        //TODO
-      }
+      string res_reg = get_reg(code_arr[i].res, false);
+      asmb_line("li " + res_reg + ", " + code_arr[i].constant);
     }
     else if(code_arr[i].op == "<<"){
       reg1 = get_reg(code_arr[i].arg1);
@@ -721,7 +716,7 @@ void code_gen(){
       reg1 = get_reg(code_arr[i].arg1);
       reg2 = get_reg(code_arr[i].arg2);
       reg3 = get_reg(code_arr[i].res, false);
-      asmb_line("sra " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >> " + code_arr[i].arg2->sym_name); // Arithmetic or logical shift?
+      asmb_line("srl " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >> " + code_arr[i].arg2->sym_name); // Arithmetic or logical shift?
     }
     else if(code_arr[i].op == "^"){
       reg1 = get_reg(code_arr[i].arg1);
@@ -744,6 +739,4 @@ void code_gen(){
 // currently assuming max 2 float params and max 4 non float params
 // global vars not handled
 // dont gen code corresponding to global stuff
-// remaining ops from 3ac [ DONE ]
-// can sort and align offsets, for now just aligned but that leads to stack holes
 // BIG PROBLEM WITH REGS !!!!
