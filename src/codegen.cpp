@@ -13,7 +13,7 @@ queue <string> fregs_in_use;
 
 string reg1, reg2, reg3;
 string curr_func;
-int func_size;
+int fp_cond = 0;
 stack<qid> parameters;
 
 vector <string> assembly_code;
@@ -102,7 +102,7 @@ string get_reg(void* tmp, bool from_mem){
         sym_to_place[sym] = itr.first;
         // load val from memory to reg
         offset += sym->offset;
-        if (from_mem) asmb_line("lwc1 " + itr.first + " , " + to_string(-offset) + "($fp)");
+        if (from_mem) asmb_line("lwc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
 
         return itr.first;
       }
@@ -112,12 +112,12 @@ string get_reg(void* tmp, bool from_mem){
     fregs_in_use.pop();
     // store val from reg to memory
     offset += reg_to_sym[reg]->offset;
-    asmb_line("swc1 " + reg + " , " + to_string(-offset) + "($fp)");
+    asmb_line("swc1 " + reg + ", " + to_string(-offset) + "($fp)");
     sym_to_place[reg_to_sym[reg]] = "";
     // load val from memory to reg
     offset -= reg_to_sym[reg]->offset;
     offset += sym->offset;
-    if (from_mem) asmb_line("lwc1 " + reg + " , " + to_string(-offset) + "($fp)");
+    if (from_mem) asmb_line("lwc1 " + reg + ", " + to_string(-offset) + "($fp)");
     sym_to_place[sym] = reg;
     fregs_in_use.push(reg);
     reg_to_sym[reg] = sym;
@@ -137,7 +137,9 @@ string get_reg(void* tmp, bool from_mem){
             asmb_line("move " + itr.first + ", $zero");
             asmb_line("lb " + itr.first + ", " + to_string(-offset) + "($fp)");
           } 
-          else asmb_line("lw " + itr.first + ", " + to_string(-offset) + "($fp)");
+          else {
+            asmb_line("lw " + itr.first + ", " + to_string(-offset) + "($fp)");
+          } 
         }
         return itr.first;
       }
@@ -148,7 +150,9 @@ string get_reg(void* tmp, bool from_mem){
     // store val from reg to memory
     offset += reg_to_sym[reg]->offset;
     if(is_type_char(sym->type) || is_type_bool(sym->type)) asmb_line("sb " + reg + ", " + to_string(-offset) + "($fp)");
-    else asmb_line("sw " + reg + ", " + to_string(-offset) + "($fp)");
+    else {
+      asmb_line("sw " + reg + ", " + to_string(-offset) + "($fp)");
+    } 
     sym_to_place[reg_to_sym[reg]] = "";
     // load val from memory to reg
     offset -= reg_to_sym[reg]->offset;
@@ -158,7 +162,9 @@ string get_reg(void* tmp, bool from_mem){
         asmb_line("move " + reg + ", $zero");
         asmb_line("lb " + reg + ", " + to_string(-offset) + "($fp)");
       } 
-      else asmb_line("lw " + reg + ", " + to_string(-offset) + "($fp)");
+      else {
+        asmb_line("lw " + reg + ", " + to_string(-offset) + "($fp)");
+      } 
     }
     sym_to_place[sym] = reg;
     regs_in_use.push(reg);
@@ -174,6 +180,9 @@ void spill_regs(){
       offset += itr.second->offset;
       if (is_type_char(itr.second->type) || is_type_bool(itr.second->type)){
         asmb_line("sb " + itr.first + ", " + to_string(-offset) + "($fp)");
+      }
+      else if (is_type_float(itr.second->type)){
+        asmb_line("swc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
       }
       else {
         asmb_line("sw " + itr.first + ", " + to_string(-offset) + "($fp)");
@@ -434,7 +443,16 @@ void code_gen(){
         reg3 = get_reg(code_arr[i].res, false);
         if(code_arr[i].op == "<int") asmb_line("slt " + reg3 + ", " + reg1 + ", " + reg2);
         else if(code_arr[i].op == "<ptr") asmb_line("sltu " + reg3 + ", " + reg1 + ", " + reg2);
-        else asmb_line("c.lt.s " + reg3 + ", " + reg1 + ", " + reg2);
+        else {
+          asmb_line("c.lt.s " + reg1 + ", " + reg2);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 0");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 1");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+        } 
      }
      // >
      else if(code_arr[i].op == ">int" || code_arr[i].op == ">float" || code_arr[i].op == ">ptr"){
@@ -443,7 +461,16 @@ void code_gen(){
         reg3 = get_reg(code_arr[i].res, false);
         if(code_arr[i].op == ">int") asmb_line("sgt " + reg3 + ", " + reg1 + ", " + reg2);
         else if(code_arr[i].op == ">ptr") asmb_line("sgtu " + reg3 + ", " + reg1 + ", " + reg2);
-        else asmb_line("c.gt.s " + reg3 + ", " + reg1 + ", " + reg2);
+        else {
+          asmb_line("c.le.s " + reg1 + ", " + reg2);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 1");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 0");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+        }
      }
      // >=
      else if(code_arr[i].op == ">=int" || code_arr[i].op == ">=float" || code_arr[i].op == ">=ptr"){
@@ -452,7 +479,16 @@ void code_gen(){
         reg3 = get_reg(code_arr[i].res, false);
         if(code_arr[i].op == ">=int") asmb_line("sge " + reg3 + ", " + reg1 + ", " + reg2);
         else if(code_arr[i].op == ">=ptr") asmb_line("sgeu " + reg3 + ", " + reg1 + ", " + reg2);
-        else asmb_line("c.ge.s " + reg3 + ", " + reg1 + ", " + reg2);
+        else {
+          asmb_line("c.lt.s " + reg1 + ", " + reg2);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 1");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 0");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+        }
      }
     // <=
     else if(code_arr[i].op == "<=int" || code_arr[i].op == "<=float" || code_arr[i].op == "<=ptr"){
@@ -461,7 +497,16 @@ void code_gen(){
        reg3 = get_reg(code_arr[i].res, false);
        if(code_arr[i].op == "<=int") asmb_line("sle " + reg3 + ", " + reg1 + ", " + reg2);
        else if(code_arr[i].op == "<=ptr") asmb_line("sleu " + reg3 + ", " + reg1 + ", " + reg2);
-       else asmb_line("c.le.s " + reg3 + ", " + reg1 + ", " + reg2);
+       else {
+          asmb_line("c.le.s " + reg1 + ", " + reg2);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 0");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 1");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+       }
     }
     // ==
     else if(code_arr[i].op == "==int" || code_arr[i].op == "==float" || code_arr[i].op == "==ptr"){
@@ -472,15 +517,33 @@ void code_gen(){
         string arg_reg = get_reg(code_arr[i].arg1);
         if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant);
         else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + code_arr[i].constant);
-        else asmb_line("c.eq.s " + reg3 + ", " + reg1 + ", " + code_arr[i].constant);
+        else {
+          asmb_line("c.eq.s " + reg1 + ", " + code_arr[i].constant);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 0");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 1");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+        }
       }
       else{
-        reg2 = get_reg(code_arr[i].arg2);
         reg1 = get_reg(code_arr[i].arg1);
+        reg2 = get_reg(code_arr[i].arg2);
         reg3 = get_reg(code_arr[i].res, false);
         if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + reg2);
         else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + reg2);
-        else asmb_line("c.eq.s " + reg3 + ", " + reg1 + ", " + reg2);
+        else {
+          asmb_line("c.eq.s " + reg1 + ", " + reg2);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 0");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 1");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+        }
       }
     }
     // !=
@@ -490,7 +553,16 @@ void code_gen(){
        reg3 = get_reg(code_arr[i].res, false);
        if(code_arr[i].op == "!=int") asmb_line("sne " + reg3 + ", " + reg1 + ", " + reg2);
        else if(code_arr[i].op == "!=ptr") asmb_line("sneu " + reg3 + ", " + reg1 + ", " + reg2);
-       else asmb_line("c.ne.s " + reg3 + ", " + reg1 + ", " + reg2);
+       else {
+          asmb_line("c.eq.s " + reg1 + ", " + reg2);
+          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("li " + reg3 + ", 1");
+          asmb_line("b fp_cond_end_" + to_string(fp_cond));
+          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("li " + reg3 + ", 0");
+          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          fp_cond++;
+       }
     }
     else if(code_arr[i].op == "E++" || code_arr[i].op == "++E"){ 
       reg1 = get_reg(code_arr[i].res, false);
@@ -579,10 +651,12 @@ void code_gen(){
   }
   dump_asm_code();
 }
-// printf left
+// scanf printf math string
 // initialize global data
 // no usage of true label for memory
 // currently assuming max 2 float params and max 4 non float params
 // global vars not handled
 // dont gen code corresponding to global stuff
 // remaining ops from 3ac
+// can sort and align offsets, for now just aligned but that leads to stack holes
+// BIG PROBLEM WITH REGS !!!!

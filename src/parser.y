@@ -2578,8 +2578,6 @@ int main (int argc, char* argv[]){
 // same struct within struct
 // typecasting for func call
 // correct switch case (types + switch_type nested bug)
-
-// scanf printf math string
 // remove ellipsis
 
 // init errors ??

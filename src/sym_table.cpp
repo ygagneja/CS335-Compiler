@@ -52,7 +52,8 @@ int make_symbol_table(string func_name){
 }
 
 void restore_offset(string type, unsigned long long level, unsigned long long* level_id){
-    offsets[curr] -= get_size(type, level, level_id);
+    unsigned long long size = get_size(type, level, level_id);
+    offsets[curr] -= size;
 }
 
 sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
@@ -60,8 +61,9 @@ sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long siz
     entry->sym_name = sym_name;
     entry->type = type;
     entry->size = size;
+    if (curr != &global_sym_tab) offsets[curr] = offsets[curr]%4 && size >= 4 ? offsets[curr] + (4 - offsets[curr]%4) + size : offsets[curr] + size;
     entry->offset = offsets[curr];
-    offsets[curr] += size;
+    if (curr == &global_sym_tab) offsets[curr] = offsets[curr]%4 && size >= 4 ? offsets[curr] + (4 - offsets[curr]%4) + size : offsets[curr] + size;
     entry->init = init;
     entry->level = level;
     entry->level_id = level_id;
@@ -111,7 +113,7 @@ bool insert_struct_symbol(string sym_name, string type, unsigned long long size)
         entry->type = type;
         entry->size = size;
         entry->offset = offsets_struct[curr];
-        offsets_struct[curr] += size;
+        offsets_struct[curr] = offsets_struct[curr]%4 && size >= 4 ? offsets_struct[curr] + (4 - offsets_struct[curr]%4) + size : offsets_struct[curr] + size;
         (*curr)[sym_name] = entry;
         return true;
     }
