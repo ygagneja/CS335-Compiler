@@ -15,26 +15,53 @@ string reg1, reg2, reg3;
 string curr_func;
 int fp_cond = 0;
 stack<qid> parameters;
+map <qid, long long> global_offsets;
+long long global_offset;
 
 vector <string> assembly_code;
+vector <string> global_scope_assembly;
+bool glob_scope;
+int global_gen;
 
 void asmb_header(string s){
-  cout << s << endl;
+  if (glob_scope && global_gen){
+    global_scope_assembly.push_back(s);
+  }
+  else if (!glob_scope && !global_gen) {
+    assembly_code.push_back(s);
+  }
 }
 
 void asmb_label(string s){
-  assembly_code.push_back(s);
-  cout << "\t" << s << endl;
+  if (glob_scope && global_gen){
+    global_scope_assembly.push_back("\t" + s);
+  }
+  else if (!glob_scope && !global_gen) {
+    assembly_code.push_back("\t" + s);
+  }
 }
 
 void asmb_line(string s){
-  assembly_code.push_back("\t"+s);
-  cout << "\t\t" << s << endl;
+  if (glob_scope && global_gen){
+    global_scope_assembly.push_back("\t\t" + s);
+  }
+  else if(!glob_scope && !global_gen) {
+    assembly_code.push_back("\t\t" + s);
+  }
 }
 
 void dump_asm_code(){
-  ofstream out_file("test.asm");
-  for(string it : assembly_code) out_file << it << endl;//printf("%s\n", it.c_str());
+  ofstream out_file("out.asm");
+  for(string it : assembly_code){
+    out_file << it << endl;
+    if (it == "\tmain : "){
+      out_file << "\t\t# global scope assembly code starts" << endl;
+      for(string it2 : global_scope_assembly){
+        out_file << it2 << endl;
+      }
+      out_file << "\t\t# global scope assembly code ends\n" << endl;
+    }
+  }
   out_file.close();
 }
 
@@ -102,7 +129,14 @@ string get_reg(void* tmp, bool from_mem){
         sym_to_place[sym] = itr.first;
         // load val from memory to reg
         offset += sym->offset;
-        if (from_mem) asmb_line("lwc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
+        if (from_mem){
+          if (sym->level){
+            asmb_line("lwc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
+          }
+          else {
+            asmb_line("lwc1 " + itr.first + ", " + to_string(global_offsets[sym]) + "($gp)");
+          }
+        } 
 
         return itr.first;
       }
@@ -112,12 +146,24 @@ string get_reg(void* tmp, bool from_mem){
     fregs_in_use.pop();
     // store val from reg to memory
     offset += reg_to_sym[reg]->offset;
-    asmb_line("swc1 " + reg + ", " + to_string(-offset) + "($fp)");
+    if (reg_to_sym[reg]->level){
+      asmb_line("swc1 " + reg + ", " + to_string(-offset) + "($fp)");
+    }
+    else {
+      asmb_line("swc1 " + reg + ", " + to_string(global_offsets[reg_to_sym[reg]]) + "($gp)");
+    }
     sym_to_place[reg_to_sym[reg]] = "";
     // load val from memory to reg
     offset -= reg_to_sym[reg]->offset;
     offset += sym->offset;
-    if (from_mem) asmb_line("lwc1 " + reg + ", " + to_string(-offset) + "($fp)");
+    if (from_mem){
+      if (sym->level){
+        asmb_line("lwc1 " + reg + ", " + to_string(-offset) + "($fp)");
+      }
+      else {
+        asmb_line("lwc1 " + reg + ", " + to_string(global_offsets[sym]) + "($gp)");
+      }
+    }
     sym_to_place[sym] = reg;
     fregs_in_use.push(reg);
     reg_to_sym[reg] = sym;
@@ -135,10 +181,20 @@ string get_reg(void* tmp, bool from_mem){
         if (from_mem){
           if(is_type_char(sym->type) || is_type_bool(sym->type)){
             asmb_line("move " + itr.first + ", $zero");
-            asmb_line("lb " + itr.first + ", " + to_string(-offset) + "($fp)");
+            if (sym->level){
+              asmb_line("lb " + itr.first + ", " + to_string(-offset) + "($fp)");
+            }
+            else {
+              asmb_line("lb " + itr.first + ", " + to_string(global_offsets[sym]) + "($gp)");
+            }
           } 
           else {
-            asmb_line("lw " + itr.first + ", " + to_string(-offset) + "($fp)");
+            if (sym->level){
+              asmb_line("lw " + itr.first + ", " + to_string(-offset) + "($fp)");
+            }
+            else {
+              asmb_line("lw " + itr.first + ", " + to_string(global_offsets[sym]) + "($gp)");
+            }
           } 
         }
         return itr.first;
@@ -149,9 +205,21 @@ string get_reg(void* tmp, bool from_mem){
     regs_in_use.pop();
     // store val from reg to memory
     offset += reg_to_sym[reg]->offset;
-    if(is_type_char(sym->type) || is_type_bool(sym->type)) asmb_line("sb " + reg + ", " + to_string(-offset) + "($fp)");
+    if(is_type_char(sym->type) || is_type_bool(sym->type)){
+      if (reg_to_sym[reg]->level){
+        asmb_line("sb " + reg + ", " + to_string(-offset) + "($fp)");
+      }
+      else {
+        asmb_line("sb " + reg + ", " + to_string(global_offsets[reg_to_sym[reg]]) + "($gp)");
+      }
+    }
     else {
-      asmb_line("sw " + reg + ", " + to_string(-offset) + "($fp)");
+      if (reg_to_sym[reg]->level){
+        asmb_line("sw " + reg + ", " + to_string(-offset) + "($fp)");
+      }
+      else {
+        asmb_line("sw " + reg + ", " + to_string(global_offsets[reg_to_sym[reg]]) + "($gp)");
+      }
     } 
     sym_to_place[reg_to_sym[reg]] = "";
     // load val from memory to reg
@@ -160,10 +228,20 @@ string get_reg(void* tmp, bool from_mem){
     if (from_mem){
       if(is_type_char(sym->type) || is_type_bool(sym->type)){
         asmb_line("move " + reg + ", $zero");
-        asmb_line("lb " + reg + ", " + to_string(-offset) + "($fp)");
+        if (sym->level){
+          asmb_line("lb " + reg + ", " + to_string(-offset) + "($fp)");
+        }
+        else {
+          asmb_line("lb " + reg + ", " + to_string(global_offsets[sym]) + "($gp)");
+        }
       } 
       else {
-        asmb_line("lw " + reg + ", " + to_string(-offset) + "($fp)");
+        if (sym->level){
+          asmb_line("lw " + reg + ", " + to_string(-offset) + "($fp)");
+        }
+        else {
+          asmb_line("lw " + reg + ", " + to_string(global_offsets[sym]) + "($gp)");
+        }
       } 
     }
     sym_to_place[sym] = reg;
@@ -179,13 +257,28 @@ void spill_regs(){
     if(itr.second){
       offset += itr.second->offset;
       if (is_type_char(itr.second->type) || is_type_bool(itr.second->type)){
-        asmb_line("sb " + itr.first + ", " + to_string(-offset) + "($fp)");
+        if (itr.second->level){
+          asmb_line("sb " + itr.first + ", " + to_string(-offset) + "($fp)");
+        }
+        else {
+          asmb_line("sb " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+        }
       }
       else if (is_type_float(itr.second->type)){
-        asmb_line("swc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
+        if (itr.second->level){
+          asmb_line("swc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
+        }
+        else {
+          asmb_line("swc1 " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+        }
       }
       else {
-        asmb_line("sw " + itr.first + ", " + to_string(-offset) + "($fp)");
+        if (itr.second->level){
+          asmb_line("sw " + itr.first + ", " + to_string(-offset) + "($fp)");
+        }
+        else {
+          asmb_line("sw " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+        }
       }
       offset -= itr.second->offset;
       sym_to_place[itr.second] = "";
@@ -195,31 +288,50 @@ void spill_regs(){
 }
 
 void code_gen(){
-    initialise_regs();
+  initialise_regs();
 
-    asmb_header(".data\n");
-    for (auto itr : global_sym_tab){
-      if (itr.second->type.substr(0, 5) != "func "){
-        string append = itr.second->sym_name + " :\t .space " + to_string(itr.second->size);
-        asmb_label(append);
+  glob_scope = false;
+  asmb_header(".data\n");
+  for (auto itr : global_sym_tab){
+    if (itr.second->type.substr(0, 5) != "func "){
+      if (global_offset % 4 && itr.second->size >= 4){
+        asmb_label(".align\t2");
+        global_offset += (4 - global_offset % 4);
+        global_offsets[itr.second] = global_offset;
+        global_offset += itr.second->size;
       }
+      else {
+        global_offsets[itr.second] = global_offset;
+        global_offset += itr.second->size;
+      }
+      string append = itr.second->sym_name + " :\t .space " + to_string(itr.second->size);
+      asmb_label(append);
     }
+  }
 
-    asmb_header(".text\n");
+  asmb_header(".text\n");
+  glob_scope = true;
 
-    // Store goto label locations to create label in assembly
-    unordered_set<int> label_lines;
+  // Store goto label locations to create label in assembly
+  unordered_set<int> label_lines;
+  for (int i=0; i<code_arr.size(); i++){
+    if (code_arr[i].op == "GOTO" || code_arr[i].op == "GOTO IF"){
+      int tmp = code_arr[i].goto_label;
+      while (code_arr[tmp].op == "GOTO") tmp = code_arr[tmp].goto_label;
+      label_lines.insert(tmp);
+      code_arr[i].goto_label = tmp;
+    }
+  }
+
+  for (global_gen=1; global_gen>=0; global_gen--){
+
     for (int i=0; i<code_arr.size(); i++){
-      if (code_arr[i].op == "GOTO" || code_arr[i].op == "GOTO IF"){
-        int tmp = code_arr[i].goto_label;
-        while (code_arr[tmp].op == "GOTO") tmp = code_arr[tmp].goto_label;
-        label_lines.insert(tmp);
-        code_arr[i].goto_label = tmp;
+      
+      if (!global_gen && i==0){
+        glob_scope = false;
+        while (i<code_arr.size() && code_arr[i].op.substr(0, 16) != "*function start*") i++;
       }
-    }
-
-    for (int i=0; i < (int)code_arr.size(); i++){
-      // cout << "op : " << code_arr[i].op << endl;
+      
       if(label_lines.count(i)){
         asmb_label("Label_" + to_string(i) + " :");
       }
@@ -238,22 +350,32 @@ void code_gen(){
           asmb_line("jr $ra \t # Return");
         }
         initialise_regs();
+        if (!global_gen){
+          while (i<code_arr.size() && code_arr[i].op.substr(0, 16) != "*function start*") i++;
+          i--;
+          continue;
+        }
+        glob_scope = true;
       }
       else if(code_arr[i].op.substr(0, 16) == "*function start*"){
         // cout << "Assembly for function start\n";
+        if (global_gen){
+          while (i<code_arr.size() && code_arr[i].op.substr(0, 14) != "*function end*") i++;
+          continue;
+        }
+        glob_scope = false;
         // Extract the name of the func from op
-
         curr_func = code_arr[i].op.substr(18);
         curr_func.pop_back();
 
         if(curr_func == "main"){
-          asmb_label("main:");
+          asmb_label("main : ");
           asmb_line("subu $sp, $sp, " + to_string(MAIN_AR_SIZE));
           asmb_line("sw $fp, " + to_string(MAIN_AR_SIZE-4) + "($sp) \t # preserve frame pointer");
           asmb_line("addu $fp, $sp, " + to_string(MAIN_AR_SIZE) + "\t # set frame pointer");
         }
         else{
-          asmb_label(curr_func + ":");
+          asmb_label(curr_func + " : ");
           asmb_line("subu $sp, $sp, " + to_string(FUNC_AR_SIZE));
           asmb_line("sw $fp, " + to_string(FUNC_AR_SIZE-4) + "($sp) \t # preserve frame pointer");
           asmb_line("sw $ra, " + to_string(FUNC_AR_SIZE-8) + "($sp) \t # preserve return address");
@@ -347,104 +469,96 @@ void code_gen(){
         }
       }
       else if(code_arr[i].op == "*"){ // res <- *arg2
-          // cout << "Printing unary* assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg_reg = get_reg(code_arr[i].arg2);
-          if (is_type_float(code_arr[i].res->type)) asmb_line("lwc1 " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
-          else if (is_type_bool(code_arr[i].res->type) || is_type_char(code_arr[i].res->type)) asmb_line("lb " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
-          else asmb_line("lw " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
+        // cout << "Printing unary* assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        if (is_type_float(code_arr[i].res->type)) asmb_line("lwc1 " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
+        else if (is_type_bool(code_arr[i].res->type) || is_type_char(code_arr[i].res->type)) asmb_line("lb " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
+        else asmb_line("lw " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
       }
       else if(code_arr[i].op == "-"){ // res <- -arg2
-          // cout << "Printing unary- assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg_reg = get_reg(code_arr[i].arg2);
-          if(is_type_float(code_arr[i].arg2 -> type)) asmb_line("neg.s " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = -"+code_arr[i].arg2->sym_name);
-          else asmb_line("neg " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = -"+code_arr[i].arg2->sym_name);
-      }
-      else if(code_arr[i].op == "+"){ // res <- +arg2
-          // cout << "Printing unary+ assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg_reg = get_reg(code_arr[i].arg2);
-          if (is_type_float(code_arr[i].res->type)) asmb_line("lwc1 " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = +"+code_arr[i].arg2->sym_name);
-          else if (is_type_bool(code_arr[i].res->type) || is_type_char(code_arr[i].res->type)) asmb_line("lb " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = +"+code_arr[i].arg2->sym_name);
-          else asmb_line("lw " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = +"+code_arr[i].arg2->sym_name);
+        // cout << "Printing unary- assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        if(is_type_float(code_arr[i].arg2 -> type)) asmb_line("neg.s " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = -"+code_arr[i].arg2->sym_name);
+        else asmb_line("neg " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = -"+code_arr[i].arg2->sym_name);
       }
       else if(code_arr[i].op == "~"){ // res <- ~arg2
-          // cout << "Printing unary ~ assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg_reg = get_reg(code_arr[i].arg2);
-          asmb_line("not " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = ~"+code_arr[i].arg2->sym_name);
-          if (is_type_char(code_arr[i].res->type)){
-            asmb_line("and " + res_reg + ", " + res_reg + ", 0xFF");
-          }
-          else if (is_type_bool(code_arr[i].res->type)){
-            asmb_line("and " + res_reg + ", " + res_reg + ", 0x1");
-          }
+        // cout << "Printing unary ~ assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("not " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = ~"+code_arr[i].arg2->sym_name);
+        if (is_type_char(code_arr[i].res->type)){
+          asmb_line("and " + res_reg + ", " + res_reg + ", 0xFF");
+        }
+        else if (is_type_bool(code_arr[i].res->type)){
+          asmb_line("and " + res_reg + ", " + res_reg + ", 0x1");
+        }
       }
       else if(code_arr[i].op == "!"){ // res <- !arg2
-          // cout << "Printing unary ! assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg_reg = get_reg(code_arr[i].arg2);
-          asmb_line("seq " + res_reg + ", " + arg_reg + ", " + "$zero" + "\t # "+code_arr[i].res->sym_name + " = !"+code_arr[i].arg2->sym_name);
+        // cout << "Printing unary ! assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("seq " + res_reg + ", " + arg_reg + ", " + "$zero" + "\t # "+code_arr[i].res->sym_name + " = !"+code_arr[i].arg2->sym_name);
       }
       // addition
       else if(code_arr[i].op == "+int" || code_arr[i].op == "+float" || code_arr[i].op == "+ptr"){
-          // cout << "Printing addition assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg1_reg = get_reg(code_arr[i].arg1);
-          string arg2_reg = get_reg(code_arr[i].arg2);
-          if(code_arr[i].op == "+int") asmb_line("add " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +int "+code_arr[i].arg2->sym_name);
-          else if(code_arr[i].op == "+ptr") asmb_line("addu " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +ptr "+code_arr[i].arg2->sym_name);
-          else asmb_line("add.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +float "+code_arr[i].arg2->sym_name);
+        // cout << "Printing addition assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg1_reg = get_reg(code_arr[i].arg1);
+        string arg2_reg = get_reg(code_arr[i].arg2);
+        if(code_arr[i].op == "+int") asmb_line("add " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +int "+code_arr[i].arg2->sym_name);
+        else if(code_arr[i].op == "+ptr") asmb_line("addu " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +ptr "+code_arr[i].arg2->sym_name);
+        else asmb_line("add.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +float "+code_arr[i].arg2->sym_name);
       }
       // subtraction
       else if(code_arr[i].op == "-int" || code_arr[i].op == "-float" || code_arr[i].op == "-ptr"){
-          // cout << "Printing subtraction assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg1_reg = get_reg(code_arr[i].arg1);
-          string arg2_reg = get_reg(code_arr[i].arg2);
-          if(code_arr[i].op == "-int") asmb_line("sub " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " -int " + code_arr[i].arg2->sym_name);
-          else if(code_arr[i].op == "-ptr") asmb_line("subu " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " -ptr " + code_arr[i].arg2->sym_name);
-          else asmb_line("sub.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " -float " + code_arr[i].arg2->sym_name);
+        // cout << "Printing subtraction assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg1_reg = get_reg(code_arr[i].arg1);
+        string arg2_reg = get_reg(code_arr[i].arg2);
+        if(code_arr[i].op == "-int") asmb_line("sub " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " -int " + code_arr[i].arg2->sym_name);
+        else if(code_arr[i].op == "-ptr") asmb_line("subu " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " -ptr " + code_arr[i].arg2->sym_name);
+        else asmb_line("sub.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " -float " + code_arr[i].arg2->sym_name);
       }
       // Integer multiplication
       else if(code_arr[i].op == "*int" || code_arr[i].op == "*float"){
-          // cout << "Printing multiplication assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg1_reg = get_reg(code_arr[i].arg1);
-          if (code_arr[i].arg2){
-              string arg2_reg = get_reg(code_arr[i].arg2);
-              if(code_arr[i].op == "*int") asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *int "+code_arr[i].arg2->sym_name);
-              else if(code_arr[i].op == "*float") asmb_line("mul.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *float "+code_arr[i].arg2->sym_name);
-          }
-          else{
-              if(code_arr[i].op == "*int"){
-                asmb_line("li " + res_reg + ", " + code_arr[i].constant);
-                asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + res_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *int "+code_arr[i].constant);
-              }
-              else if(code_arr[i].op == "*float"){
-                  asmb_line("li.s " + res_reg + ", " + code_arr[i].constant);
-                  asmb_line("mul.s " + res_reg + ", " + arg1_reg + ", " + res_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *float "+code_arr[i].constant);
-              }
-          }
+        // cout << "Printing multiplication assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg1_reg = get_reg(code_arr[i].arg1);
+        if (code_arr[i].arg2){
+            string arg2_reg = get_reg(code_arr[i].arg2);
+            if(code_arr[i].op == "*int") asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *int "+code_arr[i].arg2->sym_name);
+            else if(code_arr[i].op == "*float") asmb_line("mul.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *float "+code_arr[i].arg2->sym_name);
+        }
+        else{
+            if(code_arr[i].op == "*int"){
+              asmb_line("li " + res_reg + ", " + code_arr[i].constant);
+              asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + res_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *int "+code_arr[i].constant);
+            }
+            else if(code_arr[i].op == "*float"){
+                asmb_line("li.s " + res_reg + ", " + code_arr[i].constant);
+                asmb_line("mul.s " + res_reg + ", " + arg1_reg + ", " + res_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *float "+code_arr[i].constant);
+            }
+        }
       }
       // Integer division
       else if(code_arr[i].op == "/int" || code_arr[i].op == "/float"){
         //  cout << "Printing division assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg1_reg = get_reg(code_arr[i].arg1);
-          string arg2_reg = get_reg(code_arr[i].arg2);
-          if(code_arr[i].op == "/int") asmb_line("div " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " /int "+code_arr[i].arg2->sym_name);
-          else if(code_arr[i].op == "/float") asmb_line("div.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " /float "+code_arr[i].arg2->sym_name);
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg1_reg = get_reg(code_arr[i].arg1);
+        string arg2_reg = get_reg(code_arr[i].arg2);
+        if(code_arr[i].op == "/int") asmb_line("div " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " /int "+code_arr[i].arg2->sym_name);
+        else if(code_arr[i].op == "/float") asmb_line("div.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " /float "+code_arr[i].arg2->sym_name);
       }
       // Integer modulo
       else if(code_arr[i].op == "%int"){
-          // cout << "Printing modulo assembly\n";
-          string res_reg = get_reg(code_arr[i].res, false);
-          string arg1_reg = get_reg(code_arr[i].arg1);
-          string arg2_reg = get_reg(code_arr[i].arg2);
-          asmb_line("div " + arg1_reg +", " + arg2_reg + "\t # "+code_arr[i].arg1->sym_name + "/" + code_arr[i].arg2->sym_name);
-          asmb_line("mfhi " + res_reg + "\t # store modulo in "+code_arr[i].res->sym_name);
+        // cout << "Printing modulo assembly\n";
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg1_reg = get_reg(code_arr[i].arg1);
+        string arg2_reg = get_reg(code_arr[i].arg2);
+        asmb_line("div " + arg1_reg +", " + arg2_reg + "\t # "+code_arr[i].arg1->sym_name + "/" + code_arr[i].arg2->sym_name);
+        asmb_line("mfhi " + res_reg + "\t # store modulo in "+code_arr[i].res->sym_name);
       }
       else if(code_arr[i].op == "<int" || code_arr[i].op == "<float" || code_arr[i].op == "<ptr"){
         reg1 = get_reg(code_arr[i].arg1);
@@ -462,27 +576,27 @@ void code_gen(){
           asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
           fp_cond++;
         } 
-     }
-     // >
-     else if(code_arr[i].op == ">int" || code_arr[i].op == ">float" || code_arr[i].op == ">ptr"){
-        reg1 = get_reg(code_arr[i].arg1);
-        reg2 = get_reg(code_arr[i].arg2);
-        reg3 = get_reg(code_arr[i].res, false);
-        if(code_arr[i].op == ">int") asmb_line("sgt " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >int "+code_arr[i].arg2->sym_name+"? 1 : 0");
-        else if(code_arr[i].op == ">ptr") asmb_line("sgtu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
-        else {
-          asmb_line("c.le.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " >float " + code_arr[i].arg2->sym_name + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
-          asmb_line("li " + reg3 + ", 1");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
-          asmb_line("li " + reg3 + ", 0");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
-          fp_cond++;
-        }
-     }
-     // >=
-     else if(code_arr[i].op == ">=int" || code_arr[i].op == ">=float" || code_arr[i].op == ">=ptr"){
+      }
+      // >
+      else if(code_arr[i].op == ">int" || code_arr[i].op == ">float" || code_arr[i].op == ">ptr"){
+          reg1 = get_reg(code_arr[i].arg1);
+          reg2 = get_reg(code_arr[i].arg2);
+          reg3 = get_reg(code_arr[i].res, false);
+          if(code_arr[i].op == ">int") asmb_line("sgt " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >int "+code_arr[i].arg2->sym_name+"? 1 : 0");
+          else if(code_arr[i].op == ">ptr") asmb_line("sgtu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
+          else {
+            asmb_line("c.le.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " >float " + code_arr[i].arg2->sym_name + " ?");
+            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("li " + reg3 + ", 1");
+            asmb_line("b fp_cond_end_" + to_string(fp_cond));
+            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("li " + reg3 + ", 0");
+            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            fp_cond++;
+          }
+      }
+      // >=
+      else if(code_arr[i].op == ">=int" || code_arr[i].op == ">=float" || code_arr[i].op == ">=ptr"){
         reg1 = get_reg(code_arr[i].arg1);
         reg2 = get_reg(code_arr[i].arg2);
         reg3 = get_reg(code_arr[i].res, false);
@@ -498,15 +612,15 @@ void code_gen(){
           asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
           fp_cond++;
         }
-     }
-    // <=
-    else if(code_arr[i].op == "<=int" || code_arr[i].op == "<=float" || code_arr[i].op == "<=ptr"){
-       reg1 = get_reg(code_arr[i].arg1);
-       reg2 = get_reg(code_arr[i].arg2);
-       reg3 = get_reg(code_arr[i].res, false);
-       if(code_arr[i].op == "<=int") asmb_line("sle " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " <=int "+code_arr[i].arg2->sym_name+"? 1 : 0");
-       else if(code_arr[i].op == "<=ptr") asmb_line("sleu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " <=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
-       else {
+      }
+      // <=
+      else if(code_arr[i].op == "<=int" || code_arr[i].op == "<=float" || code_arr[i].op == "<=ptr"){
+        reg1 = get_reg(code_arr[i].arg1);
+        reg2 = get_reg(code_arr[i].arg2);
+        reg3 = get_reg(code_arr[i].res, false);
+        if(code_arr[i].op == "<=int") asmb_line("sle " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " <=int "+code_arr[i].arg2->sym_name+"? 1 : 0");
+        else if(code_arr[i].op == "<=ptr") asmb_line("sleu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " <=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
+        else {
           asmb_line("c.le.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " <=float " + code_arr[i].arg2->sym_name + " ?");
           asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
           asmb_line("li " + reg3 + ", 0");
@@ -515,228 +629,226 @@ void code_gen(){
           asmb_line("li " + reg3 + ", 1");
           asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
           fp_cond++;
-       }
-    }
-    // ==
-    else if(code_arr[i].op == "==int" || code_arr[i].op == "==float" || code_arr[i].op == "==ptr"){
-      // cout << "Checking Equality\n";
-      if(!code_arr[i].arg2){
-        // arg2 is never NULL for ==ptr (for now)
-        string res_reg = get_reg(code_arr[i].res, false);
-        string arg_reg = get_reg(code_arr[i].arg1);
-        if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
-        else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
-        else {
-          asmb_line("c.eq.s " + reg1 + ", " + code_arr[i].constant+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].constant + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
-          asmb_line("li " + reg3 + ", 0");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
-          asmb_line("li " + reg3 + ", 1");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
-          fp_cond++;
         }
       }
-      else{
+      // ==
+      else if(code_arr[i].op == "==int" || code_arr[i].op == "==float" || code_arr[i].op == "==ptr"){
+        // cout << "Checking Equality\n";
+        if(!code_arr[i].arg2){
+          // arg2 is never NULL for ==ptr (for now)
+          string res_reg = get_reg(code_arr[i].res, false);
+          string arg_reg = get_reg(code_arr[i].arg1);
+          if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
+          else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
+          else {
+            asmb_line("c.eq.s " + reg1 + ", " + code_arr[i].constant+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].constant + " ?");
+            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("li " + reg3 + ", 0");
+            asmb_line("b fp_cond_end_" + to_string(fp_cond));
+            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("li " + reg3 + ", 1");
+            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            fp_cond++;
+          }
+        }
+        else{
+          reg1 = get_reg(code_arr[i].arg1);
+          reg2 = get_reg(code_arr[i].arg2);
+          reg3 = get_reg(code_arr[i].res, false);
+          if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].arg2->sym_name+"? 1 : 0");
+          else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
+          else {
+            asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].arg2->sym_name + " ?");
+            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("li " + reg3 + ", 0");
+            asmb_line("b fp_cond_end_" + to_string(fp_cond));
+            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("li " + reg3 + ", 1");
+            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            fp_cond++;
+          }
+        }
+      }
+      // !=
+      else if(code_arr[i].op == "!=int" || code_arr[i].op == "!=float" || code_arr[i].op == "!=ptr"){
         reg1 = get_reg(code_arr[i].arg1);
         reg2 = get_reg(code_arr[i].arg2);
         reg3 = get_reg(code_arr[i].res, false);
-        if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].arg2->sym_name+"? 1 : 0");
-        else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
+        if(code_arr[i].op == "!=int") asmb_line("sne " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=int "+code_arr[i].arg2->sym_name+"? 1 : 0");
+        else if(code_arr[i].op == "!=ptr") asmb_line("sneu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
         else {
-          asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].arg2->sym_name + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
-          asmb_line("li " + reg3 + ", 0");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
-          asmb_line("li " + reg3 + ", 1");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
-          fp_cond++;
+            asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " !=float " + code_arr[i].arg2->sym_name + " ?");
+            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("li " + reg3 + ", 1");
+            asmb_line("b fp_cond_end_" + to_string(fp_cond));
+            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("li " + reg3 + ", 0");
+            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            fp_cond++;
         }
       }
-    }
-    // !=
-    else if(code_arr[i].op == "!=int" || code_arr[i].op == "!=float" || code_arr[i].op == "!=ptr"){
-       reg1 = get_reg(code_arr[i].arg1);
-       reg2 = get_reg(code_arr[i].arg2);
-       reg3 = get_reg(code_arr[i].res, false);
-       if(code_arr[i].op == "!=int") asmb_line("sne " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=int "+code_arr[i].arg2->sym_name+"? 1 : 0");
-       else if(code_arr[i].op == "!=ptr") asmb_line("sneu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
-       else {
-          asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " !=float " + code_arr[i].arg2->sym_name + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
-          asmb_line("li " + reg3 + ", 1");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
-          asmb_line("li " + reg3 + ", 0");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
-          fp_cond++;
-       }
-    }
-    else if(code_arr[i].op == "E++"){ 
-      reg1 = get_reg(code_arr[i].res, false);
-      reg2 = get_reg(code_arr[i].arg1);
-      if(is_type_float(code_arr[i].arg1 -> type)) {
-        asmb_line("mov.s " + reg1 + ", " + reg2);
-        asmb_line("add.s " + reg2 + ", " + reg2 + ", 1");
+      else if(code_arr[i].op == "E++"){ 
+        reg1 = get_reg(code_arr[i].res, false);
+        reg2 = get_reg(code_arr[i].arg1);
+        if(is_type_float(code_arr[i].arg1 -> type)) {
+          asmb_line("mov.s " + reg1 + ", " + reg2);
+          asmb_line("add.s " + reg2 + ", " + reg2 + ", 1");
+        }
+        else if (is_type_char(code_arr[i].arg1 -> type)) {
+          asmb_line("move " + reg1 + ", " + reg2);
+          asmb_line("addu " + reg2 + ", " + reg2 + ", 1");
+        }
+        else {
+          asmb_line("move " + reg1 + ", " + reg2);
+          asmb_line("addi " + reg2 + ", " + reg2 + ", 1");
+        }
       }
-      else if (is_type_char(code_arr[i].arg1 -> type)) {
-        asmb_line("move " + reg1 + ", " + reg2);
-        asmb_line("addu " + reg2 + ", " + reg2 + ", 1");
+      else if(code_arr[i].op == "++E"){ 
+        reg1 = get_reg(code_arr[i].res, false);
+        reg2 = get_reg(code_arr[i].arg1);
+        if(is_type_float(code_arr[i].arg1 -> type)) {
+          asmb_line("add.s " + reg2 + ", " + reg2 + ", 1");
+          asmb_line("mov.s " + reg1 + ", " + reg2);
+        }
+        else if (is_type_char(code_arr[i].arg1 -> type)) {
+          asmb_line("addu " + reg2 + ", " + reg2 + ", 1");
+          asmb_line("move " + reg1 + ", " + reg2);
+        }
+        else {
+          asmb_line("addi " + reg2 + ", " + reg2 + ", 1");
+          asmb_line("move " + reg1 + ", " + reg2);
+        }
       }
-      else {
-        asmb_line("move " + reg1 + ", " + reg2);
-        asmb_line("addi " + reg2 + ", " + reg2 + ", 1");
+      else if(code_arr[i].op == "E--"){ 
+        reg1 = get_reg(code_arr[i].res, false);
+        reg2 = get_reg(code_arr[i].arg1);
+        if(is_type_float(code_arr[i].arg1 -> type)) {
+          asmb_line("mov.s " + reg1 + ", " + reg2);
+          asmb_line("sub.s " + reg2 + ", " + reg2 + ", 1");
+        }
+        else if (is_type_char(code_arr[i].arg1 -> type)) {
+          asmb_line("move " + reg1 + ", " + reg2);
+          asmb_line("subu " + reg2 + ", " + reg2 + ", 1");
+        }
+        else {
+          asmb_line("move " + reg1 + ", " + reg2);
+          asmb_line("subi " + reg2 + ", " + reg2 + ", 1");
+        }
+      }
+      else if(code_arr[i].op == "--E"){ 
+        reg1 = get_reg(code_arr[i].res, false);
+        reg2 = get_reg(code_arr[i].arg1);
+        if(is_type_float(code_arr[i].arg1 -> type)) {
+          asmb_line("sub.s " + reg2 + ", " + reg2 + ", 1");
+          asmb_line("mov.s " + reg1 + ", " + reg2);
+        }
+        else if (is_type_char(code_arr[i].arg1 -> type)) {
+          asmb_line("subu " + reg2 + ", " + reg2 + ", 1");
+          asmb_line("move " + reg1 + ", " + reg2);
+        }
+        else {
+          asmb_line("subi " + reg2 + ", " + reg2 + ", 1");
+          asmb_line("move " + reg1 + ", " + reg2);
+        }
+      }
+      else if(code_arr[i].op == "GOTO"){ // GOTO
+        asmb_line("j Label_" + to_string(code_arr[i].goto_label));
+      }
+      else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
+        string arg_reg = get_reg(code_arr[i].arg2, false);
+        asmb_line("bnez " + arg_reg + ", Label_" + to_string(code_arr[i].goto_label));
+      }
+      else if(code_arr[i].op == "inttochar"){ // Load only one byte(lower 8 bits)
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("and " + res_reg + ", " + arg_reg + ", 0xFF \t # "+code_arr[i].res->sym_name + " = int_to_char " + code_arr[i].arg2->sym_name);
+      }
+      else if(code_arr[i].op == "floattochar"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("cvt.w.s $f0, " + arg_reg); // Float to int
+        asmb_line("mfc1 " + res_reg + ", $f0"); // move from float reg to int reg
+        asmb_line("and " + res_reg + ", " + res_reg + ", 0xFF \t # "+code_arr[i].res->sym_name + " = float_to_char " + code_arr[i].arg2->sym_name);
+      }
+      else if(code_arr[i].op == "chartofloat"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("mtc1 " + arg_reg + ", " + arg_reg); // Intreg to floatreg
+        asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // Convert int to float
+      }
+      else if(code_arr[i].op == "chartoint"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("move " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = char_to_int " + code_arr[i].arg2->sym_name);
+      }
+      else if(code_arr[i].op == "inttobool" || code_arr[i].op == "chartobool"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("sne " + res_reg + ", " + arg_reg + ", 0" + "\t # "+code_arr[i].res->sym_name + " = int_to_bool " + code_arr[i].arg2->sym_name); // arg != 0 implies res = 1
+      }
+      else if(code_arr[i].op == "booltoint" || code_arr[i].op == "booltochar"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("sne " + res_reg + ", " + arg_reg + ", 0" + "\t # "+code_arr[i].res->sym_name + " = bool_to_(int/char) " + code_arr[i].arg2->sym_name); // arg == 1 implies res = 1
+      }
+      else if(code_arr[i].op == "booltofloat"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("mtc1 " + arg_reg + ", " + res_reg); // move to float reg
+        asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // convert int to float
+      }
+      else if(code_arr[i].op == "inttofloat"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("mtc1 " + arg_reg + ", " + res_reg); // move from int reg to floating point reg
+        asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // convert int value to floating point value
+      }
+      else if(code_arr[i].op == "floattoint"){ 
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("cvt.w.s $f0, " + arg_reg); // convert floating point value to integer value
+        asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
+      }
+      else if(code_arr[i].op == "floattobool"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("cvt.w.s $f0, " + arg_reg); // convert floating point value to integer value
+        asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
+        asmb_line("sne " + res_reg + ", " + res_reg + ", 0"); // arg != 0 implies res = 1
+      }
+      else if(code_arr[i].op == "SIZEOF"){
+        string res_reg = get_reg(code_arr[i].res, false);
+        asmb_line("li " + res_reg + ", " + code_arr[i].constant);
+      }
+      else if(code_arr[i].op == "<<"){
+        reg1 = get_reg(code_arr[i].arg1);
+        reg2 = get_reg(code_arr[i].arg2);
+        reg3 = get_reg(code_arr[i].res, false);
+        asmb_line("sll " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " << " + code_arr[i].arg2->sym_name);
+      }
+      else if(code_arr[i].op == ">>"){
+        reg1 = get_reg(code_arr[i].arg1);
+        reg2 = get_reg(code_arr[i].arg2);
+        reg3 = get_reg(code_arr[i].res, false);
+        asmb_line("srl " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >> " + code_arr[i].arg2->sym_name); // Arithmetic or logical shift?
+      }
+      else if(code_arr[i].op == "^"){
+        reg1 = get_reg(code_arr[i].arg1);
+        reg2 = get_reg(code_arr[i].arg2);
+        reg3 = get_reg(code_arr[i].res, false);
+        asmb_line("xor " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ^ " + code_arr[i].arg2->sym_name);
+      }
+      else if(code_arr[i].op == "|"){
+        reg1 = get_reg(code_arr[i].arg1);
+        reg2 = get_reg(code_arr[i].arg2);
+        reg3 = get_reg(code_arr[i].res, false);
+        asmb_line("or " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " | " + code_arr[i].arg2->sym_name);
       }
     }
-    else if(code_arr[i].op == "++E"){ 
-      reg1 = get_reg(code_arr[i].res, false);
-      reg2 = get_reg(code_arr[i].arg1);
-      if(is_type_float(code_arr[i].arg1 -> type)) {
-        asmb_line("add.s " + reg2 + ", " + reg2 + ", 1");
-        asmb_line("mov.s " + reg1 + ", " + reg2);
-      }
-      else if (is_type_char(code_arr[i].arg1 -> type)) {
-        asmb_line("addu " + reg2 + ", " + reg2 + ", 1");
-        asmb_line("move " + reg1 + ", " + reg2);
-      }
-      else {
-        asmb_line("addi " + reg2 + ", " + reg2 + ", 1");
-        asmb_line("move " + reg1 + ", " + reg2);
-      }
-    }
-    else if(code_arr[i].op == "E--"){ 
-      reg1 = get_reg(code_arr[i].res, false);
-      reg2 = get_reg(code_arr[i].arg1);
-      if(is_type_float(code_arr[i].arg1 -> type)) {
-        asmb_line("mov.s " + reg1 + ", " + reg2);
-        asmb_line("sub.s " + reg2 + ", " + reg2 + ", 1");
-      }
-      else if (is_type_char(code_arr[i].arg1 -> type)) {
-        asmb_line("move " + reg1 + ", " + reg2);
-        asmb_line("subu " + reg2 + ", " + reg2 + ", 1");
-      }
-      else {
-        asmb_line("move " + reg1 + ", " + reg2);
-        asmb_line("subi " + reg2 + ", " + reg2 + ", 1");
-      }
-    }
-    else if(code_arr[i].op == "--E"){ 
-      reg1 = get_reg(code_arr[i].res, false);
-      reg2 = get_reg(code_arr[i].arg1);
-      if(is_type_float(code_arr[i].arg1 -> type)) {
-        asmb_line("sub.s " + reg2 + ", " + reg2 + ", 1");
-        asmb_line("mov.s " + reg1 + ", " + reg2);
-      }
-      else if (is_type_char(code_arr[i].arg1 -> type)) {
-        asmb_line("subu " + reg2 + ", " + reg2 + ", 1");
-        asmb_line("move " + reg1 + ", " + reg2);
-      }
-      else {
-        asmb_line("subi " + reg2 + ", " + reg2 + ", 1");
-        asmb_line("move " + reg1 + ", " + reg2);
-      }
-    }
-    else if(code_arr[i].op == "GOTO"){ // GOTO
-      asmb_line("j Label_" + to_string(code_arr[i].goto_label));
-    }
-    else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
-      string arg_reg = get_reg(code_arr[i].arg2, false);
-      asmb_line("bnez " + arg_reg + ", Label_" + to_string(code_arr[i].goto_label));
-    }
-    else if(code_arr[i].op == "inttochar"){ // Load only one byte(lower 8 bits)
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("and " + res_reg + ", " + arg_reg + ", 0xFF \t # "+code_arr[i].res->sym_name + " = int_to_char " + code_arr[i].arg2->sym_name);
-    }
-    else if(code_arr[i].op == "floattochar"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("cvt.w.s $f0, " + arg_reg); // Float to int
-      asmb_line("mfc1 " + res_reg + ", $f0"); // move from float reg to int reg
-      asmb_line("and " + res_reg + ", " + res_reg + ", 0xFF \t # "+code_arr[i].res->sym_name + " = float_to_char " + code_arr[i].arg2->sym_name);
-    }
-    else if(code_arr[i].op == "chartofloat"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("mtc1 " + arg_reg + ", " + arg_reg); // Intreg to floatreg
-      asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // Convert int to float
-    }
-    else if(code_arr[i].op == "chartoint"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("move " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = char_to_int " + code_arr[i].arg2->sym_name);
-    }
-    else if(code_arr[i].op == "inttobool" || code_arr[i].op == "chartobool"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("sne " + res_reg + ", " + arg_reg + ", 0" + "\t # "+code_arr[i].res->sym_name + " = int_to_bool " + code_arr[i].arg2->sym_name); // arg != 0 implies res = 1
-    }
-    else if(code_arr[i].op == "booltoint" || code_arr[i].op == "booltochar"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("sne " + res_reg + ", " + arg_reg + ", 0" + "\t # "+code_arr[i].res->sym_name + " = bool_to_(int/char) " + code_arr[i].arg2->sym_name); // arg == 1 implies res = 1
-    }
-    else if(code_arr[i].op == "booltofloat"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("mtc1 " + arg_reg + ", " + res_reg); // move to float reg
-      asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // convert int to float
-    }
-    else if(code_arr[i].op == "inttofloat"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("mtc1 " + arg_reg + ", " + res_reg); // move from int reg to floating point reg
-      asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // convert int value to floating point value
-    }
-    else if(code_arr[i].op == "floattoint"){ 
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("cvt.w.s $f0, " + arg_reg); // convert floating point value to integer value
-      asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
-    }
-    else if(code_arr[i].op == "floattobool"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      string arg_reg = get_reg(code_arr[i].arg2);
-      asmb_line("cvt.w.s $f0, " + arg_reg); // convert floating point value to integer value
-      asmb_line("mfc1 " + res_reg + ", $f0");  // move from floating point reg to int reg
-      asmb_line("sne " + res_reg + ", " + res_reg + ", 0"); // arg != 0 implies res = 1
-    }
-    else if(code_arr[i].op == "SIZEOF"){
-      string res_reg = get_reg(code_arr[i].res, false);
-      asmb_line("li " + res_reg + ", " + code_arr[i].constant);
-    }
-    else if(code_arr[i].op == "<<"){
-      reg1 = get_reg(code_arr[i].arg1);
-      reg2 = get_reg(code_arr[i].arg2);
-      reg3 = get_reg(code_arr[i].res, false);
-      asmb_line("sll " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " << " + code_arr[i].arg2->sym_name);
-    }
-    else if(code_arr[i].op == ">>"){
-      reg1 = get_reg(code_arr[i].arg1);
-      reg2 = get_reg(code_arr[i].arg2);
-      reg3 = get_reg(code_arr[i].res, false);
-      asmb_line("srl " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >> " + code_arr[i].arg2->sym_name); // Arithmetic or logical shift?
-    }
-    else if(code_arr[i].op == "^"){
-      reg1 = get_reg(code_arr[i].arg1);
-      reg2 = get_reg(code_arr[i].arg2);
-      reg3 = get_reg(code_arr[i].res, false);
-      asmb_line("xor " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ^ " + code_arr[i].arg2->sym_name);
-    }
-    else if(code_arr[i].op == "|"){
-      reg1 = get_reg(code_arr[i].arg1);
-      reg2 = get_reg(code_arr[i].arg2);
-      reg3 = get_reg(code_arr[i].res, false);
-      asmb_line("or " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " | " + code_arr[i].arg2->sym_name);
-    }
+    if (global_gen) spill_regs();
   }
   dump_asm_code();
 }
 // scanf printf math string
-// initialize global data
-// no usage of true label for memory
 // currently assuming max 2 float params and max 4 non float params
-// global vars not handled
-// dont gen code corresponding to global stuff
 // BIG PROBLEM WITH REGS !!!!

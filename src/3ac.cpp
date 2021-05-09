@@ -17,7 +17,7 @@ void init_lists(char* nextlist, char* truelist, char* falselist, char* breaklist
 
 string new_symbol(){
     counter++;
-    string new_sym = "#temp"+to_string(counter);
+    string new_sym = "_tmp_"+to_string(counter);
     return new_sym;
 }
 

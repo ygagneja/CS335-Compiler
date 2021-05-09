@@ -484,9 +484,13 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      qid t = newtmp($$->nodetype, level, level_id);
-                                      $$->place = t;
-                                      emit($1->label, NULL, $2->place, $$->place);
+                                      string op($1->label);
+                                      if (op == "-"){
+                                        qid t = newtmp($$->nodetype, level, level_id);
+                                        $$->place = t;
+                                        emit($1->label, NULL, $2->place, $$->place);
+                                      }
+                                      else $$->place = $2->place;
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3);
@@ -509,7 +513,7 @@ unary_expression
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("SIZEOF", NULL, NULL, $$->place);
-                                      patch_constant(get_size($3->nodetype, level, level_id), k);
+                                      patch_constant(to_string(get_size($3->nodetype, level, level_id)), k);
                                     }
                                   }
   ;
@@ -2573,7 +2577,6 @@ int main (int argc, char* argv[]){
 // documentation and readme
 // make test cases to display special stuff
 
-// file io
 // dynamic memory
 // register/code optimizations
 // large params

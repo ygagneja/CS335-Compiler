@@ -19,18 +19,19 @@
 // 	p->y = 2;
 // 	return p;
 // }
-// int glob;
-// int func(){}
-int func();
-// int func(){
+int glob = 1;
+float glob2 = 2.3 + glob;
 
-// }
-int x();
+int func(int x){
+	return x + glob;
+}
+
 int main(){
 	float x = 2;
 	int i = 10;
 	bool p = true;
-	int m = i*i + p/i + x*10 - (-p+x);
+	float m = i*i + x*glob2;
+	int ret = func(i);
 	// struct point {int x;} p;
 	// {
 	// 	struct test0{
@@ -61,4 +62,5 @@ int main(){
 	// if ('c');
 	return 0;
 }
-int y(){}
+
+bool glob3 = false;
