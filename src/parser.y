@@ -71,7 +71,6 @@ extern int line;
 
 primary_expression
   : IDENTIFIER                    {$$ = terminal($1);
-                                    // cout << "id enter\n";
                                     string type = id_type($1, level, level_id);
                                     if (type != "null"){
                                       $$->init = lookup_use($1, level, level_id)->init;
@@ -82,9 +81,18 @@ primary_expression
                                       strcpy($$->symbol, id.c_str());
                                       $$->expr_type = 3;
 
-                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                        qid t = lookup_use($1, level, level_id);
-                                        $$->place = t;
+                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                        $$->place = lookup_use($1, level, level_id);
+
+                                        if (is_type_ptr($$->nodetype) && $$->place->is_arr){
+                                          $$->address = newtmp(type, level, level_id);
+                                          emit("&", NULL, $$->place, $$->address);
+                                          $$->place = $$->address;
+                                        }
+                                        else if (is_type_struct($$->nodetype)){
+                                          $$->address = newtmp(type + "*", level, level_id);
+                                          emit("&", NULL, $$->place, $$->address);
+                                        }
                                       }
                                     }
                                     else {
@@ -93,7 +101,6 @@ primary_expression
                                       strcpy($$->nodetype, type.c_str());
                                       fprintf(stderr, "%d |\t Error : %s is not declared in this scope\n", line, $1);
                                     }
-                                    // cout << "id exit\n";
                                   }
   | INT_C                        {$$ = terminal("INT_C");
                                     $$->init = true;
@@ -101,7 +108,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->int_val = $1->int_val;
 
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -114,7 +121,7 @@ primary_expression
                                     $$->expr_type = 5;
                                     $$->float_val = $1->float_val;
 
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -127,7 +134,7 @@ primary_expression
                                     $$->bool_val = true;
                                     $$->expr_type = 5;
 
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -140,7 +147,7 @@ primary_expression
                                     $$->bool_val = false;
                                     $$->expr_type = 5;
 
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -151,12 +158,21 @@ primary_expression
                                     $$->nodetype = "char*";
                                     $$->init = true;
                                     $$->expr_type = 5;
+                                    string s($1);
+                                    if (s.size() == 2){
+                                      error_throw = true;
+                                      fprintf(stderr, "%d |\t Error : Cannot initialize an empty string literal\n", line);
+                                    }
+                                    s = s.substr(1, s.size()-2);
 
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      qid t = newtmp($$->nodetype, level, level_id);
-                                      $$->place = t;
-                                      int k = emit("=", NULL, NULL, $$->place);
-                                      patch_constant($1, k);
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                      $$->place = newstring($$->nodetype, s.size()+1, level, level_id);
+                                      set_arr_flag($$->place->sym_name, level, level_id[level]);
+                                      $$->address = newtmp($$->nodetype, level, level_id);
+                                      emit("&", NULL, $$->place, $$->address);
+                                      int k = emit("=string", NULL, NULL, $$->place);
+                                      patch_constant(s, k);
+                                      $$->place = $$->address;
                                     }
                                   }
   | CHAR_LITERAL                  {$$ = terminal("CHAR_LITERAL");
@@ -165,7 +181,7 @@ primary_expression
                                     $$->int_val = $1->int_val;
                                     $$->expr_type = 5;
 
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("=", NULL, NULL, $$->place);
@@ -186,13 +202,14 @@ postfix_expression
                                                             if (type != "null"){
                                                               $$->nodetype = new char[type.size()+1];
                                                               strcpy($$->nodetype, type.c_str());
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                                qid t = emit_assignment("int", $3->nodetype, $3->place, level, level_id);
-                                                                int k = emit("*int", t, NULL, t);
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                                                qid off = newtmp("int", level, level_id);
+                                                                int k = emit("*int", $3->place, NULL, off);
                                                                 patch_constant(to_string(get_size($$->nodetype, level, level_id)), k);
-                                                                qid s = newtmp($1->nodetype, level, level_id);
-                                                                emit("+ptr", $1->place, t, s);
-                                                                
+                                                                $$->address = newtmp($1->nodetype, level, level_id);
+                                                                emit("+ptr", $1->place, off, $$->address);
+                                                                $$->place = newtmp($$->nodetype, level, level_id);
+                                                                if (!is_type_struct($$->nodetype)) emit("*", NULL, $$->address, $$->place);
                                                               }
                                                             }
                                                             else {
@@ -292,7 +309,7 @@ postfix_expression
                                                                   else break;
                                                                 }
                                                               }
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 if (type == "void"){
                                                                   qid t = NULL;
                                                                   $$->place = t;
@@ -333,11 +350,29 @@ postfix_expression
                                                   strcpy($$->symbol, symbol.c_str());
 
                                                   if (!error_throw){
-                                                    $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                    qid t = newtmp(type, level, level_id);
-                                                    $$->place = t;
-                                                    restore_offset(type, level, level_id);
-                                                    $$->place->offset = $1->place->offset + get_struct_sym_offset($1->nodetype, $3, level, level_id);
+                                                    $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                                    long long offset = get_struct_sym_offset($1->nodetype, $3, level, level_id);
+                                                    string id_type($$->nodetype);
+                                                    if (is_type_ptr(id_type)){
+                                                      if (is_struct_sym_arr($1->nodetype, $3, level, level_id)){
+                                                        $$->address = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->address, NULL, $$->address);
+                                                        patch_constant(to_string(offset), k);
+                                                        $$->place = $$->address;
+                                                      }
+                                                      else {
+                                                        $$->place = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->address, NULL, $$->place);
+                                                        patch_constant(to_string(offset), k);
+                                                      }
+                                                    }
+                                                    else {
+                                                      $$->address = newtmp(id_type + "*", level, level_id);
+                                                      int k = emit("+ptr", $1->address, NULL, $$->address);
+                                                      patch_constant(to_string(offset), k);
+                                                      $$->place = newtmp($$->nodetype, level, level_id);
+                                                      if (!is_type_struct($$->nodetype)) emit("*", NULL, $$->address, $$->place);
+                                                    }
                                                   }
                                                 }
                                               }
@@ -367,11 +402,29 @@ postfix_expression
                                                   strcpy($$->symbol, symbol.c_str());
 
                                                   if (!error_throw){
-                                                    $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                    qid t = newtmp(type, level, level_id);
-                                                    $$->place = t;
-                                                    restore_offset(type, level, level_id);
-                                                    $$->place->offset = $1->place->offset + get_struct_sym_offset(tmp, $3, level, level_id);
+                                                    $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                                    long long offset = get_struct_sym_offset(tmp, $3, level, level_id);
+                                                    string id_type($$->nodetype);
+                                                    if (is_type_ptr(id_type)){
+                                                      if (is_struct_sym_arr(tmp, $3, level, level_id)){
+                                                        $$->address = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->place, NULL, $$->address);
+                                                        patch_constant(to_string(offset), k);
+                                                        $$->place = $$->address;
+                                                      }
+                                                      else {
+                                                        $$->place = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->place, NULL, $$->place);
+                                                        patch_constant(to_string(offset), k);
+                                                      }
+                                                    }
+                                                    else {
+                                                      $$->address = newtmp(id_type + "*", level, level_id);
+                                                      int k = emit("+ptr", $1->place, NULL, $$->address);
+                                                      patch_constant(to_string(offset), k);
+                                                      $$->place = newtmp($$->nodetype, level, level_id);
+                                                      if (!is_type_struct($$->nodetype)) emit("*", NULL, $$->address, $$->place);
+                                                    }
                                                   }
                                                 }
                                               }
@@ -385,7 +438,7 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
-                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                 $$->place = t;
                                                 emit("E++", $1->place, NULL, $$->place);
@@ -400,7 +453,7 @@ postfix_expression
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
-                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                 $$->place = t;
                                                 emit("E--", $1->place, NULL, $$->place);
@@ -410,7 +463,6 @@ postfix_expression
 
 argument_expression_list
   : assignment_expression            {$$ = $1;
-                                      // cout << "single arg list enter\n";
                                       string temp($$->nodetype);
                                       $$->curr_args_types = new char[temp.size()+1];
                                       strcpy($$->curr_args_types, temp.c_str());
@@ -419,25 +471,19 @@ argument_expression_list
                                         int tmp = emit("params", NULL, $$->place, NULL);
                                         backpatch($$->nextlist, tmp);
                                       }
-                                      // cout << "single arg list exit\n";
                                      }
   | argument_expression_list ',' assignment_expression    {$$ = non_terminal(0, "argument_expression_list", $1, $3);
-                                                          // cout << "arg list enter\n";
-                                                          string type = args_type($1->nodetype, $3->nodetype);
-                                                          $$->nodetype = new char[type.size()+1];
-                                                          strcpy($$->nodetype, type.c_str());
-                                                          if ($1->init && $3->init) $$->init = true;
-                                                          // cout << "arg list exit\n";
-                                                          string append = string($1->curr_args_types) + "," + string($3->nodetype);
-                                                          $$->curr_args_types = new char[append.size()+1];
-                                                          strcpy($$->curr_args_types, append.c_str());
-                                                          // cout << "arg list exit\n";
-                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                                            int tmp = emit("params", NULL, $3->place, NULL);
-                                                            // cout << "arg list exit\n";
-                                                            backpatch($3->nextlist, tmp);
-                                                          }
-                                                          // cout << "arg list exit\n";
+                                                            string type = args_type($1->nodetype, $3->nodetype);
+                                                            $$->nodetype = new char[type.size()+1];
+                                                            strcpy($$->nodetype, type.c_str());
+                                                            if ($1->init && $3->init) $$->init = true;
+                                                            string append = string($1->curr_args_types) + "," + string($3->nodetype);
+                                                            $$->curr_args_types = new char[append.size()+1];
+                                                            strcpy($$->curr_args_types, append.c_str());
+                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                                              int tmp = emit("params", NULL, $3->place, NULL);
+                                                              backpatch($3->nextlist, tmp);
+                                                            }
                                                           }
   ;
 
@@ -452,10 +498,17 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                        qid t = newtmp($$->nodetype, level, level_id);
-                                        $$->place = t;
-                                        emit("++E", $2->place, NULL, $$->place);
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                        $$->address = $2->address;
+                                        if ($2->address){
+                                          $$->place = newtmp($$->nodetype, level, level_id);
+                                          emit("* ++E", $2->address, NULL, $$->address);
+                                          emit("*", NULL, $$->address, $$->place);
+                                        }
+                                        else {
+                                          $$->place = newtmp($$->nodetype, level, level_id);
+                                          emit("++E", $2->place, NULL, $$->place);
+                                        }
                                     }
                                   }
 
@@ -468,10 +521,17 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
-                                      qid t = newtmp($$->nodetype, level, level_id);
-                                      $$->place = t;
-                                      emit("--E", $2->place, NULL, $$->place);
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                      $$->address = $2->address;
+                                      if ($2->address){
+                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                        emit("* --E", $2->address, NULL, $$->address);
+                                        emit("*", NULL, $$->address, $$->place);
+                                      }
+                                      else {
+                                        $$->place = newtmp($$->nodetype, level, level_id);
+                                        emit("--E", $2->place, NULL, $$->place);
+                                      }
                                     }
                                   }
   | unary_operator cast_expression{$$ = non_terminal(0, "unary_expression", $1, $2);
@@ -481,16 +541,32 @@ unary_expression
                                     strcpy($$->nodetype, type.c_str());
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator\n", line, $1->label);
+                                      fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator or trying to derefer a struct pointer. Remember, multi-pointers are also not allowed\n", line, $1->label);
                                     }
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       string op($1->label);
-                                      if (op == "-"){
-                                        qid t = newtmp($$->nodetype, level, level_id);
-                                        $$->place = t;
+                                      if (op == "&"){
+                                        $$->place = newtmp(type, level, level_id);
+                                        if ($2->address){
+                                          emit("=", NULL, $2->address, $$->place);
+                                        }
+                                        else {
+                                          emit("&", NULL, $2->place, $$->place);
+                                        }
+                                      }
+                                      else if (op == "*"){
+                                        $$->place = newtmp(type, level, level_id);
+                                        $$->address = newtmp($2->nodetype, level, level_id);
+                                        emit("=", NULL, $2->place, $$->address);
+                                        emit("*", NULL, $2->place, $$->place);
+                                      }
+                                      else if (op == "+"){
+                                        $$->place = $2->place;
+                                      }
+                                      else {
+                                        $$->place = newtmp($2->nodetype, level, level_id);
                                         emit($1->label, NULL, $2->place, $$->place);
                                       }
-                                      else $$->place = $2->place;
                                     }
                                   }
   | SIZEOF '(' type_name ')'      {$$ = non_terminal(0, $1, $3);
@@ -509,7 +585,7 @@ unary_expression
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
                                     }
-                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
                                       int k = emit("SIZEOF", NULL, NULL, $$->place);
@@ -547,7 +623,7 @@ cast_expression
                                           $$->nodetype = $2->nodetype;
                                           fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
 
-                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                             qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
                                             $$->place = tmp;
                                           }
@@ -555,7 +631,7 @@ cast_expression
                                         else if (type == "1"){
                                           $$->nodetype = $2->nodetype;
 
-                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                             qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
                                             $$->place = tmp;
                                           }
@@ -577,7 +653,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "* int", $1, $3);
                                                               $$->nodetype = "int";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -589,7 +665,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "* float", $1, $3);
                                                               $$->nodetype = "float";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -612,7 +688,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "/ int", $1, $3);
                                                               $$->nodetype = "int";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -624,7 +700,7 @@ multiplicative_expression
                                                               $$ = non_terminal(0, "/ float", $1, $3);
                                                               $$->nodetype = "float";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -647,7 +723,7 @@ multiplicative_expression
                                                             $$ = non_terminal(0, "% int", $1, $3);
                                                             $$->nodetype = "int";
 
-                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                               qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                               qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                               qid t = newtmp($$->nodetype, level, level_id);
@@ -674,7 +750,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "int";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -687,7 +763,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "float";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -701,7 +777,7 @@ additive_expression
                                                               $$->nodetype = new char[type.size()+1];
                                                               strcpy($$->nodetype, type.c_str());
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 if (is_type_int($1->nodetype)){
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
@@ -738,7 +814,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "int";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -751,7 +827,7 @@ additive_expression
                                                               $$ = non_terminal(0, label, $1, $3);
                                                               $$->nodetype = "float";
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                                 qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
@@ -765,7 +841,7 @@ additive_expression
                                                               $$->nodetype = new char[type.size()+1];
                                                               strcpy($$->nodetype, type.c_str());
 
-                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 if (is_type_int($1->nodetype)){
                                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                                   $$->place = t;
@@ -809,7 +885,7 @@ shift_expression
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
                                                     }
                                                     else {
-                                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                         qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                         qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                         qid t = newtmp($$->nodetype, level, level_id);
@@ -828,7 +904,7 @@ shift_expression
                                                       fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
                                                     }
                                                     else {
-                                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                      if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                         qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                         qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                         qid t = newtmp($$->nodetype, level, level_id);
@@ -853,14 +929,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*"){
-                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit("<ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -869,7 +945,7 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -898,14 +974,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*"){
-                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit(">ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -914,7 +990,7 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -943,14 +1019,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*"){
-                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit("<=ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -959,7 +1035,7 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -988,14 +1064,14 @@ relational_expression
                                                       $$->nodetype = "bool";
 
                                                       if (type == "*"){
-                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit(">=ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -1004,7 +1080,7 @@ relational_expression
                                                         }
                                                       }
                                                       else if (type == "float"){
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                           qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                           qid t = newtmp($$->nodetype, level, level_id);
@@ -1037,14 +1113,14 @@ equality_expression
                                                         $$->nodetype = "bool";
 
                                                         if (type == "*"){
-                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             emit("==ptr", $1->place, $3->place, $$->place);
                                                           }
                                                         }
                                                         else if (type == "int"){
-                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                             qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                             qid t = newtmp($$->nodetype, level, level_id);
@@ -1053,7 +1129,7 @@ equality_expression
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                             qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                             qid t = newtmp($$->nodetype, level, level_id);
@@ -1082,14 +1158,14 @@ equality_expression
                                                         $$->nodetype = "bool";
 
                                                         if (type == "*"){
-                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             emit("!=ptr", $1->place, $3->place, $$->place);
                                                           }
                                                         }
                                                         else if (type == "int"){
-                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                             qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                             qid t = newtmp($$->nodetype, level, level_id);
@@ -1098,7 +1174,7 @@ equality_expression
                                                           }
                                                         }
                                                         else if (type == "float"){
-                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                          if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
                                                             qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
                                                             qid t = newtmp($$->nodetype, level, level_id);
@@ -1126,7 +1202,7 @@ and_expression
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
 
-                                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                   qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                   qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                   qid t = newtmp($$->nodetype, level, level_id);
@@ -1153,7 +1229,7 @@ exclusive_or_expression
                                                     $$->nodetype = new char[type.size()+1];
                                                     strcpy($$->nodetype, type.c_str());
 
-                                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                       qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                       qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                       qid t = newtmp($$->nodetype, level, level_id);
@@ -1180,7 +1256,7 @@ inclusive_or_expression
                                                             $$->nodetype = new char[type.size()+1];
                                                             strcpy($$->nodetype, type.c_str());
 
-                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                               qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
                                                               qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
                                                               qid t = newtmp($$->nodetype, level, level_id);
@@ -1217,7 +1293,7 @@ logical_and_expression
                                           $$->nodetype = "bool";
 
                                           if (!error_throw){
-                                            $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                            $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                             if($3->truelist == NULL){
                                               int tmp1 = emit("GOTO IF", NULL, $3->place, NULL);
                                               int tmp2 = emit("GOTO", NULL, NULL, NULL);
@@ -1250,7 +1326,7 @@ logical_or_expression
                                         $$->nodetype = "bool";
 
                                         if (!error_throw){
-                                          $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                          $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                           if($3->truelist == NULL){
                                             int tmp1 = emit("GOTO IF", NULL, $3->place, NULL);
                                             int tmp2 = emit("GOTO", NULL, NULL, NULL);
@@ -1282,7 +1358,7 @@ conditional_expression
                                                                         $$->nodetype = new char[type.size()+1];
                                                                         strcpy($$->nodetype, type.c_str());
 
-                                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                           backpatch($1->truelist, $2);
                                                                           backpatch($1->falselist, $6);
 
@@ -1390,8 +1466,9 @@ assignment_expression
                                                                     if (tmp != "null") fprintf(stderr, "%d |\t Error : Incompatible type conversion from %s to %s\n", line, ($3->nodetype), ($1->nodetype));
                                                                   }
 
-                                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                     $$->place = $1->place;
+                                                                    $$->address = $1->address;
 
                                                                     if ($3->truelist || $3->falselist){
                                                                       qid tmp = newtmp("bool", level, level_id);
@@ -1419,24 +1496,33 @@ assignment_expression
 
                                                                       if (label == "="){
                                                                         qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id);
-                                                                        int k = emit("=", NULL, tmp1, $$->place);
+                                                                        if ($$->address){
+                                                                          int k = emit("* =", NULL, tmp1, $$->address);
+                                                                        }
+                                                                        else {
+                                                                          int k = emit("=", NULL, tmp1, $$->place);
+                                                                        }
                                                                       }
                                                                       else {
-                                                                        emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, level, level_id);
+                                                                        emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, $1->address, level, level_id);
                                                                       }
                                                                     }
                                                                     else {
                                                                       backpatch($3->nextlist, nextinstr());
                                                                       if (label == "="){
                                                                         qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
-                                                                        int k = emit("=", NULL, tmp, $$->place);
+                                                                        if ($$->address){
+                                                                          int k = emit("* =", NULL, tmp, $$->address);
+                                                                        }
+                                                                        else {
+                                                                          int k = emit("=", NULL, tmp, $$->place);
+                                                                        }
                                                                       }
                                                                       else {
-                                                                        emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, level, level_id);
+                                                                        emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, $1->address, level, level_id);
                                                                       }
                                                                     }
                                                                   }
-                                                                  // cout << "ass exit\n";
                                                                 }
   ;
 
@@ -1460,7 +1546,7 @@ expression
                                           }
   | expression ',' M assignment_expression  {$$ = non_terminal(0, "expression", $1, $4);
                                               if (!error_throw){
-                                                $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                 backpatch($1->nextlist, $3);
                                                 $$->nextlist = copy($4->nextlist);
                                               }
@@ -1487,7 +1573,7 @@ declaration
                                                             decl_track.insert($2->symbol);
                                                           }
                                                         }
-                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                        if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           $$->nextlist = copy($2->nextlist);
                                                         }
                                                         // cout << "exited declaration\n";
@@ -1522,7 +1608,7 @@ declaration_specifiers
 init_declarator_list
   : init_declarator                           {$$ = $1;}
   | init_declarator_list ',' M init_declarator  {$$ = non_terminal(0, "init_declarator_list", $1, $4);
-                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                     backpatch($1->nextlist, $3);
                                                     $$->nextlist = copy($4->nextlist);
                                                   }
@@ -1531,7 +1617,6 @@ init_declarator_list
 
 init_declarator
   : declarator                  {$$ = $1;
-                                  // cout << "entered declarator\n";
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
                                     string type = $1->nodetype;
                                     if (lookup_decl($1->symbol, level, level_id[level])){
@@ -1545,16 +1630,15 @@ init_declarator
                                     else {
                                       insert_entry($1->symbol, $1->nodetype, $1->size, 0, false, level, level_id[level]);
                                       $$->init = false;
-                                      // if ($1->expr_type == 15){
-                                      //   insert_arr_dims($$->symbol, level, level_id[level], dims);
-                                      // }
+                                      if ($1->expr_type == 15){
+                                        set_arr_flag($$->symbol, level, level_id[level]);
+                                      }
                                     }
                                     if (!error_throw){
                                       qid t = lookup_use($$->symbol, level, level_id);
                                       $$->place = t;
                                     }
                                   }
-                                  // cout << "exited declarator\n";
                                 }
   | declarator '=' initializer  {$$ = non_terminal(0, $2, $1, $3);
                                   if ($1->expr_type == 1 || $1->expr_type == 15){
@@ -1584,12 +1668,12 @@ init_declarator
                                       $$->nodetype = new char[type.size()+1];
                                       strcpy($$->nodetype, type.c_str());
                                       $$->init = true;
-                                      // if ($1->expr_type == 15){
-                                      //   insert_arr_dims($1->symbol, level, level_id[level], dims);
-                                      // }
+                                      if ($1->expr_type == 15){
+                                        set_arr_flag($1->symbol, level, level_id[level]);
+                                      }
                                     }
                                     if (!error_throw){ 
-                                      $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                      $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = lookup_use($$->symbol, level, level_id);
                                       $$->place = t;
                                       if ($1->expr_type == 15){
@@ -1782,9 +1866,9 @@ struct_declarator
                                             error_throw = true;
                                             fprintf(stderr, "$d |\t Error : Redeclaration of symbol \'%s\' in struct\n", line, $$->symbol);
                                           }
-                                          // if ($1->expr_type == 15){
-                                          //   insert_struct_arr_dims($$->symbol, dims);
-                                          // }
+                                          if ($1->expr_type == 15){
+                                            set_struct_arr_flag($$->symbol);
+                                          }
                                           // handle common struct errors
                                         }
 	;
@@ -1821,10 +1905,6 @@ declarator
                                   $$->nodetype = new char[temp.size()+1];
                                   strcpy($$->nodetype, temp.c_str());
                                   if ($2->expr_type == 15){
-                                    // unsigned long long size = get_size(t_name, level, level_id);
-                                    // if (size){
-                                    //   $$->size = ($2->size/size) * get_size($$->nodetype, level, level_id);
-                                    // }
                                     error_throw = true;
                                     fprintf(stderr, "%d |\t Error : Array of pointers not allowed\n", line);
                                   }
@@ -1847,12 +1927,11 @@ declarator
                                   $$->expr_type = 2;
                                   $$->size = get_size($$->nodetype, level, level_id);
                                 }
-                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                   $$->place = lookup_use($$->symbol, level, level_id);
                                 }
                               }
 	| direct_declarator         {
-                                // cout << "entered direct decl\n";
                                 $$ = $1;
                                 if($1->expr_type == 2){
                                   func_name = string($1->symbol);
@@ -1868,7 +1947,6 @@ declarator
                                 if (!error_throw){
                                   $$->place = lookup_use($$->symbol, level, level_id);
                                 }
-                                // cout << "exited direct decl\n";
                               }
 	;
 
@@ -1891,7 +1969,7 @@ direct_declarator
                             }
 														$$->size = get_size(t_name, level, level_id);
 
-                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                               qid t = NULL;
                               $$->place = t;
                             }
@@ -1899,7 +1977,7 @@ direct_declarator
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
-                                                      if($1->expr_type == 1 || $1->expr_type == 15){
+                                                      if($1->expr_type == 1){
                                                         $$->expr_type = 15;
                                                         string temp = string($1->nodetype) + "*";
                                                         $$->nodetype = new char[temp.size()+1];
@@ -1911,15 +1989,13 @@ direct_declarator
                                                           error_throw = true;
                                                           fprintf(stderr, "%d |\t Error : Variable or field %s declared as type void\n", line, ($1->symbol));
                                                         }
-                                                        // dims.clear();
-                                                        // dims.push_back($3->int_val);
                                                         $$->size = get_size($1->nodetype, level, level_id) * $3->int_val;
                                                       }
                                                       else if ($1->expr_type == 15){
-                                                        $$->size = $1->size * $3->int_val;
-                                                        // dims.push_back($3->int_val);
+                                                        error_throw = true;
+                                                        fprintf(stderr, "%d |\t Error : Multi-dimensional arrays not allowed\n", line);
                                                       }
-                                                      if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                      if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                         qid t = NULL;
                                                         $$->place = t;
                                                       }
@@ -1956,8 +2032,14 @@ direct_declarator
                                                               }
                                                               else {
                                                                 if (args_to_scope($$->symbol, func_args, func_symbols, level, level_id)){
-                                                                  insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
-                                                                  insert_func_args($1->symbol, func_args);
+                                                                  if (check_args_constraints($1->symbol, func_args)){
+                                                                    insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
+                                                                    insert_func_args($1->symbol, func_args);
+                                                                  }
+                                                                  else {
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Maximum arguments number is 6 (4 non-float and 2 float)\n", line);
+                                                                  }
                                                                 }
                                                                 else {
                                                                   error_throw = true;
@@ -1967,7 +2049,7 @@ direct_declarator
                                                               func_args = "";
                                                               func_symbols = "";
                                                               $$->size = get_size($$->nodetype, level, level_id);
-                                                              if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                 qid t = NULL;
                                                                 $$->place = t;
                                                               }
@@ -2007,7 +2089,7 @@ direct_declarator
                                                               func_symbols = "";
                                                             }
                                                             $$->size = get_size($$->nodetype, level, level_id);
-                                                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                               qid t = NULL;
                                                               $$->place = t;
                                                             }
@@ -2065,9 +2147,9 @@ parameter_declaration
                                             if($2->expr_type == 1){
                                               func_symbols = (func_symbols == "") ? string($2->symbol) : func_symbols + "," + string($2->symbol);
                                               func_args = (func_args == "") ?  string($2->nodetype) : func_args + "," + string($2->nodetype);
-                                              if (!is_type_int($2->nodetype) && !is_type_float($2->nodetype) && !is_type_bool($2->nodetype) && !is_type_char($2->nodetype) && !lookup_type_use($2->nodetype, level, level_id)){
+                                              if (!is_type_int($2->nodetype) && !is_type_float($2->nodetype) && !is_type_bool($2->nodetype) && !is_type_char($2->nodetype) && !is_type_ptr($2->nodetype)){
                                                 error_throw = true;
-                                                fprintf(stderr, "%d |\t Error : Passing invalid type or a pointer as argument to a function\n", line);
+                                                fprintf(stderr, "%d |\t Error : Passing invalid type or a struct as argument to a function\n", line);
                                               }
                                             }
                                           }
@@ -2144,7 +2226,7 @@ switch_case_marker
 
 labeled_statement
 	: IDENTIFIER ':' M statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $4);
-                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                     if (insert_user_label($1, $3)){
                                                       $$->nextlist = copy($4->nextlist);
                                                       $$->caselist = copy($4->caselist);
@@ -2158,7 +2240,7 @@ labeled_statement
                                                   }
                                                 }
 	| switch_case_marker M statement            {$$ = non_terminal(0, "labeled_statement", $1, $3);
-                                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                   backpatch($1->truelist, $2);
                                                   $$->breaklist = copy($3->breaklist);
                                                   $$->nextlist = merge($3->nextlist, $1->falselist);
@@ -2167,7 +2249,7 @@ labeled_statement
                                                 }
                                               }
 	| DEFAULT ':' statement                     {$$ = non_terminal(0, "labeled_statement", terminal($1), $3);
-                                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                   $$->breaklist= copy($3->breaklist);
                                                   $$->nextlist = copy($3->nextlist);
                                                   $$->continuelist = copy($3->continuelist);
@@ -2181,7 +2263,7 @@ compound_statement
 	| op_brace declaration_list cl_brace                  {$$ = $2; }
 	| op_brace declaration_list M statement_list cl_brace   {$$ = non_terminal(0, "compound_statement", $2, $4);
                                                             if (!error_throw){
-                                                              $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                              $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                               backpatch($2->nextlist, $3);
                                                               $$->nextlist = copy($4->nextlist);
                                                               $$->truelist = copy($4->truelist);
@@ -2210,7 +2292,7 @@ cl_brace
 declaration_list
 	: declaration                   {$$ = $1; }
 	| declaration_list M declaration  {$$ = non_terminal(0, "declaration_list", $1, $3);
-                                      if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                      if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                         $$->nextlist = copy($3->nextlist);
                                         backpatch($1->nextlist, $2);
                                       }
@@ -2220,7 +2302,7 @@ declaration_list
 statement_list
 	: statement                 {$$ = $1; }
 	| statement_list M statement  {$$ = non_terminal(0, "statement_list", $1, $3);
-                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                     backpatch($1->nextlist, $2);
                                     $$->nextlist = copy($3->nextlist);
                                     $$->caselist = merge($1->caselist, $3->caselist);
@@ -2252,7 +2334,7 @@ selection_statement
 	: if_expression M statement ELSE N M statement
           {
             $$ = non_terminal(1, "IF (expr) stmt ELSE stmt", $1, $3, $7);
-            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
               backpatch($1->truelist, $2);
               backpatch($1->falselist, $6);
               $$->nextlist = merge($3->nextlist, $7->nextlist);
@@ -2264,7 +2346,7 @@ selection_statement
 	| if_expression M statement
           {
             $$ = non_terminal(0, "IF (expr) stmt", $1, $3);
-            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+            if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
               backpatch($1->truelist, $2);
               $$->nextlist = merge($1->falselist, $3->nextlist);
               $$->continuelist = copy($3->continuelist);
@@ -2274,7 +2356,7 @@ selection_statement
 	| SWITCH '(' expression ')' statement
           {
             $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
-            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
               patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
               $$->continuelist = copy($5->continuelist);
@@ -2312,7 +2394,7 @@ iteration_statement
 	: WHILE '(' M expr_marker ')' M statement
         {
           $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($7->nextlist) = insert($7->nextlist, k);
             backpatch($7->nextlist, $3);
@@ -2324,7 +2406,7 @@ iteration_statement
 	| DO M statement WHILE '(' M expr_marker ')' ';'
         {
           $$ = non_terminal(0, "DO stmt WHILE (expr)", $3, $7);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             backpatch($3->continuelist, $6);
             backpatch($3->nextlist, $6);
             backpatch($7->truelist, $2);
@@ -2334,7 +2416,7 @@ iteration_statement
 	| FOR '(' expression_statement M exprstmt_marker ')' M statement
         {
           $$ = non_terminal(1, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($8->nextlist) = insert($8->nextlist, k);
             backpatch($5->truelist, $7);
@@ -2347,7 +2429,7 @@ iteration_statement
 	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M statement
         {
           $$ = non_terminal(1, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($11->nextlist) = insert($11->nextlist, k);
             backpatch($11->nextlist, $6);
@@ -2363,7 +2445,7 @@ iteration_statement
 jump_statement
 	: GOTO IDENTIFIER ';'       {
                                 $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2));
-                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                   int tmp = emit("GOTO", NULL, NULL, NULL);
                                   if (!patch_user_goto($2, tmp)){
                                     error_throw = true;
@@ -2374,7 +2456,7 @@ jump_statement
 	| CONTINUE ';'
         {
           $$ = terminal($1);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($$->continuelist) = insert($$->continuelist, k);
           }
@@ -2382,7 +2464,7 @@ jump_statement
 	| BREAK ';'
         {
           $$ = terminal($1);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($$->breaklist) = insert($$->breaklist, k);
           }
@@ -2393,7 +2475,7 @@ jump_statement
                                   error_throw = true;
                                   fprintf(stderr, "%d |\t Error : Function %s of type non-void is not returning a value\n", line, func_name.c_str());
                                 }else{
-                                  if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                  if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                     emit("RETURN", NULL, NULL, NULL);
                                   }
                                 }
@@ -2415,7 +2497,7 @@ jump_statement
                                   }
                                 }
 
-                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                   qid tmp = emit_assignment(type, $2->nodetype, $2->place, level, level_id);
                                   int k = emit("RETURN", NULL, tmp, NULL);
                                 }
@@ -2443,7 +2525,7 @@ function_definition
                                                                                               entry->init = true;
                                                                                             }
                                                                                             t_name = "";
-                                                                                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                                            if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                                               string end = "*function end*\t(" + string($2->symbol) + ")";
                                                                                               int k = emit(end, NULL, NULL, NULL);
                                                                                               backpatch($4->nextlist, $5);
@@ -2457,7 +2539,7 @@ function_definition
                                                                                       entry->init = true;
                                                                                     }
                                                                                     t_name = "";
-                                                                                    if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+                                                                                    if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                                                       string end = "*function end*\t(" + string($2->symbol) + ")";
                                                                                       int k = emit(end, NULL, NULL, NULL);
                                                                                       backpatch($4->nextlist, k);
@@ -2487,7 +2569,7 @@ M
 
 N
   : %empty  { $$ = terminal("N");
-              $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL;
+              $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
               int k = emit("GOTO", NULL, NULL, NULL);
               ($$->nextlist) = insert($$->nextlist, k);
             }
@@ -2552,6 +2634,7 @@ int main (int argc, char* argv[]){
       // remove ast
       exit(0);
     }
+    sort_and_align_offsets();
     dump_tables();
     dump_type_tables();
     dump_3ac();
@@ -2562,11 +2645,10 @@ int main (int argc, char* argv[]){
 }
 // exhaustive code review
 
-// incomplete array (3ac) and pointer dereferencing (3ac), understand how to handle ptrs in func calls etc
-// string literal initialisation
 // same struct within struct
 // typecasting for func call
 // correct switch case (types + switch_type nested bug)
+// incop decop 3ac
 
 // init errors ??
 // normal syntax errors ??
@@ -2579,4 +2661,3 @@ int main (int argc, char* argv[]){
 
 // dynamic memory
 // register/code optimizations
-// large params

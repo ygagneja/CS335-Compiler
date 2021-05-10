@@ -23,11 +23,13 @@ string new_symbol(){
 
 qid newtmp(string type, unsigned long long level, unsigned long long* level_id){
     string sym = new_symbol();
-    insert_entry(sym, type, get_size(type, level, level_id), 0, 1, level, level_id[level]);
-    qid ret = lookup_use(sym, level, level_id);
-    return ret;
+    return (qid)insert_entry(sym, type, get_size(type, level, level_id), 0, 1, level, level_id[level]);
 }
 
+qid newstring(string type, unsigned long long size, unsigned long long level, unsigned long long* level_id){
+    string sym = new_symbol();
+    return (qid)insert_entry(sym, type, size, 0, 1, level, level_id[level]);
+}
 
 int emit(string op, qid arg1, qid arg2, qid res){
     quad tmp;
@@ -235,7 +237,7 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
     }
 }
 
-void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, unsigned long long level, unsigned long long* level_id){
+void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, qid address1, unsigned long long level, unsigned long long* level_id){
     if (op == "*=" || op == "/=" || op == "%="){
         op = op.substr(0, 1);
         string type = mul_type(str1, str2, op[0]);
@@ -244,7 +246,8 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
         qid t = newtmp(type, level, level_id);
         emit(op+type, p1, p2, t);
         qid f = emit_assignment(str1, type, t, level, level_id);
-        emit("=", NULL, f, place1);
+        if (address1) emit("* =", NULL, f, address1);
+        else emit("=", NULL, f, place1);
     }
     else if (op == "+=" || op == "-="){
         op = op.substr(0, 1);
@@ -255,7 +258,8 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
             qid t = newtmp(type, level, level_id);
             emit(op+type, p1, p2, t);
             qid f = emit_assignment(str1, type, t, level, level_id);
-            emit("=", NULL, f, place1);
+            if (address1) emit("* =", NULL, f, address1);
+            else emit("=", NULL, f, place1);
         }
         else {
             if (is_type_int(str1)){
@@ -265,7 +269,8 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
                 int k = emit("*int", place1, NULL, tmp);
                 patch_constant(to_string(get_size(tp, level, level_id)), k);
                 emit(op+"ptr", tmp, place2, res);
-                emit("=", NULL, res, place1);
+                if (address1) emit("* =", NULL, res, address1);
+                else emit("=", NULL, res, place1);
             }
             else {
                 qid res = newtmp(str1, level, level_id);
@@ -274,7 +279,8 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
                 int k = emit("*int", place2, NULL, tmp);
                 patch_constant(to_string(get_size(tp, level, level_id)), k);
                 emit(op+"ptr", place1, tmp, res);
-                emit("=", NULL, res, place1);
+                if (address1) emit("* =", NULL, res, address1);
+                else emit("=", NULL, res, place1);
             }
         }
     }
@@ -286,7 +292,8 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
         qid t = newtmp(type, level, level_id);
         emit(op, p1, p2, t);
         qid f = emit_assignment(str1, type, t, level, level_id);
-        emit("=", NULL, f, place1);
+        if (address1) emit("* =", NULL, f, address1);
+        else emit("=", NULL, f, place1);
     }
     else if (op == "&=" || op == "^=" || op == "|="){
         op = op.substr(0, 1);
@@ -296,7 +303,8 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
         qid t = newtmp(type, level, level_id);
         emit(op, p1, p2, t);
         qid f = emit_assignment(str1, type, t, level, level_id);
-        emit("=", NULL, f, place1);
+        if (address1) emit("* =", NULL, f, address1);
+        else emit("=", NULL, f, place1);
     }
 }
 

@@ -1,14 +1,15 @@
-// struct point {
-// 	int x;
-// 	int y;
-// 	struct {int z; float p;} m;
-// };
+struct point {
+	int x;
+	int y;
+	struct {int z; float p;} m;
+};
 
-// struct aa {
-// 	int s;
-// 	char arr[10];
-// 	struct point* a;
-// };
+struct aa {
+	int s;
+	struct point arr[10];
+};
+
+char* s = " ";
 
 // void chng(int* p){
 // 	*p = 1;
@@ -19,19 +20,28 @@
 // 	p->y = 2;
 // 	return p;
 // }
-int glob = 1;
-float glob2 = 2.3 + glob;
+// int glob = 1;
+// float glob2 = 2.3 + glob;
 
-int func(int x){
-	return x + glob;
-}
-
+// int func(int x){
+// 	return x + glob;
+// }
+// void chng(struct point* p){
+// 	p->m.p = sizeof(struct point);
+// }
+// void print(struct point str){
+// 	str[2] = 'e';
+// }
 int main(){
-	float x = 2;
-	int i = 10;
-	bool p = true;
-	float m = i*i + x*glob2;
-	int ret = func(i);
+	// struct aa x;
+	// x.arr[2].y = 1;
+	bool y;
+	int i; char x;
+	int arr[10];
+	bool p;
+	char* str = "hello";
+	// print(str);
+	x = str[2];
 	// struct point {int x;} p;
 	// {
 	// 	struct test0{
@@ -62,5 +72,3 @@ int main(){
 	// if ('c');
 	return 0;
 }
-
-bool glob3 = false;

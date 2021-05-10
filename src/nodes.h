@@ -23,6 +23,7 @@ typedef struct {
     char* continuelist = NULL;
     char* caselist = NULL;
     qid place = NULL;
+    qid address = NULL;
 } node;
 
 typedef struct {

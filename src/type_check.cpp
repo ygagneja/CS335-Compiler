@@ -106,11 +106,16 @@ string args_type(string str1, string str2){
 
 string unary_type(char* op, string str){
     string ret_type("null");
-    if (*op == '&' && !is_type_func(str)){
+    if (*op == '&' && !is_type_func(str) && !is_type_ptr(str)){
         return string(str + "*");
     }
     else if (*op == '*' && !is_type_func(str)){
-        return postfix_type(str, "int", 1);
+        if (is_type_ptr(str) && !is_type_structptr(str)){
+            str.pop_back();
+            if (!is_type_ptr(str)) return string(str);
+            else return string("null");
+        }
+        else return string("null");
     }
     else if (*op == '+' || *op == '-'){
         if (is_type_int(str) || is_type_float(str)) return string(str);

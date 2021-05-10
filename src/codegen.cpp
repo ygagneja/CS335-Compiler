@@ -453,6 +453,25 @@ void code_gen(){
           else asmb_line("li " + res_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].constant);
         }
       }
+      else if(code_arr[i].op == "* ="){
+        string arg_reg = get_reg(code_arr[i].arg2);
+        string addr_reg = get_reg(code_arr[i].res);
+        if(is_type_float(code_arr[i].arg2->type)) asmb_line("swc1 " + arg_reg + ", (" + addr_reg + ")" + "\t # "+code_arr[i].res->sym_name + " * = "+code_arr[i].arg2->sym_name);
+        else if(is_type_bool(code_arr[i].arg2->type) || is_type_char(code_arr[i].arg2->type)) asmb_line("sb " + arg_reg + ", (" + addr_reg + ")" + "\t # "+code_arr[i].res->sym_name + " * = "+code_arr[i].arg2->sym_name);
+        else asmb_line("sw " + arg_reg + ", (" + addr_reg + ")" + "\t # "+code_arr[i].res->sym_name + " * = "+code_arr[i].arg2->sym_name);
+      }
+      else if(code_arr[i].op == "=string"){
+        long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
+        offset += code_arr[i].res->offset;
+        string s = code_arr[i].constant;
+        for (int j=0; j<s.size(); j++){
+          asmb_line("li $a0, " + to_string((int)s[j]) + "\t # load character to register");
+          if (code_arr[i].res->level) asmb_line("sb $a0, " + to_string(-offset + j) + "($fp)" + "\t # store character to memory");
+          else asmb_line("sb $a0, " + to_string(global_offsets[code_arr[i].res] + j) + "($gp)" + "\t # store character to memory");
+        }
+        if (code_arr[i].res->level) asmb_line("sb $0, " + to_string(-offset + (int)s.size()) + "($fp)" + "\t # store character to memory");
+        else asmb_line("sb $a0, " + to_string(global_offsets[code_arr[i].res] + s.size()) + "($fp)" + "\t # store character to memory");
+      }
       else if(code_arr[i].op == "&"){ // res <- &arg2
         // cout << "Printing unary& assembly\n";
         if (code_arr[i].arg1){
@@ -465,16 +484,17 @@ void code_gen(){
           string res_reg = get_reg(code_arr[i].res, false);
           long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
           offset += code_arr[i].arg2->offset;
-          asmb_line("subu " + res_reg + ", $fp, " + to_string(offset) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
+          if (code_arr[i].arg2->level) asmb_line("subu " + res_reg + ", $fp, " + to_string(offset) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
+          else asmb_line("addu " + res_reg + ", $gp, " + to_string(global_offsets[code_arr[i].arg2]) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
         }
       }
       else if(code_arr[i].op == "*"){ // res <- *arg2
         // cout << "Printing unary* assembly\n";
         string res_reg = get_reg(code_arr[i].res, false);
         string arg_reg = get_reg(code_arr[i].arg2);
-        if (is_type_float(code_arr[i].res->type)) asmb_line("lwc1 " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
-        else if (is_type_bool(code_arr[i].res->type) || is_type_char(code_arr[i].res->type)) asmb_line("lb " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
-        else asmb_line("lw " + res_reg + ", 0(" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
+        if (is_type_float(code_arr[i].res->type)) asmb_line("lwc1 " + res_reg + ", (" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
+        else if (is_type_bool(code_arr[i].res->type) || is_type_char(code_arr[i].res->type)) asmb_line("lb " + res_reg + ", (" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
+        else asmb_line("lw " + res_reg + ", (" + arg_reg + ")" + "\t # "+code_arr[i].res->sym_name + " = *"+code_arr[i].arg2->sym_name);
       }
       else if(code_arr[i].op == "-"){ // res <- -arg2
         // cout << "Printing unary- assembly\n";
@@ -533,8 +553,7 @@ void code_gen(){
         }
         else{
             if(code_arr[i].op == "*int"){
-              asmb_line("li " + res_reg + ", " + code_arr[i].constant);
-              asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + res_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *int "+code_arr[i].constant);
+              asmb_line("mul " + res_reg + ", " + arg1_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " *int "+code_arr[i].constant);
             }
             else if(code_arr[i].op == "*float"){
                 asmb_line("li.s " + res_reg + ", " + code_arr[i].constant);
@@ -850,5 +869,4 @@ void code_gen(){
   dump_asm_code();
 }
 // scanf printf math string
-// currently assuming max 2 float params and max 4 non float params
 // BIG PROBLEM WITH REGS !!!!

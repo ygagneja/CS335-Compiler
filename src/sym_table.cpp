@@ -9,7 +9,6 @@ sym_tab waste;
 map<string, type_tab*> func_type_tab_map;
 type_tab global_type_tab;
 type_tab waste_type;
-map<sym_tab*, long long> offsets;
 map<struct_sym_tab*, long long> offsets_struct;
 sym_tab* curr;
 type_tab* curr_type;
@@ -19,7 +18,6 @@ stack<struct_sym_tab*> curr_struct_stack;
 void tab_init(){
     curr = &global_sym_tab;
     curr_type = &global_type_tab;
-    offsets[curr] = 0;
 }
 
 void set_current_tab(string func_name){
@@ -47,13 +45,7 @@ int make_symbol_table(string func_name){
     func_type_tab_map[func_name] = new_type_tab;
     sym_tab* new_tab = new sym_tab;
     func_sym_tab_map[func_name] = new_tab;
-    offsets[new_tab] = 0;
     return 0;
-}
-
-void restore_offset(string type, unsigned long long level, unsigned long long* level_id){
-    unsigned long long size = get_size(type, level, level_id);
-    offsets[curr] -= size;
 }
 
 sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id){
@@ -61,14 +53,43 @@ sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long siz
     entry->sym_name = sym_name;
     entry->type = type;
     entry->size = size;
-    if (curr != &global_sym_tab) offsets[curr] = offsets[curr]%4 && size >= 4 ? offsets[curr] + (4 - offsets[curr]%4) + size : offsets[curr] + size;
-    entry->offset = offsets[curr];
-    if (curr == &global_sym_tab) offsets[curr] = offsets[curr]%4 && size >= 4 ? offsets[curr] + (4 - offsets[curr]%4) + size : offsets[curr] + size;
     entry->init = init;
     entry->level = level;
     entry->level_id = level_id;
     (*curr)[make_tuple(entry->sym_name, entry->level, entry->level_id)] = entry;
     return entry;
+}
+
+void sort_and_align_offsets(){
+    for (auto table : func_sym_tab_map){
+        long long offset = 0;
+        for (auto itr : *(table.second)){
+            sym_tab_entry* entry = itr.second;
+            if (entry->size < 4){
+                offset = offset + entry->size;
+                entry->offset = offset;
+            }
+        }
+        offset = offset % 4 ? offset + (4 - offset % 4) : offset;
+        for (auto itr : *(table.second)){
+            sym_tab_entry* entry = itr.second;
+            if (entry->size == 4){
+                offset = offset + entry->size;
+                entry->offset = offset;
+            }
+        }
+        for (auto itr : *(table.second)){
+            sym_tab_entry* entry = itr.second;
+            if (entry->size > 4){
+                offset = entry->size % 4 ? offset + (4 - entry->size % 4) + entry->size : offset + entry->size;;
+                entry->offset = offset;
+            }            
+        }
+    }
+}
+
+void set_arr_flag(string sym_name, unsigned long long level, unsigned long long level_id){
+    (*curr)[make_tuple(sym_name, level, level_id)]->is_arr = true;
 }
 
 sym_tab_entry* lookup_decl(string sym_name, unsigned long long level, unsigned long long level_id){
@@ -114,6 +135,15 @@ bool insert_struct_symbol(string sym_name, string type, unsigned long long size)
     return false;
 }
 
+void set_struct_arr_flag(string sym_name){
+    struct_sym_tab* curr;
+    if (curr_struct_stack.size()) curr = curr_struct_stack.top();
+    else return;
+    if ((*curr).find(sym_name) != (*curr).end()){
+        (*curr)[sym_name]->is_arr = true;
+    }
+}
+
 void insert_type_entry(string type_name, unsigned long long size, unsigned long long level, unsigned long long level_id){
     type_tab_entry* entry = new type_tab_entry();
     entry->type_name = type_name;
@@ -156,6 +186,16 @@ string struct_sym_type(string type, string sym_name, unsigned long long level, u
 
     if ((*tmp).find(sym_name) == (*tmp).end()) return "null";
     return (*tmp)[sym_name]->type;
+}
+
+bool is_struct_sym_arr(string type, string sym_name, unsigned long long level, unsigned long long* level_id){
+    type_tab_entry* entry = lookup_type_use(type, level, level_id);
+    struct_sym_tab* tmp;
+    if (entry && entry->symbols) tmp = entry->symbols;
+    else return false;
+
+    if ((*tmp).find(sym_name) == (*tmp).end()) return false;
+    return (*tmp)[sym_name]->is_arr;
 }
 
 long long get_struct_sym_offset(string type, string sym_name, unsigned long long level, unsigned long long* level_id){
@@ -217,6 +257,23 @@ bool is_consistent(string func_name, string args){
     if (args == "") args = "null";
     if (func_args_map[func_name] == args) return true;
     return false;
+}
+
+bool check_args_constraints(string func_name, string args){
+    string delim = ",";
+    size_t f = 1;
+    string temp = args;
+    int f_args = 0, non_f_args = 0;
+    while(f != string::npos){
+        f = temp.find_first_of(delim);
+        string type = temp.substr(0, f);
+        temp = temp.substr(f+1);
+        
+        if (is_type_float(type)) f_args++;
+        else non_f_args++;
+    }
+    if (f_args <= 2 && non_f_args <= 4) return true;
+    else return false;
 }
 
 void insert_func_args(string func_name, string arg_types){
