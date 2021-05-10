@@ -1,7 +1,7 @@
 #include<bits/stdc++.h>
 
 #define MAIN_AR_SIZE 4
-#define FUNC_AR_SIZE 128
+#define FUNC_AR_SIZE 8
 
 using namespace std;
 

@@ -18,6 +18,33 @@ stack<struct_sym_tab*> curr_struct_stack;
 void tab_init(){
     curr = &global_sym_tab;
     curr_type = &global_type_tab;
+
+    make_symbol_table("printi");
+    make_symbol_table("printf");
+    make_symbol_table("prints");
+    make_symbol_table("scani");
+    make_symbol_table("scanf");
+    make_symbol_table("scans");
+    make_symbol_table("malloc");
+    args_to_scope("printi", "int", "x");
+    args_to_scope("printf", "float", "x");
+    args_to_scope("prints", "char*", "str");
+    args_to_scope("scans", "char*,int", "str,len");
+    args_to_scope("malloc", "int", "size");
+    insert_entry("printi", "func void", 0, 0, true, 0, 0);
+    insert_entry("printf", "func void", 0, 0, true, 0, 0);
+    insert_entry("prints", "func void", 0, 0, true, 0, 0);
+    insert_entry("scani", "func int", 0, 0, true, 0, 0);
+    insert_entry("scanf", "func float", 0, 0, true, 0, 0);
+    insert_entry("scans", "func void", 0, 0, true, 0, 0);
+    insert_entry("malloc", "func void*", 0, 0, true, 0, 0);
+    insert_func_args("printi", "int");
+    insert_func_args("printf", "float");
+    insert_func_args("prints", "char*");
+    insert_func_args("scani", "null");
+    insert_func_args("scanf", "null");
+    insert_func_args("scans", "char*,int");
+    insert_func_args("malloc", "int");
 }
 
 void set_current_tab(string func_name){
@@ -213,7 +240,7 @@ unsigned long long get_size(string type, unsigned long long level, unsigned long
     if(type == "bool") return 1;
     if (type == "void") return 1;
     if (type[type.length()-1] == '*') return 4;
-    if (lookup_type_use(type, level, level_id)) return lookup_type_use(type, level, level_id)->size;
+    if (level_id && lookup_type_use(type, level, level_id)) return lookup_type_use(type, level, level_id)->size;
     if (type == "null") return 0;
     return 4;
 }
@@ -225,7 +252,7 @@ bool is_valid_type(string type, unsigned long long level, unsigned long long* le
     return false;
 }
 
-bool args_to_scope(string func_name, string func_args, string func_symbols, unsigned long long level, unsigned long long* level_id){
+bool args_to_scope(string func_name, string func_args, string func_symbols){
     set_current_tab(func_name);
     string delim = ",";
     size_t f1 = 1;
@@ -240,12 +267,12 @@ bool args_to_scope(string func_name, string func_args, string func_symbols, unsi
         string symbol = temp2.substr(0, f2);
         temp2 = temp2.substr(f2+1);
         
-        if (lookup_decl(symbol, level, level_id[level])){
+        if (lookup_decl(symbol, 1, 0)){
             set_current_tab("#");
             return false;   
         }
         else {
-            sym_tab_entry* entry = insert_entry(symbol, type, get_size(type, level, level_id), 0, false, 1, 0);
+            sym_tab_entry* entry = insert_entry(symbol, type, get_size(type, 0, NULL), 0, false, 1, 0);
             func_syms_map[func_name].push_back(entry);
         }
     }

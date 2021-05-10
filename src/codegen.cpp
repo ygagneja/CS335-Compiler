@@ -79,7 +79,7 @@ void initialise_regs(){
   // v0 and v1 -> return values
   // a0, a1, a2, a3 -> args
   // f0 and f2 -> return values
-  // f4, f6 -> args
+  // f12, f14 -> args
 
   reg_to_sym["$t0"] = NULL;
   reg_to_sym["$t1"] = NULL;
@@ -99,10 +99,10 @@ void initialise_regs(){
   reg_to_sym["$s5"] = NULL;
   reg_to_sym["$s6"] = NULL;
   reg_to_sym["$s7"] = NULL;
+  reg_to_sym["$f4"] = NULL;
+  reg_to_sym["$f6"] = NULL;
   reg_to_sym["$f8"] = NULL;
   reg_to_sym["$f10"] = NULL;
-  reg_to_sym["$f12"] = NULL;
-  reg_to_sym["$f14"] = NULL;
   reg_to_sym["$f16"] = NULL;
   reg_to_sym["$f18"] = NULL;
   reg_to_sym["$f20"] = NULL;
@@ -310,6 +310,51 @@ void code_gen(){
   }
 
   asmb_header(".text\n");
+  // scan_int assembly
+  asmb_label("scani : ");
+  asmb_line("li $v0, 5");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+  // scan_float assembly
+  asmb_label("scanf : ");
+  asmb_line("li $v0, 6");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+  // scan_string assembly
+  asmb_label("scans : ");
+  asmb_line("li $v0, 8");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+  // print_int assembly
+  asmb_label("printi : ");
+  asmb_line("li $v0, 1");
+  asmb_line("syscall");
+  asmb_line("li $a0, 0xA");
+  asmb_line("li $v0, 11");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+  // print_float assembly
+  asmb_label("printf : ");
+  asmb_line("li $v0, 2");
+  asmb_line("syscall");
+  asmb_line("li $a0, 0xA");
+  asmb_line("li $v0, 11");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+  // print_string assembly
+  asmb_label("prints : ");
+  asmb_line("li $v0, 4");
+  asmb_line("syscall");
+  asmb_line("li $a0, 0xA");
+  asmb_line("li $v0, 11");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+  // malloc assembly
+  asmb_label("malloc : ");
+  asmb_line("li $v0, 9");
+  asmb_line("syscall");
+  asmb_line("jr $ra");
+
   glob_scope = true;
 
   // Store goto label locations to create label in assembly
@@ -387,7 +432,7 @@ void code_gen(){
             qid sym = (qid)func_syms_map[curr_func][i];
             string reg = get_reg(sym, false);
             if (is_type_float(sym->type)){
-              asmb_line("mov.s " + reg + ", $f" + to_string(f_args*2 + 4) + "\t # get value of " + sym->sym_name);
+              asmb_line("mov.s " + reg + ", $f" + to_string(f_args*2 + 12) + "\t # get value of " + sym->sym_name);
               f_args++;
             }
             else {
@@ -415,7 +460,7 @@ void code_gen(){
           string reg = get_reg(sym);
           if (is_type_float(sym->type)){
             f_args--;
-            asmb_line("mov.s $f" + to_string(f_args*2 + 4) + ", " + reg + "\t # store value of " + sym->sym_name);
+            asmb_line("mov.s $f" + to_string(f_args*2 + 12) + ", " + reg + "\t # store value of " + sym->sym_name);
           }
           else {
             non_f_args--;
@@ -868,5 +913,5 @@ void code_gen(){
   }
   dump_asm_code();
 }
-// scanf printf math string
+// math, string
 // BIG PROBLEM WITH REGS !!!!

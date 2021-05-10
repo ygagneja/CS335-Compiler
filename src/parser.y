@@ -932,7 +932,6 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit("<ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
@@ -979,7 +978,6 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit(">ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
@@ -1026,7 +1024,6 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit("<=ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
@@ -1073,7 +1070,6 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
-                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit(">=ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
@@ -1124,7 +1120,6 @@ equality_expression
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
-                                                            fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                             emit("==ptr", $1->place, $3->place, $$->place);
                                                           }
                                                         }
@@ -1143,7 +1138,7 @@ equality_expression
                                                             qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
-                                                            fprintf(stderr, "%d |\t Warning : Comparison between float\n", line);
+                                                            fprintf(stderr, "%d |\t Warning : Comparison between floats\n", line);
                                                             emit("==float", p1, p2, $$->place);
                                                           }
                                                         }
@@ -1171,7 +1166,6 @@ equality_expression
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
-                                                            fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                             emit("!=ptr", $1->place, $3->place, $$->place);
                                                           }
                                                         }
@@ -2043,7 +2037,7 @@ direct_declarator
                                                                 }
                                                               }
                                                               else {
-                                                                if (args_to_scope($$->symbol, func_args, func_symbols, level, level_id)){
+                                                                if (args_to_scope($$->symbol, func_args, func_symbols)){
                                                                   if (check_args_constraints($1->symbol, func_args)){
                                                                     insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
                                                                     insert_func_args($1->symbol, func_args);
@@ -2671,5 +2665,4 @@ int main (int argc, char* argv[]){
 // documentation and readme
 // make test cases to display special stuff
 
-// dynamic memory
 // register/code optimizations

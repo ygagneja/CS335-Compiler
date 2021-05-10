@@ -54,7 +54,7 @@ bool is_struct_sym_arr(string type, string sym_name, unsigned long long level, u
 long long get_struct_sym_offset(string type, string sym_name, unsigned long long level, unsigned long long* level_id);
 unsigned long long get_size(string type, unsigned long long level, unsigned long long* level_id);
 bool is_valid_type(string type, unsigned long long level, unsigned long long* level_id);
-bool args_to_scope(string func_name, string func_args, string func_symbols, unsigned long long level, unsigned long long* level_id);
+bool args_to_scope(string func_name, string func_args, string func_symbols);
 bool is_consistent(string func_name, string args);
 bool check_args_constraints(string func_name, string args);
 void insert_func_args(string func_name, string arg_types);
