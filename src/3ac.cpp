@@ -155,7 +155,7 @@ void patch_caselist(char* li, qid arg2){
     }
 }
 
-qid emit_assignment(string str1, string str2, qid place2, unsigned long long level, unsigned long long* level_id){
+qid emit_assignment(string str1, string str2, qid place2, unsigned long long level, unsigned long long* level_id, int line){
     if (str1 == str2){
         return place2;
     }
@@ -192,6 +192,7 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
             else if (is_type_char(str1)){
                 qid tmp = newtmp(str1, level, level_id);
                 emit("floattochar", NULL, place2, tmp);
+                fprintf(stderr, "%d |\t Warning : Converting float to char\n", line);
                 return tmp;
             }
         }
@@ -199,6 +200,7 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
             if (is_type_float(str1)){
                 qid tmp = newtmp(str1, level, level_id);
                 emit("booltofloat", NULL, place2, tmp);
+                fprintf(stderr, "%d |\t Warning : Converting bool to float\n", line);
                 return tmp;
             }
             else if (is_type_int(str1)){
@@ -209,6 +211,7 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
             else if (is_type_char(str1)){
                 qid tmp = newtmp(str1, level, level_id);
                 emit("booltochar", NULL, place2, tmp);
+                fprintf(stderr, "%d |\t Warning : Converting bool to char\n", line);
                 return tmp;
             }
         }
@@ -216,11 +219,13 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
             if (is_type_float(str1)){
                 qid tmp = newtmp(str1, level, level_id);
                 emit("chartofloat", NULL, place2, tmp);
+                fprintf(stderr, "%d |\t Warning : Converting char to float\n", line);
                 return tmp;
             }
             else if (is_type_bool(str1)){
                 qid tmp = newtmp(str1, level, level_id);
                 emit("chartobool", NULL, place2, tmp);
+                fprintf(stderr, "%d |\t Warning : Converting char to bool\n", line);
                 return tmp;
             }
             else if (is_type_int(str1)){
@@ -237,15 +242,15 @@ qid emit_assignment(string str1, string str2, qid place2, unsigned long long lev
     }
 }
 
-void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, qid address1, unsigned long long level, unsigned long long* level_id){
+void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, qid address1, unsigned long long level, unsigned long long* level_id, int line){
     if (op == "*=" || op == "/=" || op == "%="){
         op = op.substr(0, 1);
         string type = mul_type(str1, str2, op[0]);
-        qid p1 = emit_assignment(type, str1, place1, level, level_id);
-        qid p2 = emit_assignment(type, str2, place2, level, level_id);
+        qid p1 = emit_assignment(type, str1, place1, level, level_id, line);
+        qid p2 = emit_assignment(type, str2, place2, level, level_id, line);
         qid t = newtmp(type, level, level_id);
         emit(op+type, p1, p2, t);
-        qid f = emit_assignment(str1, type, t, level, level_id);
+        qid f = emit_assignment(str1, type, t, level, level_id, line);
         if (address1) emit("* =", NULL, f, address1);
         else emit("=", NULL, f, place1);
     }
@@ -253,11 +258,11 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
         op = op.substr(0, 1);
         string type = add_type(str1, str2);
         if (type == "int" || type == "float"){
-            qid p1 = emit_assignment(type, str1, place1, level, level_id);
-            qid p2 = emit_assignment(type, str2, place2, level, level_id);
+            qid p1 = emit_assignment(type, str1, place1, level, level_id, line);
+            qid p2 = emit_assignment(type, str2, place2, level, level_id, line);
             qid t = newtmp(type, level, level_id);
             emit(op+type, p1, p2, t);
-            qid f = emit_assignment(str1, type, t, level, level_id);
+            qid f = emit_assignment(str1, type, t, level, level_id, line);
             if (address1) emit("* =", NULL, f, address1);
             else emit("=", NULL, f, place1);
         }
@@ -287,22 +292,22 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
     else if (op == ">>=" || op == "<<="){
         op = op.substr(0, 2);
         string type = shift_type(str1, str2);
-        qid p1 = emit_assignment(type, str1, place1, level, level_id);
-        qid p2 = emit_assignment(type, str2, place2, level, level_id);
+        qid p1 = emit_assignment(type, str1, place1, level, level_id, line);
+        qid p2 = emit_assignment(type, str2, place2, level, level_id, line);
         qid t = newtmp(type, level, level_id);
         emit(op, p1, p2, t);
-        qid f = emit_assignment(str1, type, t, level, level_id);
+        qid f = emit_assignment(str1, type, t, level, level_id, line);
         if (address1) emit("* =", NULL, f, address1);
         else emit("=", NULL, f, place1);
     }
     else if (op == "&=" || op == "^=" || op == "|="){
         op = op.substr(0, 1);
         string type = bit_type(str1, str2);
-        qid p1 = emit_assignment(type, str1, place1, level, level_id);
-        qid p2 = emit_assignment(type, str2, place2, level, level_id);
+        qid p1 = emit_assignment(type, str1, place1, level, level_id, line);
+        qid p2 = emit_assignment(type, str2, place2, level, level_id, line);
         qid t = newtmp(type, level, level_id);
         emit(op, p1, p2, t);
-        qid f = emit_assignment(str1, type, t, level, level_id);
+        qid f = emit_assignment(str1, type, t, level, level_id, line);
         if (address1) emit("* =", NULL, f, address1);
         else emit("=", NULL, f, place1);
     }

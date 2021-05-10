@@ -32,6 +32,6 @@ bool insert_user_label(string label, int addr);
 void patch_constant(string constant, int addr);
 bool patch_user_goto(string label, int addr);
 void patch_caselist(char* li, qid arg1);
-qid emit_assignment(string str1, string str2, qid place2, unsigned long long level, unsigned long long* level_id);
-void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, qid address1, unsigned long long level, unsigned long long* level_id);
+qid emit_assignment(string str1, string str2, qid place2, unsigned long long level, unsigned long long* level_id, int line);
+void emit_assignment_multi(string op, string str1, string str2, qid place1, qid place2, qid address1, unsigned long long level, unsigned long long* level_id, int line);
 void dump_3ac();

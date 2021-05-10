@@ -624,7 +624,7 @@ cast_expression
                                           fprintf(stderr, "%d |\t Warning : Incompatible pointer type-casting\n", line);
 
                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                            qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
+                                            qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id, line);
                                             $$->place = tmp;
                                           }
                                         }
@@ -632,7 +632,7 @@ cast_expression
                                           $$->nodetype = $2->nodetype;
 
                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                            qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id);
+                                            qid tmp = emit_assignment($$->nodetype, $4->nodetype, $4->place, level, level_id, line);
                                             $$->place = tmp;
                                           }
                                         }
@@ -654,8 +654,8 @@ multiplicative_expression
                                                               $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("*int", p1, p2, $$->place);
@@ -666,8 +666,8 @@ multiplicative_expression
                                                               $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("*float", p1, p2, $$->place);
@@ -689,8 +689,8 @@ multiplicative_expression
                                                               $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("/int", p1, p2, $$->place);
@@ -701,8 +701,8 @@ multiplicative_expression
                                                               $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("/float", p1, p2, $$->place);
@@ -724,8 +724,8 @@ multiplicative_expression
                                                             $$->nodetype = "int";
 
                                                             if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                              qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                              qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                              qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                              qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                               qid t = newtmp($$->nodetype, level, level_id);
                                                               $$->place = t;
                                                               emit("%int", p1, p2, $$->place);
@@ -751,8 +751,8 @@ additive_expression
                                                               $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("+int", p1, p2, $$->place);
@@ -764,8 +764,8 @@ additive_expression
                                                               $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("+float", p1, p2, $$->place);
@@ -815,8 +815,8 @@ additive_expression
                                                               $$->nodetype = "int";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("-int", p1, p2, $$->place);
@@ -828,8 +828,8 @@ additive_expression
                                                               $$->nodetype = "float";
 
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                                qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                 qid t = newtmp($$->nodetype, level, level_id);
                                                                 $$->place = t;
                                                                 emit("-float", p1, p2, $$->place);
@@ -886,8 +886,8 @@ shift_expression
                                                     }
                                                     else {
                                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                        qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                        qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                        qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                        qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                         qid t = newtmp($$->nodetype, level, level_id);
                                                         $$->place = t;
                                                         emit("<<", p1, p2, $$->place);
@@ -905,8 +905,8 @@ shift_expression
                                                     }
                                                     else {
                                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                        qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                        qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                        qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                        qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                         qid t = newtmp($$->nodetype, level, level_id);
                                                         $$->place = t;
                                                         emit(">>", p1, p2, $$->place);
@@ -932,13 +932,14 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit("<ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit("<int", p1, p2, $$->place);
@@ -946,10 +947,11 @@ relational_expression
                                                       }
                                                       else if (type == "float"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between floats\n", line);
                                                           emit("<float", p1, p2, $$->place);
                                                         }
                                                       }
@@ -977,13 +979,14 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit(">ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit(">int", p1, p2, $$->place);
@@ -991,10 +994,11 @@ relational_expression
                                                       }
                                                       else if (type == "float"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between floats\n", line);
                                                           emit(">float", p1, p2, $$->place);
                                                         }
                                                       }
@@ -1022,13 +1026,14 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit("<=ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit("<=int", p1, p2, $$->place);
@@ -1036,10 +1041,11 @@ relational_expression
                                                       }
                                                       else if (type == "float"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between floats\n", line);
                                                           emit("<=float", p1, p2, $$->place);
                                                         }
                                                       }
@@ -1067,13 +1073,14 @@ relational_expression
                                                         if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                           emit(">=ptr", $1->place, $3->place, $$->place);
                                                         }
                                                       }
                                                       else if (type == "int"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
                                                           emit(">=int", p1, p2, $$->place);
@@ -1081,10 +1088,11 @@ relational_expression
                                                       }
                                                       else if (type == "float"){
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                          qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                          qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                           $$->place = t;
+                                                          fprintf(stderr, "%d |\t Warning : Comparison between floats\n", line);
                                                           emit(">=float", p1, p2, $$->place);
                                                         }
                                                       }
@@ -1116,13 +1124,14 @@ equality_expression
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
+                                                            fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                             emit("==ptr", $1->place, $3->place, $$->place);
                                                           }
                                                         }
                                                         else if (type == "int"){
                                                           if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             emit("==int", p1, p2, $$->place);
@@ -1130,10 +1139,11 @@ equality_expression
                                                         }
                                                         else if (type == "float"){
                                                           if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
+                                                            fprintf(stderr, "%d |\t Warning : Comparison between float\n", line);
                                                             emit("==float", p1, p2, $$->place);
                                                           }
                                                         }
@@ -1161,13 +1171,14 @@ equality_expression
                                                           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
+                                                            fprintf(stderr, "%d |\t Warning : Comparison between pointers\n", line);
                                                             emit("!=ptr", $1->place, $3->place, $$->place);
                                                           }
                                                         }
                                                         else if (type == "int"){
                                                           if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
                                                             emit("!=int", p1, p2, $$->place);
@@ -1175,10 +1186,11 @@ equality_expression
                                                         }
                                                         else if (type == "float"){
                                                           if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id);
-                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id);
+                                                            qid p1 = emit_assignment(type, $1->nodetype, $1->place, level, level_id, line);
+                                                            qid p2 = emit_assignment(type, $3->nodetype, $3->place, level, level_id, line);
                                                             qid t = newtmp($$->nodetype, level, level_id);
                                                             $$->place = t;
+                                                            fprintf(stderr, "%d |\t Warning : Comparison between floats\n", line);
                                                             emit("!=float", p1, p2, $$->place);
                                                           }
                                                         }
@@ -1203,8 +1215,8 @@ and_expression
                                                 strcpy($$->nodetype, type.c_str());
 
                                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                  qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                  qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                  qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                  qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                   qid t = newtmp($$->nodetype, level, level_id);
                                                   $$->place = t;
                                                   emit("&", p1, p2, $$->place);
@@ -1230,8 +1242,8 @@ exclusive_or_expression
                                                     strcpy($$->nodetype, type.c_str());
 
                                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                      qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                      qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                      qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                      qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                       qid t = newtmp($$->nodetype, level, level_id);
                                                       $$->place = t;
                                                       emit("^", p1, p2, $$->place);
@@ -1257,8 +1269,8 @@ inclusive_or_expression
                                                             strcpy($$->nodetype, type.c_str());
 
                                                             if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                              qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id);
-                                                              qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                              qid p1 = emit_assignment($$->nodetype, $1->nodetype, $1->place, level, level_id, line);
+                                                              qid p2 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                               qid t = newtmp($$->nodetype, level, level_id);
                                                               $$->place = t;
                                                               emit("|", p1, p2, $$->place);
@@ -1362,8 +1374,8 @@ conditional_expression
                                                                           backpatch($1->truelist, $2);
                                                                           backpatch($1->falselist, $6);
 
-                                                                          qid p1 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id);
-                                                                          qid p2 = emit_assignment($$->nodetype, $7->nodetype, $7->place, level, level_id);
+                                                                          qid p1 = emit_assignment($$->nodetype, $3->nodetype, $3->place, level, level_id, line);
+                                                                          qid p2 = emit_assignment($$->nodetype, $7->nodetype, $7->place, level, level_id, line);
                                                                           qid t = newtmp($$->nodetype, level, level_id);
                                                                           $$->place = t;
 
@@ -1495,7 +1507,7 @@ assignment_expression
                                                                       }
 
                                                                       if (label == "="){
-                                                                        qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id);
+                                                                        qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id, line);
                                                                         if ($$->address){
                                                                           int k = emit("* =", NULL, tmp1, $$->address);
                                                                         }
@@ -1504,13 +1516,13 @@ assignment_expression
                                                                         }
                                                                       }
                                                                       else {
-                                                                        emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, $1->address, level, level_id);
+                                                                        emit_assignment_multi(label, $1->nodetype, "bool", $1->place, tmp, $1->address, level, level_id, line);
                                                                       }
                                                                     }
                                                                     else {
                                                                       backpatch($3->nextlist, nextinstr());
                                                                       if (label == "="){
-                                                                        qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
+                                                                        qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                                                         if ($$->address){
                                                                           int k = emit("* =", NULL, tmp, $$->address);
                                                                         }
@@ -1519,7 +1531,7 @@ assignment_expression
                                                                         }
                                                                       }
                                                                       else {
-                                                                        emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, $1->address, level, level_id);
+                                                                        emit_assignment_multi(label, $1->nodetype, $3->nodetype, $1->place, $3->place, $1->address, level, level_id, line);
                                                                       }
                                                                     }
                                                                   }
@@ -1705,12 +1717,12 @@ init_declarator
                                             backpatch($3->falselist, k0);
                                           }
 
-                                          qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id);
+                                          qid tmp1 = emit_assignment($1->nodetype, "bool", tmp, level, level_id, line);
                                           int k = emit("=", NULL, tmp1, $$->place);
                                         }
                                         else {
                                           backpatch($3->nextlist, nextinstr());
-                                          qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id);
+                                          qid tmp = emit_assignment($1->nodetype, $3->nodetype, $3->place, level, level_id, line);
                                           int k = emit("=", NULL, tmp, $$->place);
                                         }
                                       }
@@ -2498,7 +2510,7 @@ jump_statement
                                 }
 
                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                  qid tmp = emit_assignment(type, $2->nodetype, $2->place, level, level_id);
+                                  qid tmp = emit_assignment(type, $2->nodetype, $2->place, level, level_id, line);
                                   int k = emit("RETURN", NULL, tmp, NULL);
                                 }
                               }
