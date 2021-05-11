@@ -6,7 +6,7 @@ decl and defn must have same types and sym names
 storage specifiers and type qualifiers not implemented
 enum not implemented
 strictness on return types of void and non void
-ahead goto label throws error (label needs to be defined first)
+user gotos not allowed
 cannot initialise arrays and structs during declaration itself (can initialise char* strings tho with string literal)
 user is assumed to use arrays responsibly
 simple declarations only allowed inside structs

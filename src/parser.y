@@ -2232,18 +2232,8 @@ switch_case_marker
 
 labeled_statement
 	: IDENTIFIER ':' M statement                  {$$ = non_terminal(0, "labeled_statement", terminal($1), $4);
-                                                  if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                    if (insert_user_label($1, $3)){
-                                                      $$->nextlist = copy($4->nextlist);
-                                                      $$->caselist = copy($4->caselist);
-                                                      $$->continuelist = copy($4->continuelist);
-                                                      $$->breaklist = copy($4->breaklist);
-                                                    }
-                                                    else {
-                                                      error_throw = true;
-                                                      fprintf(stderr, "$d |\t Error : Multiple definitions of statement label \'%s\'\n", line, $1);
-                                                    }
-                                                  }
+                                                  error_throw = true;
+                                                  fprintf(stderr, "%d |\t Error : User goto statements not allowed\n", line);
                                                 }
 	| switch_case_marker M statement            {$$ = non_terminal(0, "labeled_statement", $1, $3);
                                                 if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
@@ -2451,13 +2441,8 @@ iteration_statement
 jump_statement
 	: GOTO IDENTIFIER ';'       {
                                 $$ = non_terminal(0, "jump_stmt", terminal($1), terminal($2));
-                                if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                  int tmp = emit("GOTO", NULL, NULL, NULL);
-                                  if (!patch_user_goto($2, tmp)){
-                                    error_throw = true;
-                                    fprintf(stderr, "%d |\t Error : Statement with label \'%s\' not found before goto is called\n", line, $2);
-                                  }
-                                }
+                                error_throw = true;
+                                fprintf(stderr, "%d |\t Error : User goto statements not allowed\n", line);
                               }
 	| CONTINUE ';'
         {

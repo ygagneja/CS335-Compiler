@@ -5,6 +5,7 @@
 extern sym_tab global_sym_tab;
 extern map<string, sym_tab*> func_sym_tab_map;
 extern map<string, vector<sym_tab_entry*>> func_syms_map;
+extern map<string, long long> max_offsets;
 
 map <string, qid> reg_to_sym;
 map <qid, string> sym_to_place;
@@ -205,7 +206,7 @@ string get_reg(void* tmp, bool from_mem){
     regs_in_use.pop();
     // store val from reg to memory
     offset += reg_to_sym[reg]->offset;
-    if(is_type_char(sym->type) || is_type_bool(sym->type)){
+    if(is_type_char(reg_to_sym[reg]->type) || is_type_bool(reg_to_sym[reg]->type)){
       if (reg_to_sym[reg]->level){
         asmb_line("sb " + reg + ", " + to_string(-offset) + "($fp)");
       }
@@ -378,20 +379,26 @@ void code_gen(){
       }
       
       if(label_lines.count(i)){
-        asmb_label("Label_" + to_string(i) + " :");
+        spill_regs();
+        asmb_label("_label_" + to_string(i) + " :");
       }
 
       if(code_arr[i].op.substr(0, 14) == "*function end*"){
         if (curr_func == "main"){
           asmb_label("main_end : ");
+          spill_regs();
           asmb_line("li $v0, 10 \t # Exit");
           asmb_line("syscall");
         }
         else {
           asmb_label(curr_func + "_end : ");
-          asmb_line("lw $fp, " + to_string(FUNC_AR_SIZE-4) + "($sp) \t # Restore frame pointer");
-          asmb_line("lw $ra, " + to_string(FUNC_AR_SIZE-8) + "($sp) \t # Restore return address");
-          asmb_line("addu $sp, $sp, " + to_string(FUNC_AR_SIZE) + "\t # Restore stack pointer");
+          spill_regs();
+          asmb_line("lw $sp, -8($fp) \t # load caller func size");
+          asmb_line("lw $ra, -4($fp) \t # restore return address");
+          asmb_line("addu $fp, $fp, $sp \t # restore frame pointer");
+          // asmb_line("lw $fp, " + to_string(FUNC_AR_SIZE-4) + "($sp) \t # Restore frame pointer");
+          // asmb_line("lw $ra, " + to_string(FUNC_AR_SIZE-8) + "($sp) \t # Restore return address");
+          // asmb_line("addu $sp, $sp, " + to_string(FUNC_AR_SIZE) + "\t # Restore stack pointer");
           asmb_line("jr $ra \t # Return");
         }
         initialise_regs();
@@ -415,16 +422,13 @@ void code_gen(){
 
         if(curr_func == "main"){
           asmb_label("main : ");
-          asmb_line("subu $sp, $sp, " + to_string(MAIN_AR_SIZE));
-          asmb_line("sw $fp, " + to_string(MAIN_AR_SIZE-4) + "($sp) \t # preserve frame pointer");
-          asmb_line("addu $fp, $sp, " + to_string(MAIN_AR_SIZE) + "\t # set frame pointer");
+          asmb_line("move $fp, $sp");
         }
         else{
           asmb_label(curr_func + " : ");
-          asmb_line("subu $sp, $sp, " + to_string(FUNC_AR_SIZE));
-          asmb_line("sw $fp, " + to_string(FUNC_AR_SIZE-4) + "($sp) \t # preserve frame pointer");
-          asmb_line("sw $ra, " + to_string(FUNC_AR_SIZE-8) + "($sp) \t # preserve return address");
-          asmb_line("addu $fp, $sp, " + to_string(FUNC_AR_SIZE) + "\t # set frame pointer");
+          asmb_line("subu $fp, $fp, $sp");
+          asmb_line("sw $sp, -8($fp) \t # preserve func size");
+          asmb_line("sw $ra, -4($fp) \t # preserve return address");
 
           // move args to temp regs
           int non_f_args = 0, f_args = 0;
@@ -470,6 +474,7 @@ void code_gen(){
         // spill regs
         spill_regs();
         // jump to callee
+        asmb_line("li $sp, " + to_string(max_offsets[curr_func]));
         asmb_line("jal " + callee);
         if(code_arr[i].res){ // Call to non void function
             string res_reg = get_reg(code_arr[i].res, false);
@@ -527,10 +532,16 @@ void code_gen(){
         }
         else {
           string res_reg = get_reg(code_arr[i].res, false);
+          string arg_reg = get_reg(code_arr[i].arg2);
           long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
           offset += code_arr[i].arg2->offset;
           if (code_arr[i].arg2->level) asmb_line("subu " + res_reg + ", $fp, " + to_string(offset) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
           else asmb_line("addu " + res_reg + ", $gp, " + to_string(global_offsets[code_arr[i].arg2]) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
+          if (!is_type_ptr(code_arr[i].arg2->type) && !is_type_struct(code_arr[i].arg2->type)){
+            if(is_type_float(code_arr[i].arg2->type)) asmb_line("swc1 " + arg_reg + ", (" + res_reg + ")" + "\t # storing in memory to avoid wild loads");
+            else if(is_type_bool(code_arr[i].arg2->type) || is_type_char(code_arr[i].arg2->type)) asmb_line("sb " + arg_reg + ", (" + res_reg + ")" + "\t # storing in memory to avoid wild loads");
+            else asmb_line("sw " + arg_reg + ", (" + res_reg + ")" + "\t # storing in memory to avoid wild loads");
+          }
         }
       }
       else if(code_arr[i].op == "*"){ // res <- *arg2
@@ -569,12 +580,21 @@ void code_gen(){
       // addition
       else if(code_arr[i].op == "+int" || code_arr[i].op == "+float" || code_arr[i].op == "+ptr"){
         // cout << "Printing addition assembly\n";
-        string res_reg = get_reg(code_arr[i].res, false);
-        string arg1_reg = get_reg(code_arr[i].arg1);
-        string arg2_reg = get_reg(code_arr[i].arg2);
-        if(code_arr[i].op == "+int") asmb_line("add " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +int "+code_arr[i].arg2->sym_name);
-        else if(code_arr[i].op == "+ptr") asmb_line("addu " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +ptr "+code_arr[i].arg2->sym_name);
-        else asmb_line("add.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +float "+code_arr[i].arg2->sym_name);
+        if (code_arr[i].arg2){
+          string res_reg = get_reg(code_arr[i].res, false);
+          string arg1_reg = get_reg(code_arr[i].arg1);
+          string arg2_reg = get_reg(code_arr[i].arg2);
+          if(code_arr[i].op == "+int") asmb_line("add " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +int "+code_arr[i].arg2->sym_name);
+          else if(code_arr[i].op == "+ptr") asmb_line("addu " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +ptr "+code_arr[i].arg2->sym_name);
+          else asmb_line("add.s " + res_reg + ", " + arg1_reg + ", " + arg2_reg + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +float "+code_arr[i].arg2->sym_name);
+        }
+        else {
+          string res_reg = get_reg(code_arr[i].res, false);
+          string arg1_reg = get_reg(code_arr[i].arg1);
+          if(code_arr[i].op == "+int") asmb_line("add " + res_reg + ", " + arg1_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +int "+code_arr[i].constant);
+          else if(code_arr[i].op == "+ptr") asmb_line("addu " + res_reg + ", " + arg1_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +ptr "+code_arr[i].constant);
+          else asmb_line("add.s " + res_reg + ", " + arg1_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " +float "+code_arr[i].constant);
+        }
       }
       // subtraction
       else if(code_arr[i].op == "-int" || code_arr[i].op == "-float" || code_arr[i].op == "-ptr"){
@@ -816,11 +836,19 @@ void code_gen(){
         }
       }
       else if(code_arr[i].op == "GOTO"){ // GOTO
-        asmb_line("j Label_" + to_string(code_arr[i].goto_label));
+        if (i>0 && code_arr[i-1].op == "GOTO IF"){
+          asmb_line("j _label_" + to_string(code_arr[i].goto_label));
+        }
+        else {
+          spill_regs();
+          asmb_line("j _label_" + to_string(code_arr[i].goto_label));
+        }
       }
       else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
-        string arg_reg = get_reg(code_arr[i].arg2, false);
-        asmb_line("bnez " + arg_reg + ", Label_" + to_string(code_arr[i].goto_label));
+        string arg_reg = get_reg(code_arr[i].arg2);
+        asmb_line("move $a0, " + arg_reg);
+        spill_regs();
+        asmb_line("bnez $a0, _label_" + to_string(code_arr[i].goto_label));
       }
       else if(code_arr[i].op == "inttochar"){ // Load only one byte(lower 8 bits)
         string res_reg = get_reg(code_arr[i].res, false);
@@ -914,4 +942,4 @@ void code_gen(){
   dump_asm_code();
 }
 // math, string
-// BIG PROBLEM WITH REGS !!!!
+// testing

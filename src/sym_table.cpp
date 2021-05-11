@@ -4,6 +4,7 @@
 map<string, sym_tab*> func_sym_tab_map;
 map<string, string> func_args_map;
 map<string, vector<sym_tab_entry*>> func_syms_map;
+map<string, long long> max_offsets;
 sym_tab global_sym_tab;
 sym_tab waste;
 map<string, type_tab*> func_type_tab_map;
@@ -112,6 +113,7 @@ void sort_and_align_offsets(){
                 entry->offset = offset;
             }            
         }
+        max_offsets[table.first] = offset + 16;
     }
 }
 

@@ -1,34 +1,29 @@
 int glob = 1;
+int x = glob == 1 ? 3 : glob == 3 ? 5 : 6;
 
-// void printi(int x);
-// void printf(float x);
-// void prints(char* str);
-// int scani();
-// float scanf();
-// void scans(char* str, int len);
-// void* malloc(int size);
-
+// Allignment error
 int main(){
-	char str[10];
-	char* ptr;
-	float y, res;
-	int x;
-	prints("enter a string");
-	scans(str, 10); // length 10 means will read 8 chars, 1 \n, 1 \0
-	prints("enter an int");
-	x = scani();
-	prints("enter a float");
-	y = scanf();
-	res = x + y*y;
-	prints("result of x + y*y is");
-	printf(res);
-	prints(str);
-	ptr = malloc(20);
-	scans(ptr, 10);
-	ptr[1] = ' ';
-	prints(ptr);
-	printi(ptr);
-	printi(str);
-	printi(&glob);
-	return 0;
+    // int a = 3,b = 5;
+    // float c = 8.1, d = 1.41;
+    // bool e = true, f = false;
+    int  var1 = 20, var2 = 22; 
+    int  *ptr1 = &var1;
+    int  *ptr2 = &var2;
+    // float res1 = a + b / c - d;
+    // float res2 = e * f;
+    bool comp = *ptr1 < *ptr2;
+    // printf(res1);
+    // printf(res2);
+    printi(&var1);
+    printi(ptr1);
+    printi(*ptr1);
+    printi(var1);
+    printi(&var2);
+    printi(ptr2);
+    printi(*ptr2);
+    printi(var2);
+    printi(comp); // should be 1 but output is 0
+	printi(x);
+
+    return 0;
 }

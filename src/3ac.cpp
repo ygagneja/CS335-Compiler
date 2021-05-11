@@ -4,16 +4,6 @@
 long long counter = 0;
 
 vector<quad> code_arr;
-unordered_map<string, int> user_goto;
-
-void init_lists(char* nextlist, char* truelist, char* falselist, char* breaklist, char* continuelist, char* caselist){
-    nextlist = NULL;
-    truelist = NULL;
-    falselist = NULL;
-    breaklist = NULL;
-    continuelist = NULL;
-    caselist = NULL;
-}
 
 string new_symbol(){
     counter++;
@@ -121,24 +111,8 @@ void backpatch(char* li, int tmp){
     }
 }
 
-bool insert_user_label(string label, int addr){
-    if (user_goto.find(label) == user_goto.end()){
-        user_goto[label] = addr;
-        return true;
-    }
-    return false;
-}
-
 void patch_constant(string constant, int addr){
     code_arr[addr].constant = string(constant);
-}
-
-bool patch_user_goto(string label, int addr){
-    if (user_goto.find(label) == user_goto.end()){
-        return false;
-    }
-    code_arr[addr].goto_label = user_goto[label];
-    return true;
 }
 
 void patch_caselist(char* li, qid arg2){
