@@ -51,10 +51,18 @@ void asmb_line(string s){
   }
 }
 
-void dump_asm_code(){
+void dump_asm_code(bool link_lib_funcs){
   ofstream out_file("out.asm");
   for(string it : assembly_code){
     out_file << it << endl;
+    if (it == ".text\n" && link_lib_funcs){
+      string line;
+      ifstream libfile("lib_funcs.asm");
+      while (getline(libfile, line)) {
+        out_file << line << endl;
+      }
+      libfile.close();
+    }
     if (it == "\tmain : "){
       out_file << "\t\t# global scope assembly code starts" << endl;
       for(string it2 : global_scope_assembly){
@@ -286,7 +294,25 @@ void spill_regs(){
   }
 }
 
-void code_gen(){
+void spill_global_regs(){
+  for(auto itr : reg_to_sym){
+    if(itr.second && itr.second->level == 0){
+      if (is_type_char(itr.second->type) || is_type_bool(itr.second->type)){
+        asmb_line("sb " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+      }
+      else if (is_type_float(itr.second->type)){
+        asmb_line("swc1 " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+      }
+      else {
+        asmb_line("sw " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+      }
+      sym_to_place[itr.second] = "";
+      reg_to_sym[itr.first] = NULL;
+    }
+  }
+}
+
+void code_gen(bool link_lib_funcs){
   initialise_regs();
 
   glob_scope = false;
@@ -384,13 +410,12 @@ void code_gen(){
       if(code_arr[i].op.substr(0, 14) == "*function end*"){
         if (curr_func == "main"){
           asmb_label("main_end : ");
-          spill_regs();
           asmb_line("li $v0, 10 \t # Exit");
           asmb_line("syscall");
         }
         else {
           asmb_label(curr_func + "_end : ");
-          spill_regs();
+          spill_global_regs();
           asmb_line("lw $sp, -8($fp) \t # load caller func size");
           asmb_line("lw $ra, -4($fp) \t # restore return address");
           asmb_line("addu $fp, $fp, $sp \t # restore frame pointer");
@@ -937,7 +962,5 @@ void code_gen(){
     }
     if (global_gen) spill_regs();
   }
-  dump_asm_code();
+  dump_asm_code(link_lib_funcs);
 }
-// math, string
-// testing

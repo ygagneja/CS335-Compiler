@@ -16,7 +16,7 @@ type_tab* curr_type;
 stack<struct_sym_tab*> curr_struct_stack;
 // total 10 types : int, float, char, bool, ptr, struct, func, array, void, null
 
-void tab_init(){
+void tab_init(bool link_lib_funcs){
     curr = &global_sym_tab;
     curr_type = &global_type_tab;
 
@@ -27,27 +27,11 @@ void tab_init(){
     make_symbol_table("scanf");
     make_symbol_table("scans");
     make_symbol_table("malloc");
-    make_symbol_table("strlen");
-    make_symbol_table("isqrt");
-    make_symbol_table("log10");
-    make_symbol_table("floor");
-    make_symbol_table("ceil");
-    make_symbol_table("power");
-    make_symbol_table("sin");
-    make_symbol_table("cos");
     args_to_scope("printi", "int", "x");
     args_to_scope("printf", "float", "x");
     args_to_scope("prints", "char*", "str");
     args_to_scope("scans", "char*,int", "str,len");
     args_to_scope("malloc", "int", "size");
-    args_to_scope("strlen", "char*", "str");
-    args_to_scope("isqrt", "int", "x");
-    args_to_scope("log10", "float", "x");
-    args_to_scope("floor", "float", "x");
-    args_to_scope("ceil", "float", "x");
-    args_to_scope("power", "int,int", "x,y");
-    args_to_scope("sin", "float", "x");
-    args_to_scope("cos", "float", "x");
     insert_entry("printi", "func void", 0, 0, true, 0, 0);
     insert_entry("printf", "func void", 0, 0, true, 0, 0);
     insert_entry("prints", "func void", 0, 0, true, 0, 0);
@@ -55,14 +39,6 @@ void tab_init(){
     insert_entry("scanf", "func float", 0, 0, true, 0, 0);
     insert_entry("scans", "func void", 0, 0, true, 0, 0);
     insert_entry("malloc", "func void*", 0, 0, true, 0, 0);
-    insert_entry("strlen", "func int", 0, 0, true, 0, 0);
-    insert_entry("isqrt", "func int", 0, 0, true, 0, 0);
-    insert_entry("log10", "func float", 0, 0, true, 0, 0);
-    insert_entry("floor", "func float", 0, 0, true, 0, 0);
-    insert_entry("ceil", "func float", 0, 0, true, 0, 0);
-    insert_entry("power", "func int", 0, 0, true, 0, 0);
-    insert_entry("sin", "func float", 0, 0, true, 0, 0);
-    insert_entry("cos", "func float", 0, 0, true, 0, 0);
     insert_func_args("printi", "int");
     insert_func_args("printf", "float");
     insert_func_args("prints", "char*");
@@ -70,14 +46,36 @@ void tab_init(){
     insert_func_args("scanf", "null");
     insert_func_args("scans", "char*,int");
     insert_func_args("malloc", "int");
-    insert_func_args("strlen", "char*");
-    insert_func_args("isqrt", "int");
-    insert_func_args("log10", "float");
-    insert_func_args("floor", "float");
-    insert_func_args("ceil", "float");
-    insert_func_args("power", "int,int");
-    insert_func_args("sin", "float");
-    insert_func_args("cos", "float");
+    if (link_lib_funcs){
+        make_symbol_table("strlen");
+        make_symbol_table("isqrt");
+        make_symbol_table("log10");
+        make_symbol_table("floor");
+        make_symbol_table("power");
+        make_symbol_table("sin");
+        make_symbol_table("cos");
+        args_to_scope("strlen", "char*", "str");
+        args_to_scope("isqrt", "int", "x");
+        args_to_scope("log10", "float", "x");
+        args_to_scope("floor", "float", "x");
+        args_to_scope("power", "int,int", "x,y");
+        args_to_scope("sin", "float", "x");
+        args_to_scope("cos", "float", "x");
+        insert_entry("strlen", "func int", 0, 0, true, 0, 0);
+        insert_entry("isqrt", "func int", 0, 0, true, 0, 0);
+        insert_entry("log10", "func float", 0, 0, true, 0, 0);
+        insert_entry("floor", "func float", 0, 0, true, 0, 0);
+        insert_entry("power", "func int", 0, 0, true, 0, 0);
+        insert_entry("sin", "func float", 0, 0, true, 0, 0);
+        insert_entry("cos", "func float", 0, 0, true, 0, 0);
+        insert_func_args("strlen", "char*");
+        insert_func_args("isqrt", "int");
+        insert_func_args("log10", "float");
+        insert_func_args("floor", "float");
+        insert_func_args("power", "int,int");
+        insert_func_args("sin", "float");
+        insert_func_args("cos", "float");
+    }
 }
 
 void set_current_tab(string func_name){

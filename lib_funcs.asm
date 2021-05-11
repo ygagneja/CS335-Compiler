@@ -1,4 +1,4 @@
-    strlen : 
+	strlen : 
 		subu $fp, $fp, $sp
 		sw $sp, -8($fp) 	 # preserve func size
 		sw $ra, -4($fp) 	 # preserve return address
@@ -317,59 +317,6 @@
 		swc1 $f10, -48($fp)
 		swc1 $f20, -44($fp)
 		sw $s0, -40($fp)
-		lw $sp, -8($fp) 	 # load caller func size
-		lw $ra, -4($fp) 	 # restore return address
-		addu $fp, $fp, $sp 	 # restore frame pointer
-		jr $ra 	 # Return
-	ceil : 
-		subu $fp, $fp, $sp
-		sw $sp, -8($fp) 	 # preserve func size
-		sw $ra, -4($fp) 	 # preserve return address
-		mov.s $f10, $f12	 # get value of x
-		li $s0, 0	 # _tmp_62 = 0
-		mtc1 $s0, $f20
-		cvt.s.w $f20, $f20
-		c.lt.s $f10, $f20	 # x <float _tmp_63 ?
-		bc1t _fp_cond_true_2
-		li $s1, 0
-		b _fp_cond_end_2
-	_fp_cond_true_2 : 
-		li $s1, 1
-	_fp_cond_end_2 : 
-		move $a0, $s1
-		swc1 $f10, -48($fp)
-		swc1 $f20, -20($fp)
-		sw $s0, -16($fp)
-		sb $s1, -9($fp)
-		bnez $a0, _lib_label_120
-		j _lib_label_123
-	_lib_label_120 :
-		lwc1 $f10, -48($fp)
-		cvt.w.s $f0, $f10
-		mfc1 $s0, $f0
-		mtc1 $s0, $f20
-		cvt.s.w $f20, $f20
-		mov.s $f0, $f20
-		j _ceil_end
-		swc1 $f10, -48($fp)
-		swc1 $f20, -28($fp)
-		sw $s0, -24($fp)
-	_lib_label_123 :
-		lwc1 $f10, -48($fp)
-		cvt.w.s $f0, $f10
-		mfc1 $s0, $f0
-		li $s1, 1	 # _tmp_68 = 1
-		add $s2, $s0, $s1	 # _tmp_69 = _tmp_67 +int _tmp_68
-		mtc1 $s2, $f20
-		cvt.s.w $f20, $f20
-		mov.s $f0, $f20
-		j _ceil_end
-	_ceil_end : 
-		swc1 $f10, -48($fp)
-		swc1 $f20, -44($fp)
-		sw $s0, -32($fp)
-		sw $s1, -36($fp)
-		sw $s2, -40($fp)
 		lw $sp, -8($fp) 	 # load caller func size
 		lw $ra, -4($fp) 	 # restore return address
 		addu $fp, $fp, $sp 	 # restore frame pointer

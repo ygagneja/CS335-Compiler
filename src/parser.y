@@ -2617,7 +2617,8 @@ int main (int argc, char* argv[]){
         return 0;
     }
     for (int i=0; i<MAX_LEVELS; i++) level_id[i] = 0;
-    tab_init();
+    bool link_lib_funcs = false;
+    tab_init(link_lib_funcs);
     graph_init();
     yyparse();
     graph_end();
@@ -2629,7 +2630,7 @@ int main (int argc, char* argv[]){
     dump_tables();
     dump_type_tables();
     dump_3ac();
-    code_gen();
+    code_gen(link_lib_funcs);
     fclose (yyin);
     fclose (ast);
     return 0;
@@ -2641,9 +2642,7 @@ int main (int argc, char* argv[]){
 // correct switch case (types + switch_type nested bug)
 // incop decop 3ac
 
-// init errors ??
 // normal syntax errors ??
-// add more warnings
 // propagate symbol names
 // else of reqd expr type condn
 // set up software like flow (dump relevant stuff)

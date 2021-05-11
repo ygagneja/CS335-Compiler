@@ -35,7 +35,7 @@ typedef struct {
 
 typedef map<tuple<string, unsigned long long, unsigned long long>, type_tab_entry*> type_tab;
 
-void tab_init();
+void tab_init(bool link_lib_funcs);
 void set_current_tab(string func_name);
 int make_symbol_table(string func_name);
 sym_tab_entry* insert_entry(string sym_name, string type, unsigned long long size, long long offset, bool init, unsigned long long level, unsigned long long level_id);
