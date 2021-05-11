@@ -110,7 +110,7 @@ string unary_type(char* op, string str){
         return string(str + "*");
     }
     else if (*op == '*' && !is_type_func(str)){
-        if (is_type_ptr(str) && !is_type_structptr(str)){
+        if (is_type_ptr(str)){
             str.pop_back();
             if (!is_type_ptr(str)) return string(str);
             else return string("null");

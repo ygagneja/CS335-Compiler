@@ -7,7 +7,7 @@ vector<quad> code_arr;
 
 string new_symbol(){
     counter++;
-    string new_sym = to_string(counter) + "_tmp";
+    string new_sym = "_tmp_" + to_string(counter);
     return new_sym;
 }
 

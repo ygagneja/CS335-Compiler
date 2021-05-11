@@ -188,7 +188,7 @@ primary_expression
                                       patch_constant(to_string($$->int_val), k);
                                     }
                                   }
-  | '(' expression ')'            {$$ = $2; }
+  | '(' expression ')'            {$$ = $2; $$->symbol = "symbol"; }
   ;
 
 postfix_expression
@@ -361,9 +361,11 @@ postfix_expression
                                                         $$->place = $$->address;
                                                       }
                                                       else {
-                                                        $$->place = newtmp(id_type, level, level_id);
-                                                        int k = emit("+ptr", $1->address, NULL, $$->place);
+                                                        $$->address = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->address, NULL, $$->address);
                                                         patch_constant(to_string(offset), k);
+                                                        $$->place = newtmp(id_type, level, level_id);
+                                                        emit("*", NULL, $$->address, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -372,6 +374,7 @@ postfix_expression
                                                       patch_constant(to_string(offset), k);
                                                       $$->place = newtmp($$->nodetype, level, level_id);
                                                       if (!is_type_struct($$->nodetype)) emit("*", NULL, $$->address, $$->place);
+                                                      else $$->place->size = 0;
                                                     }
                                                   }
                                                 }
@@ -413,9 +416,11 @@ postfix_expression
                                                         $$->place = $$->address;
                                                       }
                                                       else {
-                                                        $$->place = newtmp(id_type, level, level_id);
-                                                        int k = emit("+ptr", $1->place, NULL, $$->place);
+                                                        $$->address = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->place, NULL, $$->address);
                                                         patch_constant(to_string(offset), k);
+                                                        $$->place = newtmp(id_type, level, level_id);
+                                                        emit("*", NULL, $$->address, $$->place);
                                                       }
                                                     }
                                                     else {
@@ -424,6 +429,7 @@ postfix_expression
                                                       patch_constant(to_string(offset), k);
                                                       $$->place = newtmp($$->nodetype, level, level_id);
                                                       if (!is_type_struct($$->nodetype)) emit("*", NULL, $$->address, $$->place);
+                                                      else $$->place->size = 0;
                                                     }
                                                   }
                                                 }
@@ -434,6 +440,7 @@ postfix_expression
                                               string type = postfix_type($1->nodetype, "", 6);
                                               $$->nodetype = new char[type.size()+1];
                                               strcpy($$->nodetype, type.c_str());
+                                              $$->symbol = $1->symbol;
                                               if (type == "null"){
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
@@ -449,6 +456,7 @@ postfix_expression
                                               string type = postfix_type($1->nodetype, "", 7);
                                               $$->nodetype = new char[type.size()+1];
                                               strcpy($$->nodetype, type.c_str());
+                                              $$->symbol = $1->symbol;
                                               if (type == "null"){
                                                 error_throw = true;
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
@@ -494,6 +502,7 @@ unary_expression
                                     string type = postfix_type($2->nodetype, "", 6);
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
+                                    $$->symbol = $2->symbol;
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
@@ -517,6 +526,7 @@ unary_expression
                                     string type = postfix_type($2->nodetype, "", 7);
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
+                                    $$->symbol = $2->symbol;
                                     if (type == "null"){
                                       error_throw = true;
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
@@ -539,9 +549,10 @@ unary_expression
                                     string type = unary_type($1->label, $2->nodetype);
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
+                                    $$->symbol = $2->symbol;
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator or trying to derefer a struct pointer. Remember, multi-pointers are also not allowed\n", line, $1->label);
+                                      fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator. Remember, multi-pointers are not allowed\n", line, $1->label);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       string op($1->label);
@@ -558,7 +569,8 @@ unary_expression
                                         $$->place = newtmp(type, level, level_id);
                                         $$->address = newtmp($2->nodetype, level, level_id);
                                         emit("=", NULL, $2->place, $$->address);
-                                        emit("*", NULL, $2->place, $$->place);
+                                        if (!is_type_struct(type)) emit("*", NULL, $2->place, $$->place);
+                                        else $$->place->size = 0;
                                       }
                                       else if (op == "+"){
                                         $$->place = $2->place;
@@ -606,6 +618,7 @@ unary_operator
 cast_expression
   : unary_expression                  {$$ = $1; }
   | '(' type_name ')' cast_expression {$$ = non_terminal(0, "cast_expression", $2, $4);
+                                        $$->symbol = $4->symbol;
                                         string tmp($2->nodetype);
                                         if (!is_valid_type($2->nodetype, level, level_id)){
                                           error_throw = true;
@@ -2637,10 +2650,10 @@ int main (int argc, char* argv[]){
 }
 // exhaustive code review
 
-// same struct within struct
 // typecasting for func call
 // correct switch case (types + switch_type nested bug)
 // incop decop 3ac
+// remove void* warnings, add null
 
 // normal syntax errors ??
 // propagate symbol names

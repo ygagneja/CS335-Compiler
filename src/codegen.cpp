@@ -746,7 +746,7 @@ void code_gen(bool link_lib_funcs){
           string res_reg = get_reg(code_arr[i].res, false);
           string arg_reg = get_reg(code_arr[i].arg1);
           if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
-          else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
+          else if(code_arr[i].op == "==ptr") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
           else {
             asmb_line("c.eq.s " + reg1 + ", " + code_arr[i].constant+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].constant + " ?");
             asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
@@ -763,7 +763,7 @@ void code_gen(bool link_lib_funcs){
           reg2 = get_reg(code_arr[i].arg2);
           reg3 = get_reg(code_arr[i].res, false);
           if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].arg2->sym_name+"? 1 : 0");
-          else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
+          else if(code_arr[i].op == "==ptr") asmb_line("seq " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
           else {
             asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].arg2->sym_name + " ?");
             asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
@@ -782,7 +782,7 @@ void code_gen(bool link_lib_funcs){
         reg2 = get_reg(code_arr[i].arg2);
         reg3 = get_reg(code_arr[i].res, false);
         if(code_arr[i].op == "!=int") asmb_line("sne " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=int "+code_arr[i].arg2->sym_name+"? 1 : 0");
-        else if(code_arr[i].op == "!=ptr") asmb_line("sneu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
+        else if(code_arr[i].op == "!=ptr") asmb_line("sne " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
         else {
             asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " !=float " + code_arr[i].arg2->sym_name + " ?");
             asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
