@@ -80,7 +80,7 @@ void initialise_regs(){
   // v0 and v1 -> return values
   // a0, a1, a2, a3 -> args
   // f0 and f2 -> return values
-  // f12, f14 -> args
+  // f12, f14, f16, f18 -> args
 
   reg_to_sym["$t0"] = NULL;
   reg_to_sym["$t1"] = NULL;
@@ -104,8 +104,6 @@ void initialise_regs(){
   reg_to_sym["$f6"] = NULL;
   reg_to_sym["$f8"] = NULL;
   reg_to_sym["$f10"] = NULL;
-  reg_to_sym["$f16"] = NULL;
-  reg_to_sym["$f18"] = NULL;
   reg_to_sym["$f20"] = NULL;
   reg_to_sym["$f22"] = NULL;
   reg_to_sym["$f24"] = NULL;
@@ -448,7 +446,7 @@ void code_gen(){
       }
       else if(code_arr[i].op == "params"){ // <- params a
           // cout << "Printing params assembly \n";
-          parameters.push(code_arr[i].arg2);
+          if (code_arr[i].arg2) parameters.push(code_arr[i].arg2);
       }
       else if(code_arr[i].op == "call"){ // res <- call curr_func
         string callee = code_arr[i].arg2->sym_name;
@@ -532,12 +530,12 @@ void code_gen(){
         }
         else {
           string res_reg = get_reg(code_arr[i].res, false);
-          string arg_reg = get_reg(code_arr[i].arg2);
           long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
           offset += code_arr[i].arg2->offset;
           if (code_arr[i].arg2->level) asmb_line("subu " + res_reg + ", $fp, " + to_string(offset) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
           else asmb_line("addu " + res_reg + ", $gp, " + to_string(global_offsets[code_arr[i].arg2]) + "\t # "+code_arr[i].res->sym_name + " = &"+code_arr[i].arg2->sym_name);
           if (!is_type_ptr(code_arr[i].arg2->type) && !is_type_struct(code_arr[i].arg2->type)){
+            string arg_reg = get_reg(code_arr[i].arg2);
             if(is_type_float(code_arr[i].arg2->type)) asmb_line("swc1 " + arg_reg + ", (" + res_reg + ")" + "\t # storing in memory to avoid wild loads");
             else if(is_type_bool(code_arr[i].arg2->type) || is_type_char(code_arr[i].arg2->type)) asmb_line("sb " + arg_reg + ", (" + res_reg + ")" + "\t # storing in memory to avoid wild loads");
             else asmb_line("sw " + arg_reg + ", (" + res_reg + ")" + "\t # storing in memory to avoid wild loads");

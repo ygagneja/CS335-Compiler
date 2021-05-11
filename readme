@@ -25,3 +25,7 @@ ellipsis not allowed
 DO NOT USE BACKSLASH CHARACTERS AT ALL
 in read string if len 10 is passed, will eff read 8 chars, 1 \n 1 \0
 stack offsets are sorted and aligned
+lib funcs supported {
+    print(i,f,s), scan(i, f, s)
+    malloc, strlen, isqrt, log10, floor, ceil, power, sin, cos
+}

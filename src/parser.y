@@ -2044,7 +2044,7 @@ direct_declarator
                                                                   }
                                                                   else {
                                                                     error_throw = true;
-                                                                    fprintf(stderr, "%d |\t Error : Maximum arguments number is 6 (4 non-float and 2 float)\n", line);
+                                                                    fprintf(stderr, "%d |\t Error : Maximum arguments number is 8 (4 non-float and 4 float)\n", line);
                                                                   }
                                                                 }
                                                                 else {
@@ -2651,3 +2651,4 @@ int main (int argc, char* argv[]){
 // make test cases to display special stuff
 
 // register/code optimizations
+// pass flag to link lib funcs

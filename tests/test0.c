@@ -1,29 +1,25 @@
-int glob = 1;
-int x = glob == 1 ? 3 : glob == 3 ? 5 : 6;
-
-// Allignment error
+// void printi(int x);
+// void printf(float x);
+// void prints(char* str);
+// int scani();
+// float scanf();
+// void scans(char* str, int len);
+// void* malloc(int size);
+// int strlen(char* str);
+// int isqrt(int num);
+// float log10(float x);
+// float floor(float x);
+// float ceil(float x);
+// int power(int x, int y);
+// float sin(float x);
+// float cos(float x);
 int main(){
-    // int a = 3,b = 5;
-    // float c = 8.1, d = 1.41;
-    // bool e = true, f = false;
-    int  var1 = 20, var2 = 22; 
-    int  *ptr1 = &var1;
-    int  *ptr2 = &var2;
-    // float res1 = a + b / c - d;
-    // float res2 = e * f;
-    bool comp = *ptr1 < *ptr2;
-    // printf(res1);
-    // printf(res2);
-    printi(&var1);
-    printi(ptr1);
-    printi(*ptr1);
-    printi(var1);
-    printi(&var2);
-    printi(ptr2);
-    printi(*ptr2);
-    printi(var2);
-    printi(comp); // should be 1 but output is 0
-	printi(x);
-
-    return 0;
+	printi(strlen("hello"));
+	printi(isqrt(scani()));
+	printf(log10(scanf()));
+	printf(floor(scanf()));
+	printf(ceil(scanf()));
+	printi(power(scani(), scani()));
+	printf(sin(scanf()));
+	printf(cos(scanf()));
 }
