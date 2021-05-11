@@ -213,12 +213,12 @@
 		lwc1 $f10, -104($fp)
 		lwc1 $f20, -100($fp)
 		c.eq.s $f10, $f20	 # sum !=float old_sum ?
-		bc1t _fp_cond_true_0
+		bc1t _lib_fp_cond_true_0
 		li $s0, 1
-		b _fp_cond_end_0
-	_fp_cond_true_0 : 
+		b _lib_fp_cond_end_0
+	_lib_fp_cond_true_0 : 
 		li $s0, 0
-	_fp_cond_end_0 : 
+	_lib_fp_cond_end_0 : 
 		move $a0, $s0
 		swc1 $f10, -104($fp)
 		swc1 $f20, -100($fp)
@@ -277,12 +277,12 @@
 		mtc1 $s0, $f20
 		cvt.s.w $f20, $f20
 		c.lt.s $f10, $f20	 # x <float _tmp_54 ?
-		bc1t _fp_cond_true_1
+		bc1t _lib_fp_cond_true_1
 		li $s1, 0
-		b _fp_cond_end_1
-	_fp_cond_true_1 : 
+		b _lib_fp_cond_end_1
+	_lib_fp_cond_true_1 : 
 		li $s1, 1
-	_fp_cond_end_1 : 
+	_lib_fp_cond_end_1 : 
 		move $a0, $s1
 		swc1 $f10, -48($fp)
 		swc1 $f20, -20($fp)

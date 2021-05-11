@@ -404,7 +404,7 @@ void code_gen(bool link_lib_funcs){
       
       if(label_lines.count(i)){
         spill_regs();
-        asmb_label("_label_" + to_string(i) + " :");
+        asmb_label("_jump_label_" + to_string(i) + " :");
       }
 
       if(code_arr[i].op.substr(0, 14) == "*function end*"){
@@ -675,12 +675,12 @@ void code_gen(bool link_lib_funcs){
         else if(code_arr[i].op == "<ptr") asmb_line("sltu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " <ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
         else {
           asmb_line("c.lt.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " <float " + code_arr[i].arg2->sym_name + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
           asmb_line("li " + reg3 + ", 0");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+          asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
           asmb_line("li " + reg3 + ", 1");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
           fp_cond++;
         } 
       }
@@ -693,12 +693,12 @@ void code_gen(bool link_lib_funcs){
           else if(code_arr[i].op == ">ptr") asmb_line("sgtu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
           else {
             asmb_line("c.le.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " >float " + code_arr[i].arg2->sym_name + " ?");
-            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
             asmb_line("li " + reg3 + ", 1");
-            asmb_line("b fp_cond_end_" + to_string(fp_cond));
-            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+            asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
             asmb_line("li " + reg3 + ", 0");
-            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
             fp_cond++;
           }
       }
@@ -711,12 +711,12 @@ void code_gen(bool link_lib_funcs){
         else if(code_arr[i].op == ">=ptr") asmb_line("sgeu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " >=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
         else {
           asmb_line("c.lt.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " >=float " + code_arr[i].arg2->sym_name + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
           asmb_line("li " + reg3 + ", 1");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+          asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
           asmb_line("li " + reg3 + ", 0");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
           fp_cond++;
         }
       }
@@ -729,12 +729,12 @@ void code_gen(bool link_lib_funcs){
         else if(code_arr[i].op == "<=ptr") asmb_line("sleu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " <=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
         else {
           asmb_line("c.le.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " <=float " + code_arr[i].arg2->sym_name + " ?");
-          asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+          asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
           asmb_line("li " + reg3 + ", 0");
-          asmb_line("b fp_cond_end_" + to_string(fp_cond));
-          asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+          asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+          asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
           asmb_line("li " + reg3 + ", 1");
-          asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+          asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
           fp_cond++;
         }
       }
@@ -749,12 +749,12 @@ void code_gen(bool link_lib_funcs){
           else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
           else {
             asmb_line("c.eq.s " + reg1 + ", " + code_arr[i].constant+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].constant + " ?");
-            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
             asmb_line("li " + reg3 + ", 0");
-            asmb_line("b fp_cond_end_" + to_string(fp_cond));
-            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+            asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
             asmb_line("li " + reg3 + ", 1");
-            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
             fp_cond++;
           }
         }
@@ -766,12 +766,12 @@ void code_gen(bool link_lib_funcs){
           else if(code_arr[i].op == "==ptr") asmb_line("sequ " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
           else {
             asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].arg2->sym_name + " ?");
-            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
             asmb_line("li " + reg3 + ", 0");
-            asmb_line("b fp_cond_end_" + to_string(fp_cond));
-            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+            asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
             asmb_line("li " + reg3 + ", 1");
-            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
             fp_cond++;
           }
         }
@@ -785,12 +785,12 @@ void code_gen(bool link_lib_funcs){
         else if(code_arr[i].op == "!=ptr") asmb_line("sneu " + reg3 + ", " + reg1 + ", " + reg2 + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " !=ptr "+code_arr[i].arg2->sym_name+"? 1 : 0");
         else {
             asmb_line("c.eq.s " + reg1 + ", " + reg2+"\t # "+code_arr[i].arg1->sym_name + " !=float " + code_arr[i].arg2->sym_name + " ?");
-            asmb_line("bc1t fp_cond_true_" + to_string(fp_cond));
+            asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
             asmb_line("li " + reg3 + ", 1");
-            asmb_line("b fp_cond_end_" + to_string(fp_cond));
-            asmb_label("fp_cond_true_" + to_string(fp_cond) + " : ");
+            asmb_line("b _fp_cond_end_" + to_string(fp_cond));
+            asmb_label("_fp_cond_true_" + to_string(fp_cond) + " : ");
             asmb_line("li " + reg3 + ", 0");
-            asmb_label("fp_cond_end_" + to_string(fp_cond) + " : ");
+            asmb_label("_fp_cond_end_" + to_string(fp_cond) + " : ");
             fp_cond++;
         }
       }
@@ -860,18 +860,18 @@ void code_gen(bool link_lib_funcs){
       }
       else if(code_arr[i].op == "GOTO"){ // GOTO
         if (i>0 && code_arr[i-1].op == "GOTO IF"){
-          asmb_line("j _label_" + to_string(code_arr[i].goto_label));
+          asmb_line("j _jump_label_" + to_string(code_arr[i].goto_label));
         }
         else {
           spill_regs();
-          asmb_line("j _label_" + to_string(code_arr[i].goto_label));
+          asmb_line("j _jump_label_" + to_string(code_arr[i].goto_label));
         }
       }
       else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
         string arg_reg = get_reg(code_arr[i].arg2);
         asmb_line("move $a0, " + arg_reg);
         spill_regs();
-        asmb_line("bnez $a0, _label_" + to_string(code_arr[i].goto_label));
+        asmb_line("bnez $a0, _jump_label_" + to_string(code_arr[i].goto_label));
       }
       else if(code_arr[i].op == "inttochar"){ // Load only one byte(lower 8 bits)
         string res_reg = get_reg(code_arr[i].res, false);
