@@ -9,9 +9,10 @@ int main(){
     float res4 = f / b / c / e; // Left to right?
     float res5 = a % b / c * d;
     int res6 = h++ + g++; 
+    int res7;
     h--;
     g--;
-    int res7 = ++h + ++g; // Note difference between res6 and res7
+    res7 = ++h + ++g; // Note difference between res6 and res7
     printf(res1);
     printf(res2);
     printi(res3);

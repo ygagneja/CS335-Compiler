@@ -26,7 +26,8 @@ int main() {
             }
             res = z;
         }
-    printi(fib(num));
     printi(res);
+    printi(fib(num));
+    prints("\n");
     return 0;
 }

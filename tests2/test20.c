@@ -17,7 +17,7 @@ void newtonRaphson(float x)
 {
     float h = func(x) / derivFunc(x);
     float absh = (h >= 0) ? h : -h;
-    while (absh >= 0.001)
+    while (absh >= 0.1)
     {
         h = func(x)/derivFunc(x);
   
@@ -26,13 +26,13 @@ void newtonRaphson(float x)
     }
  
     prints("Root is:");
-    printi(x);
+    printf(x);
 }
  
 // Driver program to test above
 int main()
 {
-    float x0 = -20; // Initial values assumed
+    float x0 = 20; // Initial values assumed
     newtonRaphson(x0);
     return 0;
 }

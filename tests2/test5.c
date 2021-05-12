@@ -3,13 +3,13 @@
 int main()
 {
     int var1, var2, var3, var4;
-    prints("Input the value of var1:");
+    prints("Input the value of var1: ");
     var1 = scani();
-    prints("Input the value of var2:");
+    prints("Input the value of var2: ");
     var2 = scani();
-    prints("Input the value of var3:");
+    prints("Input the value of var3: ");
     var3 = scani();
-    prints("Input the value of var4:");
+    prints("Input the value of var4: ");
     var4 = scani();
     
     if (var1 != var2)
@@ -67,7 +67,7 @@ int main()
     }
     else
     {
-        prints("var1 is equal to var2. So I will not compare var3 and var4.");
+        prints("var1 is equal to var2.. ignoring var3 and var4.");
     }
     return 0;
 }

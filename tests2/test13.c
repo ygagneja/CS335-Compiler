@@ -1,6 +1,4 @@
 // Code to test Binary tree traversal (Dynamic Memory)
-void printf(char* str, ...);
-void scanf(char* str, ...);
 
 struct node {
    int data; 
@@ -9,10 +7,10 @@ struct node {
    void *rightChild;
 };
 
-struct node *root = 0;
+struct node *root = NULL;
 
 void insert(int data) {
-   struct node *tempNode = (struct node*) malloc(sizeof(struct node));
+   struct node *tempNode = malloc(sizeof(struct node));
    struct node *current;
    struct node *parent;
 
@@ -21,11 +19,11 @@ void insert(int data) {
    tempNode->rightChild = 0;
 
    //if tree is empty
-   if(root == 0) {
+   if(root == NULL) {
       root = tempNode;
    } else {
       current = root;
-      parent = 0;
+      parent = NULL;
 
       while(1) { 
          parent = current;
@@ -35,7 +33,7 @@ void insert(int data) {
             current = current->leftChild;                
             
             //insert to the left
-            if(current == 0) {
+            if(current == NULL) {
                parent->leftChild = tempNode;
                return;
             }
@@ -44,7 +42,7 @@ void insert(int data) {
             current = current->rightChild;
 
             //insert to the right
-            if(current == 0) {
+            if(current == NULL) {
                parent->rightChild = tempNode;
                return;
             }
@@ -58,7 +56,7 @@ struct node* search(int data) {
    prints("Visiting elements: ");
 
    while(current->data != data) {
-      if(current != 0)
+      if(current != NULL)
          printi(current->data); 
 
       //go to left tree
@@ -71,7 +69,7 @@ struct node* search(int data) {
       }
 
       //not found
-      if(current == 0) {
+      if(current == NULL) {
          return 0;
       }
    }
@@ -80,7 +78,7 @@ struct node* search(int data) {
 }
 
 void pre_order_traversal(struct node* root) {
-   if(root != 0) {
+   if(root != NULL) {
       printi(root->data);
       pre_order_traversal(root->leftChild);
       pre_order_traversal(root->rightChild);
@@ -88,7 +86,7 @@ void pre_order_traversal(struct node* root) {
 }
 
 void inorder_traversal(struct node* root) {
-   if(root != 0) {
+   if(root != NULL) {
       inorder_traversal(root->leftChild);
       printi(root->data);          
       inorder_traversal(root->rightChild);
@@ -96,7 +94,7 @@ void inorder_traversal(struct node* root) {
 }
 
 void post_order_traversal(struct node* root) {
-   if(root != 0) {
+   if(root != NULL) {
       post_order_traversal(root->leftChild);
       post_order_traversal(root->rightChild);
       printi(root->data);
@@ -106,9 +104,10 @@ void post_order_traversal(struct node* root) {
 int main() {
    int i;
    int n; // number of elements
-   prints("Enter number of elements, n = :");
+   struct node* temp;
+   prints("Enter number of elements, n = ");
    n = scani();
-   printi("Enter n numbers : ");
+   prints("Enter n numbers : ");
    for(i = 0; i < n; i++)
    {
       int x;
@@ -117,7 +116,7 @@ int main() {
    }
    prints("Enter element to search for in the tree: ");
    i = scani();
-   struct node * temp = search(i);
+   temp = search(i);
 
    if(temp != 0) {
       prints("given element found in the tree.");

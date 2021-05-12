@@ -1,15 +1,13 @@
 //Linear search in a linked list (Program to test Dynamic Memory)
-/* Node structure */
+
 struct node
 {
     int data;          // Data
     void* next; // Address
 };
 
-struct node* head;
-/**
- * Create a list of n nodes
- */
+struct node* head = NULL;
+
 void createList(int n)
 {
     struct node *newNode, *temp;
@@ -17,83 +15,60 @@ void createList(int n)
 
     head = malloc(sizeof(struct node));
 
-    /*
-     * Unable to allocate memory, hence exit from app.
-     */
-    if (head == 0)
+    if (head == NULL)
     {
         prints("Unable to allocate memory. terminating program.");
-        exit(0);
+        exit();
     }
-    
 
-    /* Input head node data from user */
     prints("Enter data of node 1: ");
     data = scani();
 
     head->data = data; // Link data field with data
-    head->next = 0; // Link address field to 0
+    head->next = NULL; // Link address field to 0
 
     temp = head;
 
-    /*
-     * Create n nodes and add to the list
-     */
     for (i = 2; i <= n; i++)
     {
         newNode = malloc(sizeof(struct node));
 
         /* If memory is not allocated for newNode */
-        if (newNode == 0)
+        if (newNode == NULL)
         {
             prints("Unable to allocate memory. Terminating program.");
-            exit(0);
+            exit();
         }
 
-        prints("Enter data of node : ");
+        prints("Enter data for node : ");
         data = scani();
 
         newNode->data = data; // Link data field of newNode
-        newNode->next = 0; // The newNode should point to nothing
+        newNode->next = NULL; // The newNode should point to nothing
 
         temp->next = newNode; // Link previous node i.e. temp to the newNode
         temp = temp->next;
     }
-    
 }
 
-
-/**
- * Display entire list
- */
 void displayList()
 {
     struct node *temp;
 
-    /*
-     * If the list is empty i.e. head = 0,
-     * dont perform any action and return.
-     */
-    if (head == 0)
+    if (head == NULL)
     {
         prints("List is empty");
         return;
     }
-    
+
     temp = head;
-    while (temp != 0)
+    while (temp != NULL)
     {
         printi(temp->data);
         temp = temp->next;  // Move to next node
     }
 }
 
-
-/**
- * Search an element with given key in linked list.
- * It return a positive integer specifying index of the element 
- * on success, otherwise returns -1.
- */
 int search(int key)
 {
     int index;
@@ -103,14 +78,13 @@ int search(int key)
     curNode = head;
 
     // Iterate till last element until key is not found
-    while (curNode != 0 && curNode->data != key)
+    while (curNode != NULL && curNode->data != key)
     {
         index++;
         curNode = curNode->next;
     }
-
-
-    return (curNode != 0) ? index : -1;
+    
+    return (curNode != NULL) ? index : -1;
 }
 
 int main()
@@ -118,7 +92,7 @@ int main()
     int n, keyToSearch, index;
 
     // Input node count to create
-    prints("Enter number of node to create: ");
+    prints("Enter number of node to create list of: ");
     n = scani();
 
     createList(n);

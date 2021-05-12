@@ -26,11 +26,11 @@ int main()
 
     // User input search
     int x;
-    prints("Enter array of size 5:");
+    prints("Enter array of size 5 (array should be sorted):\n");
     for(i = 0; i < size; i++){
         arr[i] = scani();
     }
-    prints("Enter element to search in the array:");
+    prints("Enter element to search in the array: ");
     x = scani();
     result = binarySearch(arr, 0, size-1, x);
     if (result == -1)

@@ -10,7 +10,7 @@ int main(){
 
     // Break stmt
     for(i = 0; i < 1000; i++){
-        printf(i);
+        printi(i);
         if(i == 2) break;
     }
 

@@ -879,7 +879,7 @@ void code_gen(bool link_lib_funcs){
       else if(code_arr[i].op == "chartofloat"){
         string res_reg = get_reg(code_arr[i].res, false);
         string arg_reg = get_reg(code_arr[i].arg2);
-        asmb_line("mtc1 " + arg_reg + ", " + arg_reg); // Intreg to floatreg
+        asmb_line("mtc1 " + arg_reg + ", " + res_reg); // Intreg to floatreg
         asmb_line("cvt.s.w " + res_reg + ", " + res_reg); // Convert int to float
       }
       else if(code_arr[i].op == "chartoint"){

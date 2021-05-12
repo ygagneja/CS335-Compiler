@@ -44,7 +44,7 @@ int main()
         list[i] = scani();
     } 
     quicksort(list, 0, size - 1);
-    prints("After applying quick sort\n");
+    prints("Array after applying quick sort : ");
     for (i = 0; i < size; i++)
     {
         printi(list[i]);

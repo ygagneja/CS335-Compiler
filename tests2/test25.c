@@ -35,5 +35,5 @@ int main(){
 
     printi(c1);
     c1 = func2(c1, (int)d);
-    func3(func(3, 5), func2(5, 4));
+    func3(func2(3, 5), func2(5, 4));
 }

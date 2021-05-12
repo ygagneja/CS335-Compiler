@@ -12,10 +12,10 @@ int A(int m, int n)
 int main()
 {
     int m,n;
-    prints("Enter two numbers ::");
-    m = scani();
+    prints("Enter two numbers:\n");
+    m = scani();// 2 2 expected output : 7
     n = scani();
-    prints("\nAckerman Output ::");
+    prints("\nAckerman Output :: ");
     printi(A(m, n));
     return 0;
 }

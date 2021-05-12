@@ -29,21 +29,6 @@ int main () {
  
    prints("Max value is");
    printi(ret);
-
-   ret = max(100, 50, 20, 150, 180, 200);
- 
-   prints("Max value is");
-   printi(ret);
-
-   ret = max(100.3, 50.6, 20.434, 150.212, 180, 200);
- 
-   prints("Max value is");
-   printi(ret);
-
-   ret = max(100.3, 50.6, 20.434, 150.212, 180.2, 200.5);
- 
-   prints("Max value is");
-   printi(ret);
  
    return 0;
 }

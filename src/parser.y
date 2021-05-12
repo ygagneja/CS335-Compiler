@@ -673,7 +673,8 @@ unary_expression
                                         $$->place = $2->place;
                                       }
                                       else if (op == "-"){
-                                        qid t = emit_assignment("int", $2->nodetype, $2->place, level, level_id, line);
+                                        $$->place = newtmp(type, level, level_id);
+                                        qid t = emit_assignment(type, $2->nodetype, $2->place, level, level_id, line);
                                         emit($1->label, NULL, t, $$->place);
                                       }
                                       else {
@@ -1678,7 +1679,6 @@ declaration
                                                         t_name = "";
                                                       }
   | declaration_specifiers init_declarator_list ';'   {$$ = non_terminal(0, "declaration", $1, $2);
-                                                        // cout << "entered declaration\n";
                                                         t_name = "";
                                                         if ($2->expr_type == 2){
                                                           if (decl_track.find($2->symbol) != decl_track.end()){
@@ -1692,7 +1692,6 @@ declaration
                                                         if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                           $$->nextlist = copy($2->nextlist);
                                                         }
-                                                        // cout << "exited declaration\n";
                                                       }
   ;
 
@@ -2067,7 +2066,6 @@ declarator
 
 direct_declarator
 	: IDENTIFIER            {
-                            // cout << "entered id\n";
 														$$ = terminal($1);
                             $$->expr_type = 1;
                             string id($1);
@@ -2088,7 +2086,6 @@ direct_declarator
                               qid t = NULL;
                               $$->place = t;
                             }
-                            // cout << "exited id\n";
 													}
   | direct_declarator '[' INT_C ']'                 {$$ = non_terminal(0, "direct_declarator", $1, terminal("INT_C"), NULL, NULL, NULL, "[]");
                                                       $$->symbol = $1->symbol;
@@ -2598,8 +2595,38 @@ jump_statement
                                 }
 
                                 if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                  qid tmp = emit_assignment(type, $2->nodetype, $2->place, level, level_id, line);
-                                  int k = emit("RETURN", NULL, tmp, NULL);
+                                  if ($2->truelist || $2->falselist){
+                                    qid tmp = newtmp("bool", level, level_id);
+                                    if ($2->truelist && $2->falselist){
+                                      int k0 = emit("=", NULL, NULL, tmp);
+                                      patch_constant("1", k0);
+                                      int k1 = emit("GOTO", NULL, NULL, NULL);
+                                      int k2 = emit("=", NULL, NULL, tmp);
+                                      patch_constant("0", k2);
+                                      backpatch($2->truelist, k0);
+                                      backpatch($2->falselist, k2);
+                                      $2->nextlist = insert($2->nextlist, k1);
+                                      backpatch($2->nextlist, nextinstr());
+                                    }
+                                    else if ($2->truelist){
+                                      int k0 = emit("=", NULL, NULL, tmp);
+                                      patch_constant("1", k0);
+                                      backpatch($2->truelist, k0);
+                                    }
+                                    else if ($2->falselist){
+                                      int k0 = emit("=", NULL, NULL, tmp);
+                                      patch_constant("0", k0);
+                                      backpatch($2->falselist, k0);
+                                    }
+
+                                    qid tmp1 = emit_assignment(type, "bool", tmp, level, level_id, line);
+                                    int k = emit("RETURN", NULL, tmp1, NULL);
+                                  }
+                                  else {
+                                    backpatch($2->nextlist, nextinstr());
+                                    qid tmp = emit_assignment(type, $2->nodetype, $2->place, level, level_id, line);
+                                    int k = emit("RETURN", NULL, tmp, NULL);
+                                  }
                                 }
                               }
 	;

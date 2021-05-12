@@ -7,7 +7,7 @@ int main()
     
     number = 10;
     
-    prints("Enter an array of size 10:  ");
+    prints("Enter an array of size 10:\n");
     for(i = 0; i < number; i++)
         a[i] = scani();
 

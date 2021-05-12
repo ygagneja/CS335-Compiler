@@ -21,5 +21,6 @@ int main(){
         res = true;
     }
     printi(b);
+    prints("\n");
     return 0;
 }

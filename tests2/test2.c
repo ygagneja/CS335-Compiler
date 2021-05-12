@@ -19,7 +19,7 @@ int main(){
     printi(arr[4]);
     printi(arr[8]);
 
-    a += a+b-i*a;
+    a += a+i*b-a;
     printi(a);
     a <<= 1;
     printi(a);
@@ -43,7 +43,6 @@ int main(){
     printf(res1);
     printf(res2);
     printi(comp);
-    printi(&var1);
-    printi(ptr1);
+    prints("\n");
     return 0;
 }
