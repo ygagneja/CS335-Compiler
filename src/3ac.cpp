@@ -286,27 +286,28 @@ void emit_assignment_multi(string op, string str1, string str2, qid place1, qid 
 }
 
 void dump_3ac(){
+    ofstream out_file("./out/out.3ac");
     int i = 0;
     for (quad q : code_arr){
-        cout << i << ".\t";
+        out_file << i << ".\t";
         if (q.res){
-            cout << q.res->sym_name;
+            out_file << q.res->sym_name;
         }
         else if (q.op == "GOTO" || q.op == "GOTO IF"){
-            cout << q.goto_label;
+            out_file << q.goto_label;
         }
-        cout << " <- ";
+        out_file << " <- ";
         if (q.arg1){
-            cout << q.arg1->sym_name;
+            out_file << q.arg1->sym_name;
         }
-        cout << " " << q.op << " ";
+        out_file << " " << q.op << " ";
         if (q.arg2){
-            cout << q.arg2->sym_name;
+            out_file << q.arg2->sym_name;
         }
         else {
-            cout << q.constant;
+            out_file << q.constant;
         }
-        cout << endl;
+        out_file << endl;
         i++;
     }
 }

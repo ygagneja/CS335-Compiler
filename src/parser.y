@@ -2712,7 +2712,7 @@ void yyerror(char* s){
 void usage_info(){
     printf("Specify -help for usage info\n");
     printf("Specify test program with -i flag\n");
-    printf("Specify output file with -o flag\n");
+    printf("Provide -link flag to link library functions\n");
     return;
 }
 
@@ -2722,6 +2722,7 @@ int main (int argc, char* argv[]){
         usage_info();
         return 0;
     }
+    bool link_lib_funcs = false;
     yyin = NULL;
     ast = NULL;
     for(int i = 0; i < argc-1; i++){
@@ -2729,17 +2730,14 @@ int main (int argc, char* argv[]){
             usage_info();
             return 0;
         }
-        if(i == argc-2){
-            usage_info();
-            return 0;
-        }
         if(!strcmp(argv[i+1], "-i")){
             yyin = fopen(argv[i+2], "r");
             i++;
-        }else if(!strcmp(argv[i+1], "-o")){
-            ast = fopen(argv[i+2], "w");
-            i++;
-        }else{
+        }
+        else if(!strcmp(argv[i+1], "-link")){
+            link_lib_funcs = true;
+        }
+        else{
             usage_info();
             return 0;
         }
@@ -2748,19 +2746,15 @@ int main (int argc, char* argv[]){
         printf("Please specify a valid input file\n");
         return 0;
     }
-    if (ast == NULL){
-        printf("Please specify an output file\n");
-        return 0;
-    }
+    ast = fopen("./out/tree.ast", "w");
     for (int i=0; i<MAX_LEVELS; i++) level_id[i] = 0;
-    bool link_lib_funcs = false;
     tab_init(link_lib_funcs);
     graph_init();
     yyparse();
     graph_end();
     if (error_throw){
-      // remove ast
-      exit(0);
+      remove("./out/tree.ast");
+      return 0;
     }
     sort_and_align_offsets();
     dump_tables();
@@ -2776,7 +2770,5 @@ int main (int argc, char* argv[]){
 // correct switch case (types + switch_type nested bug)
 
 // else of reqd expr type condn
-// set up software like flow (dump relevant stuff)
 // documentation and readme
 // make test cases to display special stuff
-// pass flag to link lib funcs

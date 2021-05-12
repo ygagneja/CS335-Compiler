@@ -3,10 +3,13 @@ LEX=flex
 YACC=bison
 .PHONY: all clean
 
-all: ./bin/parser
+all: ./bin/compiler
 
-./bin/parser : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.* ./src/type_check.* ./src/sym_table.* ./src/3ac.* ./src/codegen.*
+./bin/compiler : ./src/lex.yy.c ./src/parser.tab.c ./src/nodes.* ./src/type_check.* ./src/sym_table.* ./src/3ac.* ./src/codegen.*
 	mkdir -p bin
+	mkdir -p out
+	mkdir -p ./out/sym_tables
+	mkdir -p ./out/type_tables
 	$(CC) $^ -o $@ -I ./src
 
 ./src/parser.tab.c : ./src/parser.y
@@ -15,18 +18,8 @@ all: ./bin/parser
 ./src/lex.yy.c : ./src/lexer.l
 	$(LEX) -o $@ $^
 
-# ./src/nodes.o : ./src/nodes.cpp ./src/nodes.h
-# 	$(CC) -c $^ -o $@
-
-# ./src/type_check.o : ./src/type_check.cpp ./src/type_check.h
-# 	$(CC) -c $^ -o $@
-
-# ./src/sym_table.o : ./src/sym_table.cpp ./src/sym_table.h
-# 	$(CC) -c $^ -o $@
-
 clean:
 	rm -rf ./src/lex.yy.c ./src/parser.tab.* ./src/*.o
 	rm -rf bin
-	rm -rf *.dot
-	rm -rf *.ps
-	rm -rf *.csv
+	rm -rf out
+	rm -rf *.ast *.ps *.csv *.asm *.3ac

@@ -1,10 +1,10 @@
 bin/*
+out/*
 src/lex.yy.c
-src/nodes.o
-src/type_check.o
-src/sym_table.o
-src/parser.tab.c
-src/parser.tab.h
-*.dot
+src/parser.tab.*
+src/*.o
+*.ast
 *.ps
 *.csv
+*.asm
+*.3ac

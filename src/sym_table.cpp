@@ -364,39 +364,31 @@ string get_func_ret_type(string func_name){
 }
 
 void dump_tables(){
-    cout << "\nGLOBAL SYMBOL TABLE\n";
-    // string glob = "global_sym_table.csv";
-    // ofstream out_file(glob);
-    cout << "sym_name,type,size,offset,init,level,level_id\n";
+    ofstream out_file("./out/sym_tables/global_sym_table.csv");
+    out_file << "sym_name,type,size,offset,level,level_id\n";
     for (auto itr : global_sym_tab){
-        cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
+        out_file << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->level << "," << itr.second->level_id << "\n";
     }
-    cout << endl;
     for (auto table : func_sym_tab_map){
-        cout << "\nFUNCTION : " << table.first << " SYMBOL TABLE\n";
-        // string filename = table.first + "_table.csv";
-        // ofstream out_file(filename);
-        cout << "sym_name,type,size,offset,init,level,level_id\n";
+        ofstream out_file("./out/sym_tables/" + table.first + "_sym_table.csv");
+        out_file << "sym_name,type,size,offset,level,level_id\n";
         for (auto itr : *(table.second)){
-            cout << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->init << "," << itr.second->level << "," << itr.second->level_id << "\n";
+            out_file << itr.second->sym_name << "," << itr.second->type << "," << itr.second->size << "," << itr.second->offset << "," << itr.second->level << "," << itr.second->level_id << "\n";
         }
-        cout << endl;
     }
 }
 
 void dump_type_tables(){
-    cout << "\nGLOBAL TYPE TABLE\n";
-    cout << "sym_name,size,level,level_id\n";
+    ofstream out_file("./out/type_tables/global_type_table.csv");
+    out_file << "sym_name,size,level,level_id\n";
     for (auto itr : global_type_tab){
-        cout << itr.second->type_name  << "," << itr.second->size << "," << itr.second->level << "," << itr.second->level_id << "\n";
+        out_file << itr.second->type_name  << "," << itr.second->size << "," << itr.second->level << "," << itr.second->level_id << "\n";
     }
-    cout << endl;
     for (auto table : func_type_tab_map){
-        cout << "\nFUNCTION : " << table.first << " TYPE TABLE\n";
-        cout << "sym_name,size,level,level_id\n";
+        ofstream out_file("./out/type_tables/" + table.first + "_type_table.csv");
+        out_file << "sym_name,size,level,level_id\n";
         for (auto itr : *(table.second)){
-            cout << itr.second->type_name  << "," << itr.second->size << "," << itr.second->level << "," << itr.second->level_id << "\n";
+            out_file << itr.second->type_name  << "," << itr.second->size << "," << itr.second->level << "," << itr.second->level_id << "\n";
         }
-        cout << endl;
     }
 }

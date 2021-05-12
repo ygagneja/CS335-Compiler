@@ -48,23 +48,23 @@ int main(){
 	// (*(arr[5].s)).k = 3.4;
 	// (*(arr[5].s)).k++;
 	// printi(arr[5].x++); printf(arr[5].s->m++); printf(++arr[5].s->k);
-	// int i;
-	// struct list* curr;
-	// struct list* prev;
-	// struct list* head = malloc(sizeof(struct list));
-	// head->val = 0;
-	// head->next = NULL;
-	// prev = head;
-	// for (i = 1; i<5; ){
-	// 	curr = insert_node(i);
-	// 	prev->next = curr;
-	// 	prev = curr;
-	// 	i += 1;
-	// }
-	// while (head != NULL){
-	// 	printi(head->val);
-	// 	head = head->next;
-	// }
+	int i;
+	struct list* curr;
+	struct list* prev;
+	struct list* head = malloc(sizeof(struct list));
+	head->val = 0;
+	head->next = NULL;
+	prev = head;
+	for (i = 1; i<5; ){
+		curr = insert_node(i);
+		prev->next = curr;
+		prev = curr;
+		i += 1;
+	}
+	while (head != NULL){
+		printi(head->val);
+		head = head->next;
+	}
 	prints(str);
 	printi(1);
 	printf(1.2);

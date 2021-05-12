@@ -51,12 +51,12 @@ void asmb_line(string s){
 }
 
 void dump_asm_code(bool link_lib_funcs){
-  ofstream out_file("out.asm");
+  ofstream out_file("./out/out.asm");
   for(string it : assembly_code){
     out_file << it << endl;
     if (it == ".text\n" && link_lib_funcs){
       string line;
-      ifstream libfile("lib_funcs.asm");
+      ifstream libfile("./src/lib_funcs.asm");
       while (getline(libfile, line)) {
         out_file << line << endl;
       }
