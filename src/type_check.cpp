@@ -43,6 +43,17 @@ bool is_type_structptr(string str){
     return false;
 }
 
+int get_real_size(string s){
+  int len = 0;
+  for (int i=0; i<s.size(); i++){
+    if (s[i] == '\\'){
+        if (i+1 < (int)s.size() && s[i+1] == 't' || s[i+1] == 'v' || s[i+1] == 'n' || s[i+1] == 'f') continue;
+    }
+    len++;
+  }
+  return len;
+}
+
 string is_valid(string str1, string str2){
     if (str1 == "null" || str2 == "null") return string("1");
     if (str1 == str2){

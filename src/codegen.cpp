@@ -3,14 +3,13 @@
 #include "type_check.h"
 
 extern sym_tab global_sym_tab;
-extern map<string, sym_tab*> func_sym_tab_map;
-extern map<string, vector<sym_tab_entry*>> func_syms_map;
-extern map<string, long long> max_offsets;
+extern unordered_map<string, sym_tab*> func_sym_tab_map;
+extern unordered_map<string, vector<sym_tab_entry*>> func_syms_map;
+extern unordered_map<string, long long> max_offsets;
 
-map <string, qid> reg_to_sym;
-map <qid, string> sym_to_place;
-queue <string> regs_in_use;
-queue <string> fregs_in_use;
+unordered_map <string, qid> reg_to_sym;
+unordered_map <string, qid> f_reg_to_sym;
+map <qid, long long> next_use;
 
 string reg1, reg2, reg3;
 string curr_func;
@@ -75,14 +74,6 @@ void dump_asm_code(bool link_lib_funcs){
 }
 
 void initialise_regs(){
-  for (auto itr : global_sym_tab){
-    sym_to_place[(qid)itr.second] = "";
-  }
-  for (auto table : func_sym_tab_map){
-    for (auto itr : *(table.second)){
-      sym_to_place[(qid)itr.second] = "";
-    }
-  }
   // do not initialize the commented regs since they are reserved for special ops
   // gp, fp, ra, sp -> reserved regs
   // v0 and v1 -> return values
@@ -108,32 +99,57 @@ void initialise_regs(){
   reg_to_sym["$s5"] = NULL;
   reg_to_sym["$s6"] = NULL;
   reg_to_sym["$s7"] = NULL;
-  reg_to_sym["$f4"] = NULL;
-  reg_to_sym["$f6"] = NULL;
-  reg_to_sym["$f8"] = NULL;
-  reg_to_sym["$f10"] = NULL;
-  reg_to_sym["$f20"] = NULL;
-  reg_to_sym["$f22"] = NULL;
-  reg_to_sym["$f24"] = NULL;
-  reg_to_sym["$f26"] = NULL;
-  reg_to_sym["$f28"] = NULL;
-  reg_to_sym["$f30"] = NULL;
+  f_reg_to_sym["$f4"] = NULL;
+  f_reg_to_sym["$f6"] = NULL;
+  f_reg_to_sym["$f8"] = NULL;
+  f_reg_to_sym["$f10"] = NULL;
+  f_reg_to_sym["$f20"] = NULL;
+  f_reg_to_sym["$f22"] = NULL;
+  f_reg_to_sym["$f24"] = NULL;
+  f_reg_to_sym["$f26"] = NULL;
+  f_reg_to_sym["$f28"] = NULL;
+  f_reg_to_sym["$f30"] = NULL;
+}
+
+string store_reg(string type){
+  long long min_next_use = LONG_MAX;
+  if (is_type_float(type)){
+    for (auto itr : f_reg_to_sym){
+      min_next_use = min(next_use[itr.second], min_next_use);
+    }
+    for (auto itr : f_reg_to_sym){
+      if (next_use[itr.second] == min_next_use) return itr.first;
+    }
+  }
+  else {
+    for (auto itr : reg_to_sym){
+      min_next_use = min(next_use[itr.second], min_next_use);
+    }
+    for (auto itr : reg_to_sym){
+      if (next_use[itr.second] == min_next_use) return itr.first;
+    }
+  }
 }
 
 string get_reg(void* tmp, bool from_mem){
   qid sym = (qid)tmp;
-  // cout << t -> sym_name << " " << t -> offset << endl;
-  if (sym_to_place[sym] != ""){
-    return sym_to_place[sym];
+  next_use[sym]--;
+  if (is_type_float(sym->type)){
+    for (auto itr : f_reg_to_sym){
+      if (itr.second == sym) return itr.first;
+    }
+  }
+  else {
+    for (auto itr : reg_to_sym){
+      if (itr.second == sym) return itr.first;
+    }
   }
   long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
   if (is_type_float(sym->type)){
-    for (auto itr : reg_to_sym){
-      if (itr.first.substr(0, 2) == "$f" && itr.second == NULL){
+    for (auto itr : f_reg_to_sym){
+      if (itr.second == NULL){
         // free reg available
-        fregs_in_use.push(itr.first);
-        reg_to_sym[itr.first] = sym;
-        sym_to_place[sym] = itr.first;
+        f_reg_to_sym[itr.first] = sym;
         // load val from memory to reg
         offset += sym->offset;
         if (from_mem){
@@ -149,19 +165,17 @@ string get_reg(void* tmp, bool from_mem){
       }
     }
     // no free reg available
-    string reg = fregs_in_use.front();
-    fregs_in_use.pop();
+    string reg = store_reg("float");
     // store val from reg to memory
-    offset += reg_to_sym[reg]->offset;
-    if (reg_to_sym[reg]->level){
+    offset += f_reg_to_sym[reg]->offset;
+    if (f_reg_to_sym[reg]->level){
       asmb_line("swc1 " + reg + ", " + to_string(-offset) + "($fp)");
     }
     else {
-      asmb_line("swc1 " + reg + ", " + to_string(global_offsets[reg_to_sym[reg]]) + "($gp)");
+      asmb_line("swc1 " + reg + ", " + to_string(global_offsets[f_reg_to_sym[reg]]) + "($gp)");
     }
-    sym_to_place[reg_to_sym[reg]] = "";
     // load val from memory to reg
-    offset -= reg_to_sym[reg]->offset;
+    offset -= f_reg_to_sym[reg]->offset;
     offset += sym->offset;
     if (from_mem){
       if (sym->level){
@@ -171,18 +185,14 @@ string get_reg(void* tmp, bool from_mem){
         asmb_line("lwc1 " + reg + ", " + to_string(global_offsets[sym]) + "($gp)");
       }
     }
-    sym_to_place[sym] = reg;
-    fregs_in_use.push(reg);
-    reg_to_sym[reg] = sym;
+    f_reg_to_sym[reg] = sym;
     return reg;
   }
   else {
     for (auto itr : reg_to_sym){
-      if (itr.first.substr(0, 2) != "$f" && itr.second == NULL){
+      if (itr.second == NULL){
         // free reg available
-        regs_in_use.push(itr.first);
         reg_to_sym[itr.first] = sym;
-        sym_to_place[sym] = itr.first;
         // load val from memory to reg
         offset += sym->offset;
         if (from_mem){
@@ -208,8 +218,7 @@ string get_reg(void* tmp, bool from_mem){
       }
     }
     // no free reg available
-    string reg = regs_in_use.front();
-    regs_in_use.pop();
+    string reg = store_reg("int");
     // store val from reg to memory
     offset += reg_to_sym[reg]->offset;
     if(is_type_char(reg_to_sym[reg]->type) || is_type_bool(reg_to_sym[reg]->type)){
@@ -228,7 +237,6 @@ string get_reg(void* tmp, bool from_mem){
         asmb_line("sw " + reg + ", " + to_string(global_offsets[reg_to_sym[reg]]) + "($gp)");
       }
     } 
-    sym_to_place[reg_to_sym[reg]] = "";
     // load val from memory to reg
     offset -= reg_to_sym[reg]->offset;
     offset += sym->offset;
@@ -251,8 +259,6 @@ string get_reg(void* tmp, bool from_mem){
         }
       } 
     }
-    sym_to_place[sym] = reg;
-    regs_in_use.push(reg);
     reg_to_sym[reg] = sym;
     return reg;
   }
@@ -260,6 +266,19 @@ string get_reg(void* tmp, bool from_mem){
 
 void spill_regs(){
   long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
+  for(auto itr : f_reg_to_sym){
+    if(itr.second){
+      offset += itr.second->offset;
+      if (itr.second->level){
+        asmb_line("swc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
+      }
+      else {
+        asmb_line("swc1 " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+      }
+      offset -= itr.second->offset;
+      f_reg_to_sym[itr.first] = NULL;
+    }
+  }
   for(auto itr : reg_to_sym){
     if(itr.second){
       offset += itr.second->offset;
@@ -271,14 +290,6 @@ void spill_regs(){
           asmb_line("sb " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
         }
       }
-      else if (is_type_float(itr.second->type)){
-        if (itr.second->level){
-          asmb_line("swc1 " + itr.first + ", " + to_string(-offset) + "($fp)");
-        }
-        else {
-          asmb_line("swc1 " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
-        }
-      }
       else {
         if (itr.second->level){
           asmb_line("sw " + itr.first + ", " + to_string(-offset) + "($fp)");
@@ -288,25 +299,26 @@ void spill_regs(){
         }
       }
       offset -= itr.second->offset;
-      sym_to_place[itr.second] = "";
       reg_to_sym[itr.first] = NULL;
     }
   }
 }
 
 void spill_global_regs(){
+  for(auto itr : f_reg_to_sym){
+    if(itr.second && itr.second->level == 0){
+      asmb_line("swc1 " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
+      f_reg_to_sym[itr.first] = NULL;
+    }
+  }
   for(auto itr : reg_to_sym){
     if(itr.second && itr.second->level == 0){
       if (is_type_char(itr.second->type) || is_type_bool(itr.second->type)){
         asmb_line("sb " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
       }
-      else if (is_type_float(itr.second->type)){
-        asmb_line("swc1 " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
-      }
       else {
         asmb_line("sw " + itr.first + ", " + to_string(global_offsets[itr.second]) + "($gp)");
       }
-      sym_to_place[itr.second] = "";
       reg_to_sym[itr.first] = NULL;
     }
   }
@@ -354,7 +366,7 @@ void code_gen(bool link_lib_funcs){
   asmb_label("printi : ");
   asmb_line("li $v0, 1");
   asmb_line("syscall");
-  asmb_line("li $a0, 0xA");
+  asmb_line("li $a0, 0x20");
   asmb_line("li $v0, 11");
   asmb_line("syscall");
   asmb_line("jr $ra");
@@ -362,7 +374,7 @@ void code_gen(bool link_lib_funcs){
   asmb_label("printf : ");
   asmb_line("li $v0, 2");
   asmb_line("syscall");
-  asmb_line("li $a0, 0xA");
+  asmb_line("li $a0, 0x20");
   asmb_line("li $v0, 11");
   asmb_line("syscall");
   asmb_line("jr $ra");
@@ -370,32 +382,38 @@ void code_gen(bool link_lib_funcs){
   asmb_label("prints : ");
   asmb_line("li $v0, 4");
   asmb_line("syscall");
-  asmb_line("li $a0, 0xA");
-  asmb_line("li $v0, 11");
-  asmb_line("syscall");
   asmb_line("jr $ra");
   // malloc assembly
   asmb_label("malloc : ");
   asmb_line("li $v0, 9");
   asmb_line("syscall");
   asmb_line("jr $ra");
+  // exit assembly
+  asmb_label("exit : ");
+  asmb_line("li $v0, 10");
+  asmb_line("syscall");
 
   glob_scope = true;
 
   // Store goto label locations to create label in assembly
   unordered_set<int> label_lines;
-  for (int i=0; i<code_arr.size(); i++){
+  for (long long i=0; i<code_arr.size(); i++){
     if (code_arr[i].op == "GOTO" || code_arr[i].op == "GOTO IF"){
       int tmp = code_arr[i].goto_label;
       while (code_arr[tmp].op == "GOTO") tmp = code_arr[tmp].goto_label;
       label_lines.insert(tmp);
       code_arr[i].goto_label = tmp;
     }
+    else {
+      if (code_arr[i].arg1 && !is_type_func(code_arr[i].arg1->type)) next_use[code_arr[i].arg1]++;
+      if (code_arr[i].arg2 && !is_type_func(code_arr[i].arg2->type)) next_use[code_arr[i].arg2]++;
+      if (code_arr[i].res && !is_type_func(code_arr[i].res->type)) next_use[code_arr[i].res]++;
+    }
   }
 
   for (global_gen=1; global_gen>=0; global_gen--){
 
-    for (int i=0; i<code_arr.size(); i++){
+    for (long long i=0; i<code_arr.size(); i++){
       
       if (!global_gen && i==0){
         glob_scope = false;
@@ -535,13 +553,37 @@ void code_gen(bool link_lib_funcs){
         long long offset = curr_func == "main" ? MAIN_AR_SIZE : FUNC_AR_SIZE;
         offset += code_arr[i].res->offset;
         string s = code_arr[i].constant;
+        int len = 0;
         for (int j=0; j<s.size(); j++){
-          asmb_line("li $a0, " + to_string((int)s[j]) + "\t # load character to register");
-          if (code_arr[i].res->level) asmb_line("sb $a0, " + to_string(-offset + j) + "($fp)" + "\t # store character to memory");
-          else asmb_line("sb $a0, " + to_string(global_offsets[code_arr[i].res] + j) + "($gp)" + "\t # store character to memory");
+          if (s[j] == '\\' && j+1 < (int)s.size()){
+            if (s[j+1] == 't'){
+              int ch = '\t';
+              asmb_line("li $a0, " + to_string(ch) + "\t # load character to register"); j++;
+            }
+            else if (s[j+1] == 'v'){
+              int ch = '\v';
+              asmb_line("li $a0, " + to_string(ch) + "\t # load character to register"); j++;
+            }
+            else if (s[j+1] == 'n'){
+              int ch = '\n';
+              asmb_line("li $a0, " + to_string(ch) + "\t # load character to register"); j++;
+            }
+            else if (s[j+1] == 'f'){
+              int ch = '\f';
+              asmb_line("li $a0, " + to_string(ch) + "\t # load character to register"); j++;
+            }
+            else {
+              asmb_line("li $a0, " + to_string((int)s[j]) + "\t # load character to register");
+            }
+          }
+          else asmb_line("li $a0, " + to_string((int)s[j]) + "\t # load character to register");
+          
+          if (code_arr[i].res->level) asmb_line("sb $a0, " + to_string(-offset + len) + "($fp)" + "\t # store character to memory");
+          else asmb_line("sb $a0, " + to_string(global_offsets[code_arr[i].res] + len) + "($gp)" + "\t # store character to memory");
+          len++;
         }
-        if (code_arr[i].res->level) asmb_line("sb $0, " + to_string(-offset + (int)s.size()) + "($fp)" + "\t # store character to memory");
-        else asmb_line("sb $a0, " + to_string(global_offsets[code_arr[i].res] + s.size()) + "($fp)" + "\t # store character to memory");
+        if (code_arr[i].res->level) asmb_line("sb $0, " + to_string(-offset + len) + "($fp)" + "\t # store character to memory");
+        else asmb_line("sb $0, " + to_string(global_offsets[code_arr[i].res] + len) + "($gp)" + "\t # store character to memory");
       }
       else if(code_arr[i].op == "&"){ // res <- &arg2
         // cout << "Printing unary& assembly\n";

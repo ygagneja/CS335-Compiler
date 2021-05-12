@@ -101,33 +101,33 @@ L?\"(\\.|[^\\"])*\"	{ yylval.str=strdup(yytext); count("STRING_LITERAL"); return
 ">="			{ yylval.str=strdup(yytext); count("GE_OP"); return(GE_OP); }
 "=="			{ yylval.str=strdup(yytext); count("EQ_OP"); return(EQ_OP); }
 "!="			{ yylval.str=strdup(yytext); count("NE_OP"); return(NE_OP); }
-";"			{ yylval.str=strdup(yytext); count(";"); return(';'); }
+";"			    { yylval.str=strdup(yytext); count(";"); return(';'); }
 ("{"|"<%")		{ yylval.str=strdup(yytext); count("{"); return('{'); }
 ("}"|"%>")		{ yylval.str=strdup(yytext); count("}"); return('}'); }
-","			{ yylval.str=strdup(yytext); count(","); return(','); }
-":"			{ yylval.str=strdup(yytext); count(":"); return(':'); }
-"="			{ yylval.str=strdup(yytext); count("="); return('='); }
-"("			{ yylval.str=strdup(yytext); count("("); return('('); }
-")"			{ yylval.str=strdup(yytext); count(")"); return(')'); }
+","			    { yylval.str=strdup(yytext); count(","); return(','); }
+":"			    { yylval.str=strdup(yytext); count(":"); return(':'); }
+"="			    { yylval.str=strdup(yytext); count("="); return('='); }
+"("			    { yylval.str=strdup(yytext); count("("); return('('); }
+")"			    { yylval.str=strdup(yytext); count(")"); return(')'); }
 ("["|"<:")		{ yylval.str=strdup(yytext); count("["); return('['); }
 ("]"|":>")		{ yylval.str=strdup(yytext); count("]"); return(']'); }
-"."			{ yylval.str=strdup(yytext); count("."); return('.'); }
-"&"			{ yylval.str=strdup(yytext); count("&"); return('&'); }
-"!"			{ yylval.str=strdup(yytext); count("!"); return('!'); }
-"~"			{ yylval.str=strdup(yytext); count("~"); return('~'); }
-"-"			{ yylval.str=strdup(yytext); count("-"); return('-'); }
-"+"			{ yylval.str=strdup(yytext); count("+"); return('+'); }
-"*"			{ yylval.str=strdup(yytext); count("*"); return('*'); }
-"/"			{ yylval.str=strdup(yytext); count("/"); return('/'); }
-"%"			{ yylval.str=strdup(yytext); count("%"); return('%'); }
-"<"			{ yylval.str=strdup(yytext); count("<"); return('<'); }
-">"			{ yylval.str=strdup(yytext); count(">"); return('>'); }
-"^"			{ yylval.str=strdup(yytext); count("^"); return('^'); }
-"|"			{ yylval.str=strdup(yytext); count("|"); return('|'); }
-"?"			{ yylval.str=strdup(yytext); count("?"); return('?'); }
+"."			    { yylval.str=strdup(yytext); count("."); return('.'); }
+"&"			    { yylval.str=strdup(yytext); count("&"); return('&'); }
+"!"			    { yylval.str=strdup(yytext); count("!"); return('!'); }
+"~"			    { yylval.str=strdup(yytext); count("~"); return('~'); }
+"-"			    { yylval.str=strdup(yytext); count("-"); return('-'); }
+"+"			    { yylval.str=strdup(yytext); count("+"); return('+'); }
+"*"			    { yylval.str=strdup(yytext); count("*"); return('*'); }
+"/"			    { yylval.str=strdup(yytext); count("/"); return('/'); }
+"%"			    { yylval.str=strdup(yytext); count("%"); return('%'); }
+"<"			    { yylval.str=strdup(yytext); count("<"); return('<'); }
+">"			    { yylval.str=strdup(yytext); count(">"); return('>'); }
+"^"			    { yylval.str=strdup(yytext); count("^"); return('^'); }
+"|"			    { yylval.str=strdup(yytext); count("|"); return('|'); }
+"?"			    { yylval.str=strdup(yytext); count("?"); return('?'); }
 
 [ \t\v\n\f]		{ count("\0"); }
-.			{ yyerror("Unidentified expression found !!!\n");}
+.			    { yyerror("Unidentified token found in the test program !\n");}
 
 %%
 
@@ -142,7 +142,6 @@ void comment(){
             column = 1;
             line++;
         }
-        // else if (c=='\t') column = column + 8 - (column%8);
         else column++;
 
         if (c == '*'){
@@ -161,9 +160,6 @@ void count(char* token){
             column = 1;
             line++;
         }
-        // else if (yytext[i]=='\t'){
-        //     column = column + 8 - (column%8);
-        // }
         else column++;
     }
 }

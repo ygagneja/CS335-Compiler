@@ -1,13 +1,13 @@
 #include "sym_table.h"
 #include "type_check.h"
 
-map<string, sym_tab*> func_sym_tab_map;
-map<string, string> func_args_map;
-map<string, vector<sym_tab_entry*>> func_syms_map;
-map<string, long long> max_offsets;
+unordered_map<string, sym_tab*> func_sym_tab_map;
+unordered_map<string, string> func_args_map;
+unordered_map<string, vector<sym_tab_entry*>> func_syms_map;
+unordered_map<string, long long> max_offsets;
 sym_tab global_sym_tab;
 sym_tab waste;
-map<string, type_tab*> func_type_tab_map;
+unordered_map<string, type_tab*> func_type_tab_map;
 type_tab global_type_tab;
 type_tab waste_type;
 map<struct_sym_tab*, long long> offsets_struct;
@@ -27,6 +27,7 @@ void tab_init(bool link_lib_funcs){
     make_symbol_table("scanf");
     make_symbol_table("scans");
     make_symbol_table("malloc");
+    make_symbol_table("exit");
     args_to_scope("printi", "int", "x");
     args_to_scope("printf", "float", "x");
     args_to_scope("prints", "char*", "str");
@@ -39,6 +40,7 @@ void tab_init(bool link_lib_funcs){
     insert_entry("scanf", "func float", 0, 0, true, 0, 0);
     insert_entry("scans", "func void", 0, 0, true, 0, 0);
     insert_entry("malloc", "func void*", 0, 0, true, 0, 0);
+    insert_entry("exit", "func void", 0, 0, true, 0, 0);
     insert_func_args("printi", "int");
     insert_func_args("printf", "float");
     insert_func_args("prints", "char*");
@@ -46,6 +48,7 @@ void tab_init(bool link_lib_funcs){
     insert_func_args("scanf", "null");
     insert_func_args("scans", "char*,int");
     insert_func_args("malloc", "int");
+    insert_func_args("exit", "null");
     if (link_lib_funcs){
         make_symbol_table("strlen");
         make_symbol_table("isqrt");

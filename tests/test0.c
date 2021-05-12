@@ -5,6 +5,7 @@
 // float scanf();
 // void scans(char* str, int len);
 // void* malloc(int size);
+// void exit();
 // int strlen(char* str);
 // int isqrt(int num);
 // float log10(float x);
@@ -29,6 +30,7 @@ struct list* insert_node(int val){
 	node->next = NULL;
 	return node;
 }
+char* str = "hello\two\vrl\fd\n";
 int main(){
 	/*printi(strlen("hello"));
 	printi(isqrt(scani()));
@@ -38,14 +40,14 @@ int main(){
 	printf(sin(scanf()));
 	printf(cos(scanf()));
 	printi(4);*/
-	struct point arr[10];
-	(*(arr+5)).x = 1;
-	(*(arr+5)).s = malloc(sizeof(struct soint));
-	(arr+5)->s->m = 2.3;
-	(arr+5)->s->m++;
-	(*(arr[5].s)).k = 3.4;
-	(*(arr[5].s)).k++;
-	printi(arr[5].x++); printf(arr[5].s->m++); printf(++arr[5].s->k);
+	// struct point arr[10];
+	// (*(arr+5)).x = 1;
+	// (*(arr+5)).s = malloc(sizeof(struct soint));
+	// (arr+5)->s->m = 2.3;
+	// (arr+5)->s->m++;
+	// (*(arr[5].s)).k = 3.4;
+	// (*(arr[5].s)).k++;
+	// printi(arr[5].x++); printf(arr[5].s->m++); printf(++arr[5].s->k);
 	// int i;
 	// struct list* curr;
 	// struct list* prev;
@@ -63,4 +65,10 @@ int main(){
 	// 	printi(head->val);
 	// 	head = head->next;
 	// }
+	prints(str);
+	printi(1);
+	printf(1.2);
+	prints("\n");
+	exit();
+	prints("hi\n"); // should not print
 }

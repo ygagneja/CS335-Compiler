@@ -23,7 +23,7 @@ DO NOT PASS STRUCT AS ARGUMENTS
 CAN RETURN ONLY 4 BYTE VALUES
 ellipsis not allowed
 char literal and null vals allowed
-DO NOT USE BACKSLASH CHARACTERS AT ALL
+can use \t \v \n \f but not \0
 in read string if len 10 is passed, will eff read 8 chars, 1 \n 1 \0
 stack offsets are sorted and aligned
 lib funcs supported {

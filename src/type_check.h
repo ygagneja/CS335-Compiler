@@ -10,6 +10,7 @@ bool is_type_ptr(string str);
 bool is_type_func(string str);
 bool is_type_struct(string str);
 bool is_type_structptr(string str);
+int get_real_size(string s);
 string is_valid(string str1, string str2);
 string id_type(string str, unsigned long long level, unsigned long long* level_id);
 string postfix_type(string str, string exp_type, int label);

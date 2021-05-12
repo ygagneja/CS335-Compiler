@@ -166,9 +166,10 @@ primary_expression
                                       fprintf(stderr, "%d |\t Error : Cannot initialize an empty string literal\n", line);
                                     }
                                     s = s.substr(1, s.size()-2);
+                                    int size = get_real_size(s);
 
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                      $$->place = newstring($$->nodetype, s.size()+1, level, level_id);
+                                      $$->place = newstring($$->nodetype, size+1, level, level_id);
                                       set_arr_flag($$->place->sym_name, level, level_id[level]);
                                       $$->address = newtmp($$->nodetype, level, level_id);
                                       emit("&", NULL, $$->place, $$->address);
@@ -2741,7 +2742,6 @@ int main (int argc, char* argv[]){
 // exhaustive code review
 
 // correct switch case (types + switch_type nested bug)
-// register optimizations
 
 // normal syntax errors ??
 // propagate symbol names
