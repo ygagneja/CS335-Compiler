@@ -1,16 +1,27 @@
-// Large expression, with more permutations handled
+// Test program to test jump statements in C
+
+int fact(int n){
+    if(n == 0) return 1;
+    return n*fact(n - 1);
+}
 
 int main(){
+    int i, j;
+
+    // Break stmt
+    for(i = 0; i < 1000; i++){
+        printf(i);
+        if(i == 2) break;
+    }
+
+    //Continue stmt
+    for(i = 0; i < 3; i++){
+        if(i == 1) continue;
+        printi(i);
+    }
     
-    int a = 5, b = 3, c = 1, d = 11, e = 12, f = 20, g = 32, h = 10;
-    int res1 = -a * b + c / d; // has a unary -
-    int res2 = a / b * c - d; // div should happen first, and flooring it to int
-    int res3 = a * b - c * d; // First multiplications, then subtraction
-    int res4 = f / b / c / e; // Left to right?
-    int res5 = a % b / c * d;
-    int res6 = h++ + g++; 
-    h--;
-    g--;
-    int res7 = ++h + ++g; // Note difference between res6 and res7
+    printi(fact(7));
+
+    // return jump
     return 0;
 }

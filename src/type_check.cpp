@@ -185,7 +185,7 @@ string add_type(string str1, string str2){
 
 string shift_type(string str1, string str2){
     if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
-    if ((is_type_int(str1) || is_type_bool(str1) || is_type_char(str1)) && (is_type_int(str2) || is_type_bool(str2) || is_type_char(str2))){
+    if ((is_type_int(str1) || is_type_char(str1)) && (is_type_int(str2) || is_type_char(str2))){
         if (is_type_int(str1) || is_type_int(str2)) return "int";
         return "char";
     }

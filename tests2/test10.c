@@ -1,20 +1,15 @@
 // Bubble sort to test array and nested loops
-void printf(char* str, ...);
-void scanf(char* str, ...);
-
 
 int main()
 {
     int number, i, j, temp;
+    int a[10];
     
-    printf("\n Enter the total Number of Elements  :  ");
-    scanf("%d", &number);
-
-    int a[number];
+    number = 10;
     
-    printf("\n Enter the Array Elements  :  ");
+    prints("Enter an array of size 10:  ");
     for(i = 0; i < number; i++)
-        scanf("%d", &a[i]);
+        a[i] = scani();
 
     for(i = 0; i < number - 1; i++)
     {
@@ -28,11 +23,10 @@ int main()
             }
         }
     }
-    printf("\n List Sorted in Ascending Order : ");
+    prints("List Sorted in Ascending Order : ");
     for(i = 0; i < number; i++)
     {
-        printf(" %d \t", a[i]);
+        printi(a[i]);
     }
-    printf("\n");
     return 0;
 }

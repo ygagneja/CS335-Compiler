@@ -895,7 +895,7 @@ void code_gen(bool link_lib_funcs){
       else if(code_arr[i].op == "booltoint" || code_arr[i].op == "booltochar"){
         string res_reg = get_reg(code_arr[i].res, false);
         string arg_reg = get_reg(code_arr[i].arg2);
-        asmb_line("sne " + res_reg + ", " + arg_reg + ", 0" + "\t # "+code_arr[i].res->sym_name + " = bool_to_(int/char) " + code_arr[i].arg2->sym_name); // arg == 1 implies res = 1
+        asmb_line("move " + res_reg + ", " + arg_reg + "\t # "+code_arr[i].res->sym_name + " = bool_to_(int/char) " + code_arr[i].arg2->sym_name); // arg == 1 implies res = 1
       }
       else if(code_arr[i].op == "booltofloat"){
         string res_reg = get_reg(code_arr[i].res, false);

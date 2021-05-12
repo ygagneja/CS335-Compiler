@@ -1,7 +1,4 @@
 // Program to test recursion using Ackerman
-void printf(char* str, ...);
-void scanf(char* str, ...);
-
 int A(int m, int n)
 {
     if(m==0)
@@ -15,9 +12,11 @@ int A(int m, int n)
 int main()
 {
     int m,n;
-    printf("Enter two numbers :: \n");
-    scanf("%d %d",&m,&n);
-    printf("\nAckerman Output :: %d\n",A(m,n));
+    prints("Enter two numbers ::");
+    m = scani();
+    n = scani();
+    prints("\nAckerman Output ::");
+    printi(A(m, n));
     return 0;
 }
 

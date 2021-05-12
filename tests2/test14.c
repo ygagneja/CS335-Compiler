@@ -1,11 +1,8 @@
 // Program to implement Graph as adjacency list/matrix (Dynamic Memory)
 
-void printf(char* str, ...);
-void scanf(char* str, ...);
-
 struct node {
   int vertex;
-  struct node* next;
+  void* next;
 };
 struct node* createNode(int);
 
@@ -54,12 +51,12 @@ void printGraph(struct Graph* graph) {
   int v;
   for (v = 0; v < graph->numVertices; v++) {
     struct node* temp = graph->adjLists[v];
-    printf("\n Vertex %d\n: ", v);
+    prints("Vertex : ");
+    printi(v);
     while (temp) {
-      printf("%d -> ", temp->vertex);
+      printi(temp->vertex);
       temp = temp->next;
     }
-    printf("\n");
   }
 }
 

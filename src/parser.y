@@ -169,13 +169,14 @@ primary_expression
                                     int size = get_real_size(s);
 
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                      $$->place = newstring($$->nodetype, size+1, level, level_id);
-                                      set_arr_flag($$->place->sym_name, level, level_id[level]);
+                                      qid t = newstring($$->nodetype, size+1, level, level_id);
+                                      set_arr_flag(t->sym_name, level, level_id[level]);
+                                      $$->place = newtmp($$->nodetype, level, level_id);
+                                      emit("&", NULL, t, $$->place);
+                                      int k = emit("=string", NULL, NULL, t);
+                                      patch_constant(s, k);
                                       $$->address = newtmp($$->nodetype, level, level_id);
                                       emit("&", NULL, $$->place, $$->address);
-                                      int k = emit("=string", NULL, NULL, $$->place);
-                                      patch_constant(s, k);
-                                      $$->place = $$->address;
                                     }
                                   }
   | CHAR_LITERAL                  {$$ = terminal("CHAR_LITERAL");
@@ -457,7 +458,7 @@ postfix_expression
                                               $$->symbol = $1->symbol;
                                               if (type == "null"){
                                                 error_throw = true;
-                                                fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
+                                                fprintf(stderr, "%d |\t Error : Increment used with incompatible type. Allowed types are int, char, float\n", line);
                                               }
                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                 if ($1->address){
@@ -497,7 +498,7 @@ postfix_expression
                                               $$->symbol = $1->symbol;
                                               if (type == "null"){
                                                 error_throw = true;
-                                                fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
+                                                fprintf(stderr, "%d |\t Error : Decrement used with incompatible type. Allowed types are int, char, float\n", line);
                                               }
                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                                 if ($1->address){
@@ -567,7 +568,7 @@ unary_expression
                                     $$->symbol = $2->symbol;
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
+                                      fprintf(stderr, "%d |\t Error : Increment used with incompatible type. Allowed types are int, char, float\n", line);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       if ($2->address){
@@ -606,7 +607,7 @@ unary_expression
                                     $$->symbol = $2->symbol;
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
+                                      fprintf(stderr, "%d |\t Error : Decrement used with incompatible type. Allowed types are int, char, float\n", line);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       if ($2->address){
@@ -642,12 +643,16 @@ unary_expression
                                     $$->nodetype = new char[type.size()+1];
                                     strcpy($$->nodetype, type.c_str());
                                     $$->symbol = $2->symbol;
+                                    string op($1->label);
                                     if (type == "null"){
                                       error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator. Remember, multi-pointers are not allowed\n", line, $1->label);
+                                      if(op == "&") fprintf(stderr, "%d |\t Error : Trying to use %s with a pointer type. Note : Multi-level-pointers are not allowed\n", line, $1->label);
+                                      else if(op == "*") fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator either the symbol is a not a pointer or is a multi-level pointer\n", line, $1->label);
+                                      else if(op == "+" || op == "-") fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator. Note : Allowed types are int, float, bool and char\n", line, $1->label);
+                                      else if(op == "~") fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator. Note : Allowed types are int, bool and char\n", line, $1->label);
+                                      else if(op == "!") fprintf(stderr, "%d |\t Error : Type inconsistent with %s operator. Note : Allowed types are int, float, bool and char\n", line, $1->label);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                      string op($1->label);
                                       if (op == "&"){
                                         $$->place = newtmp(type, level, level_id);
                                         if ($2->address){
@@ -667,6 +672,10 @@ unary_expression
                                       else if (op == "+"){
                                         $$->place = $2->place;
                                       }
+                                      else if (op == "-"){
+                                        qid t = emit_assignment("int", $2->nodetype, $2->place, level, level_id, line);
+                                        emit($1->label, NULL, t, $$->place);
+                                      }
                                       else {
                                         $$->place = newtmp($2->nodetype, level, level_id);
                                         emit($1->label, NULL, $2->place, $$->place);
@@ -685,10 +694,6 @@ unary_expression
                                     }
                                     if ($3->init) $$->init = true;
                                     $$->nodetype = "int";
-                                    if (type == "null"){
-                                      error_throw = true;
-                                      fprintf(stderr, "%d |\t Error : sizeof cannot be defined for given identifiers\n", line);
-                                    }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                       qid t = newtmp($$->nodetype, level, level_id);
                                       $$->place = t;
@@ -781,7 +786,7 @@ multiplicative_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Incompatible type for * operator\n", line);
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for * operator. Note : Supported operands are int, char, bool and float\n", line);
                                                             $$ = non_terminal(0, "*", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -817,7 +822,7 @@ multiplicative_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Incompatible type for / operator\n", line);
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for / operator. Note : Supported operands are int, char, bool and float\n", line);
                                                             $$ = non_terminal(0, "/", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -838,7 +843,7 @@ multiplicative_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Incompatible type for % operator\n", line);
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for % operator. Note : Supported operands are int, char and bool\n", line);
                                                             $$ = non_terminal(0, "%", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -906,7 +911,7 @@ additive_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Incompatible type for + operator\n", line);
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for + operator. Note : Each operand should of type int, char, bool or float and if one operand is a pointer then the other should be an integer\n", line);
                                                             $$ = non_terminal(0, "+", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -970,7 +975,7 @@ additive_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Incompatible type for - operator\n", line);
+                                                            fprintf(stderr, "%d |\t Error : Incompatible type for - operator. Note : Each operand should of type int, char, bool or float and if one operand is a pointer then the other should be an integer\n", line);
                                                             $$ = non_terminal(0, "-", $1, $3);
                                                             $$->nodetype = "null";
                                                           }
@@ -987,7 +992,7 @@ shift_expression
                                                     strcpy($$->nodetype, type.c_str());
                                                     if (type == "null"){
                                                       error_throw = true;
-                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<\n", line);
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with <<. Note : Each operand should of type int or char\n", line);
                                                     }
                                                     else {
                                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
@@ -1006,7 +1011,7 @@ shift_expression
                                                     strcpy($$->nodetype, type.c_str());
                                                     if (type == "null"){
                                                       error_throw = true;
-                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>\n", line);
+                                                      fprintf(stderr, "%d |\t Error : Invalid operand(s) with >>. Note : Each operand should of type int or char\n", line);
                                                     }
                                                     else {
                                                       if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
@@ -1323,7 +1328,7 @@ and_expression
                                               }
                                               else {
                                                 error_throw = true;
-                                                fprintf(stderr, "%d |\t Error : Invalid operand(s) with &\n", line);
+                                                fprintf(stderr, "%d |\t Error : Invalid operand(s) with &. Note : Each operand should of type int, char or bool\n", line);
                                                 $$ = non_terminal(0, $2, $1, $3);
                                                 $$->nodetype = new char[type.size()+1];
                                                 strcpy($$->nodetype, type.c_str());
@@ -1350,7 +1355,7 @@ exclusive_or_expression
                                                   }
                                                   else {
                                                     error_throw = true;
-                                                    fprintf(stderr, "%d |\t Error : Invalid operand(s) with ^\n", line);
+                                                    fprintf(stderr, "%d |\t Error : Invalid operand(s) with ^. Note : Each operand should of type int, char or bool\n", line);
                                                     $$ = non_terminal(0, $2, $1, $3);
                                                     $$->nodetype = new char[type.size()+1];
                                                     strcpy($$->nodetype, type.c_str());
@@ -1377,7 +1382,7 @@ inclusive_or_expression
                                                           }
                                                           else {
                                                             error_throw = true;
-                                                            fprintf(stderr, "%d |\t Error : Invalid operand(s) with |\n", line);
+                                                            fprintf(stderr, "%d |\t Error : Invalid operand(s) with |. Note : Each operand should of type int, char or bool\n", line);
                                                             $$ = non_terminal(0, $2, $1, $3);
                                                             $$->nodetype = new char[type.size()+1];
                                                             strcpy($$->nodetype, type.c_str());
@@ -2673,7 +2678,7 @@ N
 %%
 
 void yyerror(char* s){
-    fprintf(stderr, "%s\n", s);
+    fprintf(stderr, "%s near line %d\n", s, line);
     exit(0);
 }
 
@@ -2743,8 +2748,6 @@ int main (int argc, char* argv[]){
 
 // correct switch case (types + switch_type nested bug)
 
-// normal syntax errors ??
-// propagate symbol names
 // else of reqd expr type condn
 // set up software like flow (dump relevant stuff)
 // documentation and readme

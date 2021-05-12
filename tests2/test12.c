@@ -1,15 +1,12 @@
 //Linear search in a linked list (Program to test Dynamic Memory)
-
-void printf(char* str, ...);
-void scanf(char* str, ...);
 /* Node structure */
 struct node
 {
     int data;          // Data
-    struct node *next; // Address
-} * head;
+    void* next; // Address
+};
 
-
+struct node* head;
 /**
  * Create a list of n nodes
  */
@@ -23,19 +20,19 @@ void createList(int n)
     /*
      * Unable to allocate memory, hence exit from app.
      */
-    if (head == NULL)
+    if (head == 0)
     {
-        printf("Unable to allocate memory. Exiting from app.");
+        prints("Unable to allocate memory. terminating program.");
         exit(0);
     }
     
 
     /* Input head node data from user */
-    printf("Enter data of node 1: ");
-    scanf("%d", &data);
+    prints("Enter data of node 1: ");
+    data = scani();
 
     head->data = data; // Link data field with data
-    head->next = NULL; // Link address field to NULL
+    head->next = 0; // Link address field to 0
 
     temp = head;
 
@@ -47,17 +44,17 @@ void createList(int n)
         newNode = malloc(sizeof(struct node));
 
         /* If memory is not allocated for newNode */
-        if (newNode == NULL)
+        if (newNode == 0)
         {
-            printf("Unable to allocate memory. Exiting from app.");
+            prints("Unable to allocate memory. Terminating program.");
             exit(0);
         }
 
-        printf("Enter data of node %d: ", i);
-        scanf("%d", &data);
+        prints("Enter data of node : ");
+        data = scani();
 
         newNode->data = data; // Link data field of newNode
-        newNode->next = NULL; // The newNode should point to nothing
+        newNode->next = 0; // The newNode should point to nothing
 
         temp->next = newNode; // Link previous node i.e. temp to the newNode
         temp = temp->next;
@@ -74,22 +71,21 @@ void displayList()
     struct node *temp;
 
     /*
-     * If the list is empty i.e. head = NULL,
+     * If the list is empty i.e. head = 0,
      * dont perform any action and return.
      */
-    if (head == NULL)
+    if (head == 0)
     {
-        printf("List is empty.\n");
+        prints("List is empty");
         return;
     }
     
     temp = head;
-    while (temp != NULL)
+    while (temp != 0)
     {
-        printf("%d, ", temp->data);
+        printi(temp->data);
         temp = temp->next;  // Move to next node
     }
-    printf("\n");
 }
 
 
@@ -107,14 +103,14 @@ int search(int key)
     curNode = head;
 
     // Iterate till last element until key is not found
-    while (curNode != NULL && curNode->data != key)
+    while (curNode != 0 && curNode->data != key)
     {
         index++;
         curNode = curNode->next;
     }
 
 
-    return (curNode != NULL) ? index : -1;
+    return (curNode != 0) ? index : -1;
 }
 
 int main()
@@ -122,28 +118,29 @@ int main()
     int n, keyToSearch, index;
 
     // Input node count to create
-    printf("Enter number of node to create: ");
-    scanf("%d", &n);
+    prints("Enter number of node to create: ");
+    n = scani();
 
     createList(n);
 
     // Display list
-    printf("\nData in list: \n");
+    prints("Data in the list: ");
     displayList();
 
     // Input element to search from user.
-    printf("\nEnter element to search: ");
-    scanf("%d", &keyToSearch);
+    prints("Enter element to search: ");
+    keyToSearch = scani();
 
     // Call function to search first element by key
     index = search(keyToSearch);
     
     // Element found in the list
-    if (index >= 0)
-        printf("%d found in the list at position %d\n", keyToSearch, index + 1);
+    if (index >= 0){
+        prints("key found in the list at position :");
+        printi(index+1);
+    }
     else
-        printf("%d not found in the list.\n", keyToSearch);
-    
+        prints("key not found in the list.");
 
     return 0;
 }

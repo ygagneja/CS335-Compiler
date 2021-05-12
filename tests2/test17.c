@@ -1,10 +1,7 @@
 // Program to test Function with >7 parameters (ADV: Optimized Reg Allocation)
 
-void printf(char* str, ...);
-void scanf(char* str, ...);
-
 /* function returning the max between 8 positive numbers */
-int max(int num1, int num2, int num3, int num4, int num5, int num6, int num7, int num8) {
+int max(int num1, int num2, int num3, int num4, float num5, float num6) {
 
    /* local variable declaration */
     int result = 0;
@@ -20,10 +17,6 @@ int max(int num1, int num2, int num3, int num4, int num5, int num6, int num7, in
         result = num5;
     if(num6 > result)
         result = num6;
-    if(num7 > result)
-        result = num7;
-    if(num8 > result)
-        result = num8;
  
    return result; 
 }
@@ -32,10 +25,27 @@ int main () {
 
    int ret;
  
-   ret = max(100, 50, 20, 150, 180, 200, 15, 9);
+   ret = max(100, 50, 20, 150, 180.2, 200.5);
  
-   printf( "Max value is : %d\n", ret);
+   prints("Max value is");
+   printi(ret);
+
+   ret = max(100, 50, 20, 150, 180, 200);
+ 
+   prints("Max value is");
+   printi(ret);
+
+   ret = max(100.3, 50.6, 20.434, 150.212, 180, 200);
+ 
+   prints("Max value is");
+   printi(ret);
+
+   ret = max(100.3, 50.6, 20.434, 150.212, 180.2, 200.5);
+ 
+   prints("Max value is");
+   printi(ret);
  
    return 0;
 }
  
+// non_f_args problem, why -1? accessing $a-1

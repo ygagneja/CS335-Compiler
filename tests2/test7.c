@@ -1,8 +1,6 @@
 // Program to test arrays and recursion
-void printf(char* str, ...);
-void scanf(char* str, ...);
 
-void quicksort(int list[], int low, int high)
+void quicksort(int* list, int low, int high)
 {
     int pivot, i, j, temp;
     if (low < high)
@@ -14,11 +12,11 @@ void quicksort(int list[], int low, int high)
         {
             while (list[i] <= list[pivot] && i <= high)
             {
-                i++;
+                i = i+1;
             }
             while (list[j] > list[pivot] && j >= low)
             {
-                j--;
+                j = j-1;
             }
             if (i < j)
             {
@@ -37,23 +35,19 @@ void quicksort(int list[], int low, int high)
 
 int main()
 {
-    int size, i;
+    int size = 10, i;
  
-    printf("Enter the number of elements: ");
-    scanf("%d", &size); 
-    int list[size];
-    printf("Enter the elements of the array to be sorted:\n");
+    int list[10];
+    prints("Enter 10 elements of the array to be sorted:\n");
     for (i = 0; i < size; i++)
     {
-        scanf("%d", &list[i]);
+        list[i] = scani();
     } 
     quicksort(list, 0, size - 1);
-    printf("After applying quick sort\n");
+    prints("After applying quick sort\n");
     for (i = 0; i < size; i++)
     {
-        printf("%d ", list[i]);
-    }
-    printf("\n");
- 
+        printi(list[i]);
+    } 
     return 0;
 }

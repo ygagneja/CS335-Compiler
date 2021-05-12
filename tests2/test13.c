@@ -5,11 +5,11 @@ void scanf(char* str, ...);
 struct node {
    int data; 
 	
-   struct node *leftChild;
-   struct node *rightChild;
+   void *leftChild;
+   void *rightChild;
 };
 
-struct node *root = NULL;
+struct node *root = 0;
 
 void insert(int data) {
    struct node *tempNode = (struct node*) malloc(sizeof(struct node));
@@ -17,15 +17,15 @@ void insert(int data) {
    struct node *parent;
 
    tempNode->data = data;
-   tempNode->leftChild = NULL;
-   tempNode->rightChild = NULL;
+   tempNode->leftChild = 0;
+   tempNode->rightChild = 0;
 
    //if tree is empty
-   if(root == NULL) {
+   if(root == 0) {
       root = tempNode;
    } else {
       current = root;
-      parent = NULL;
+      parent = 0;
 
       while(1) { 
          parent = current;
@@ -35,7 +35,7 @@ void insert(int data) {
             current = current->leftChild;                
             
             //insert to the left
-            if(current == NULL) {
+            if(current == 0) {
                parent->leftChild = tempNode;
                return;
             }
@@ -44,7 +44,7 @@ void insert(int data) {
             current = current->rightChild;
 
             //insert to the right
-            if(current == NULL) {
+            if(current == 0) {
                parent->rightChild = tempNode;
                return;
             }
@@ -55,11 +55,11 @@ void insert(int data) {
 
 struct node* search(int data) {
    struct node *current = root;
-   printf("Visiting elements: ");
+   prints("Visiting elements: ");
 
    while(current->data != data) {
-      if(current != NULL)
-         printf("%d ",current->data); 
+      if(current != 0)
+         printi(current->data); 
 
       //go to left tree
       if(current->data > data) {
@@ -71,8 +71,8 @@ struct node* search(int data) {
       }
 
       //not found
-      if(current == NULL) {
-         return NULL;
+      if(current == 0) {
+         return 0;
       }
    }
    
@@ -80,72 +80,58 @@ struct node* search(int data) {
 }
 
 void pre_order_traversal(struct node* root) {
-   if(root != NULL) {
-      printf("%d ",root->data);
+   if(root != 0) {
+      printi(root->data);
       pre_order_traversal(root->leftChild);
       pre_order_traversal(root->rightChild);
    }
 }
 
 void inorder_traversal(struct node* root) {
-   if(root != NULL) {
+   if(root != 0) {
       inorder_traversal(root->leftChild);
-      printf("%d ",root->data);          
+      printi(root->data);          
       inorder_traversal(root->rightChild);
    }
 }
 
 void post_order_traversal(struct node* root) {
-   if(root != NULL) {
+   if(root != 0) {
       post_order_traversal(root->leftChild);
       post_order_traversal(root->rightChild);
-      printf("%d ", root->data);
+      printi(root->data);
    }
 }
 
 int main() {
    int i;
-   int array[7] = { 27, 14, 35, 10, 19, 31, 42 };
-   for(i = 0; i < 7; i++)
-      insert(array[i]);
-
-    // Adding option of changing array at run time since test is on dynamic memory, handled by insert func
-
-    // int n; // number of elements
-    // for(i = 0; i < n; i++)
-    // {
-    //     int x;
-    //     scanf("%d", &x);
-    //     insert(x);
-    // }
-
-   i = 31;
+   int n; // number of elements
+   prints("Enter number of elements, n = :");
+   n = scani();
+   printi("Enter n numbers : ");
+   for(i = 0; i < n; i++)
+   {
+      int x;
+      x = scani();
+      insert(x);
+   }
+   prints("Enter element to search for in the tree: ");
+   i = scani();
    struct node * temp = search(i);
 
-   if(temp != NULL) {
-      printf("[%d] Element found.", temp->data);
-      printf("\n");
+   if(temp != 0) {
+      prints("given element found in the tree.");
    }else {
-      printf("[ x ] Element not found (%d).\n", i);
-   }
-
-   i = 15;
-   temp = search(i);
-
-   if(temp != NULL) {
-      printf("[%d] Element found.", temp->data);
-      printf("\n");
-   }else {
-      printf("[ x ] Element not found (%d).\n", i);
+      prints("[ x ] element not found.");
    }            
 
-   printf("\nPreorder traversal: ");
+   prints("Preorder traversal: ");
    pre_order_traversal(root);
 
-   printf("\nInorder traversal: ");
+   prints("Inorder traversal: ");
    inorder_traversal(root);
 
-   printf("\nPost order traversal: ");
+   prints("Post order traversal: ");
    post_order_traversal(root);       
 
    return 0;

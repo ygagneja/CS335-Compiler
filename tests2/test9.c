@@ -1,9 +1,4 @@
 // Code to test mutual recursion
-void printf(char* str, ...);
-void scanf(char* str, ...);
-
-int hofstaderFemale(int);
-int hofstaderMale(int);
   
 // Female function
 int hofstaderFemale(int n)
@@ -26,22 +21,20 @@ int hofstaderMale(int n)
         if (n == 0)
             return 0;
         else
-            return (n - hofstaderMale(n - 1));
+            return (n-hofstaderMale(n - 1));
 }
   
 // Driver Code
 int main()
 {
     int i;
-    printf("F\n");
+    prints("F");
     for (i = 0; i < 20; i++) 
-        printf("%d ",hofstaderFemale(i));
-      
-    printf("\n");
-  
-    printf("M\n");
+        printi(hofstaderFemale(i));
+
+    prints("M");
     for (i = 0; i < 20; i++) 
-        printf("%d ",hofstaderMale(i));
+        printi(hofstaderMale(i));
   
     return 0;
 }

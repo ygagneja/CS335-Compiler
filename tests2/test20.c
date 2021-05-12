@@ -1,8 +1,5 @@
 // Newton Raphson code on floats
 
-void printf(char* str, ...);
-void scanf(char* str, ...);
-
 //The function is x^3 - x^2  + 2
 float func(float x)
 {
@@ -19,7 +16,8 @@ float derivFunc(float x)
 void newtonRaphson(float x)
 {
     float h = func(x) / derivFunc(x);
-    while (abs(h) >= 0.001)
+    float absh = (h >= 0) ? h : -h;
+    while (absh >= 0.001)
     {
         h = func(x)/derivFunc(x);
   
@@ -27,7 +25,8 @@ void newtonRaphson(float x)
         x = x - h;
     }
  
-    printf("Root is %d",x);
+    prints("Root is:");
+    printi(x);
 }
  
 // Driver program to test above
