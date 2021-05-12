@@ -49,6 +49,7 @@ int line = 1;
 "if"			{ yylval.str=strdup(yytext); count("IF"); return(IF); }
 "int"			{ yylval.str=strdup(yytext); count("INT"); return(INT); }
 "long"			{ yylval.str=strdup(yytext); count("LONG"); return(LONG); }
+"NULL"          { yylval.constant->str=strdup(yytext); count("NULL"); return(NULL_PTR);}
 "register"		{ yylval.str=strdup(yytext); count("REGISTER"); return(REGISTER); }
 "return"		{ yylval.str=strdup(yytext); count("RETURN"); return(RETURN); }
 "short"			{ yylval.str=strdup(yytext); count("SHORT"); return(SHORT); }

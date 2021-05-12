@@ -26,7 +26,7 @@ struct list {
 struct list* insert_node(int val){
 	struct list* node = malloc(sizeof(struct list));
 	node->val = val;
-	node->next = 0;
+	node->next = NULL;
 	return node;
 }
 int main(){
@@ -38,27 +38,29 @@ int main(){
 	printf(sin(scanf()));
 	printf(cos(scanf()));
 	printi(4);*/
-	// struct point arr[10];
-	// (*(arr+5)).x = 1;
-	// (*(arr+5)).s = malloc(sizeof(struct soint));
-	// (arr+5)->s->m = 2.3;
-	// (*(arr[5].s)).k = 3.4;
-	// printi(arr[5].x); printf(arr[5].s->m); printf(arr[5].s->k);
-	int i;
-	struct list* curr;
-	struct list* prev;
-	struct list* head = malloc(sizeof(struct list));
-	head->val = 0;
-	head->next = 0;
-	prev = head;
-	for (i = 1; i<5; ){
-		curr = insert_node(i);
-		prev->next = curr;
-		prev = curr;
-		i += 1;
-	}
-	while (head != 0){
-		printi(head->val);
-		head = head->next;
-	}
+	struct point arr[10];
+	(*(arr+5)).x = 1;
+	(*(arr+5)).s = malloc(sizeof(struct soint));
+	(arr+5)->s->m = 2.3;
+	(arr+5)->s->m++;
+	(*(arr[5].s)).k = 3.4;
+	(*(arr[5].s)).k++;
+	printi(arr[5].x++); printf(arr[5].s->m++); printf(++arr[5].s->k);
+	// int i;
+	// struct list* curr;
+	// struct list* prev;
+	// struct list* head = malloc(sizeof(struct list));
+	// head->val = 0;
+	// head->next = NULL;
+	// prev = head;
+	// for (i = 1; i<5; ){
+	// 	curr = insert_node(i);
+	// 	prev->next = curr;
+	// 	prev = curr;
+	// 	i += 1;
+	// }
+	// while (head != NULL){
+	// 	printi(head->val);
+	// 	head = head->next;
+	// }
 }

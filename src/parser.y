@@ -48,7 +48,7 @@ extern int line;
 %token <str> STRUCT UNION ENUM ELLIPSIS
 %token <str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN TRUE FALSE
 %token <str> '>' '<' '&' '|' '^' '=' '*' ',' ';'
-%token <constant> INT_C FLOAT_C CHAR_LITERAL
+%token <constant> INT_C FLOAT_C CHAR_LITERAL NULL_PTR
 
 %start translation_unit
 
@@ -85,9 +85,11 @@ primary_expression
                                         $$->place = lookup_use($1, level, level_id);
 
                                         if (is_type_ptr($$->nodetype) && $$->place->is_arr){
+                                          qid t = newtmp(type, level, level_id);
+                                          emit("&", NULL, $$->place, t);
                                           $$->address = newtmp(type, level, level_id);
-                                          emit("&", NULL, $$->place, $$->address);
-                                          $$->place = $$->address;
+                                          emit("&", NULL, t, $$->address);
+                                          $$->place = t;
                                         }
                                         else if (is_type_struct($$->nodetype)){
                                           $$->address = newtmp(type + "*", level, level_id);
@@ -188,6 +190,19 @@ primary_expression
                                       patch_constant(to_string($$->int_val), k);
                                     }
                                   }
+  | NULL_PTR                      {$$ = terminal("NULL");
+                                    $$->init = true;
+                                    $$->nodetype = "void*";
+                                    $$->expr_type = 5;
+                                    $$->int_val = 0;
+
+                                    if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                      qid t = newtmp($$->nodetype, level, level_id);
+                                      $$->place = t;
+                                      int k = emit("=", NULL, NULL, $$->place);
+                                      patch_constant(to_string(0), k);
+                                    }
+                                  }
   | '(' expression ')'            {$$ = $2; $$->symbol = "symbol"; }
   ;
 
@@ -252,7 +267,6 @@ postfix_expression
                                               }
                                              }
   | postfix_expression '(' argument_expression_list ')'   {$$ = non_terminal(0, "postfix_expression(argument_expression_list)", $1, $3);
-                                                            // cout << $3->curr_args_types << endl;
                                                             if ($3->init) $$->init = true;
                                                             $$->symbol = $1->symbol;
                                                             string type = postfix_type($1->nodetype, "", 3);
@@ -282,23 +296,26 @@ postfix_expression
                                                                     typeB = temp2.substr(0,f2);
                                                                     temp2 = temp2.substr(f2+1);
                                                                   }
-                                                                  if (typeB == string("...")) break;
                                                                   string chk = is_valid(typeA, typeB);
-                                                                  if (chk == string("0")){
+                                                                  if (chk == "0"){
                                                                     fprintf(stderr, "%d |\t Warning : Passing argument %d of %s from incompatible pointer type. Note : expected %s but argument is of type %s\n", line,  arg_num, ($1->symbol), typeB.c_str(), typeA.c_str());
                                                                   }
                                                                   else if (chk == "null"){
                                                                     error_throw = true;
                                                                     fprintf(stderr, "%d |\t Error : Incompatible type for argument %d of %s. Note : expected %s but argument is of type %s\n", line, arg_num, ($1->symbol), typeB.c_str(), typeA.c_str());
                                                                   }
+                                                                  else if (chk == "1"){
+                                                                    if ((is_type_float(typeA) &&  !is_type_float(typeB)) || (!is_type_float(typeA) &&  is_type_float(typeB))){
+                                                                      error_throw = true;
+                                                                      fprintf(stderr, "%d | \t Error : Implicit typecasting of float to non-float or non-float to float is not allowed in function arguments. Check argument number %d of function call %s\n", line, arg_num, $1->symbol);
+                                                                    }
+                                                                  }
                                                                   if ((f1 != string::npos) && (f2 != string::npos)){
                                                                     continue;
                                                                   }
                                                                   else if (f2 != string::npos){
-                                                                    if(!(temp2==string("..."))){
-                                                                      error_throw = true;
-                                                                      fprintf(stderr, "%d |\t Error : Too few arguments for the function %s\n", line, ($1->symbol));
-                                                                    }
+                                                                    error_throw = true;
+                                                                    fprintf(stderr, "%d |\t Error : Too few arguments for the function %s\n", line, ($1->symbol));
                                                                     break;
                                                                   }
                                                                   else if (f1 != string::npos){
@@ -310,14 +327,8 @@ postfix_expression
                                                                 }
                                                               }
                                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                                if (type == "void"){
-                                                                  qid t = NULL;
-                                                                  $$->place = t;
-                                                                }
-                                                                else {
-                                                                  qid t = newtmp($$->nodetype, level, level_id);
-                                                                  $$->place = t;
-                                                                }
+                                                                if (type == "void");
+                                                                else $$->place = newtmp($$->nodetype, level, level_id);
                                                                 int k = emit("call", NULL, $1->place, $$->place);
                                                               }
                                                             }
@@ -355,10 +366,11 @@ postfix_expression
                                                     string id_type($$->nodetype);
                                                     if (is_type_ptr(id_type)){
                                                       if (is_struct_sym_arr($1->nodetype, $3, level, level_id)){
-                                                        $$->address = newtmp(id_type, level, level_id);
-                                                        int k = emit("+ptr", $1->address, NULL, $$->address);
+                                                        $$->place = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->address, NULL, $$->place);
                                                         patch_constant(to_string(offset), k);
-                                                        $$->place = $$->address;
+                                                        $$->address = newtmp(id_type, level, level_id);
+                                                        emit("&", NULL, $$->place, $$->address);
                                                       }
                                                       else {
                                                         $$->address = newtmp(id_type, level, level_id);
@@ -410,10 +422,11 @@ postfix_expression
                                                     string id_type($$->nodetype);
                                                     if (is_type_ptr(id_type)){
                                                       if (is_struct_sym_arr(tmp, $3, level, level_id)){
-                                                        $$->address = newtmp(id_type, level, level_id);
-                                                        int k = emit("+ptr", $1->place, NULL, $$->address);
+                                                        $$->place = newtmp(id_type, level, level_id);
+                                                        int k = emit("+ptr", $1->place, NULL, $$->place);
                                                         patch_constant(to_string(offset), k);
-                                                        $$->place = $$->address;
+                                                        $$->address = newtmp(id_type, level, level_id);
+                                                        emit("&", NULL, $$->place, $$->address);
                                                       }
                                                       else {
                                                         $$->address = newtmp(id_type, level, level_id);
@@ -446,9 +459,33 @@ postfix_expression
                                                 fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                               }
                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                qid t = newtmp($$->nodetype, level, level_id);
-                                                $$->place = t;
-                                                emit("E++", $1->place, NULL, $$->place);
+                                                if ($1->address){
+                                                  $$->address = $1->address;
+                                                  $$->place = newtmp($$->nodetype, level, level_id);
+                                                  emit("=", NULL, $1->place, $$->place);
+                                                  if (is_type_float($$->nodetype)){
+                                                    int k = emit("+float", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1.0), k);
+                                                    emit("* =", NULL, $1->place, $$->address);
+                                                  }
+                                                  else {
+                                                    int k = emit("+int", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1), k);
+                                                    emit("* =", NULL, $1->place, $$->address);
+                                                  }
+                                                }
+                                                else {
+                                                  $$->place = newtmp($$->nodetype, level, level_id);
+                                                  emit("=", NULL, $1->place, $$->place);
+                                                  if (is_type_float($$->nodetype)){
+                                                    int k = emit("+float", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1.0), k);
+                                                  }
+                                                  else {
+                                                    int k = emit("+int", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1), k);
+                                                  }
+                                                }
                                               }
                                              }
   | postfix_expression DEC_OP                {$$ = non_terminal(0, $2, $1);
@@ -462,9 +499,33 @@ postfix_expression
                                                 fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                               }
                                               if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                                qid t = newtmp($$->nodetype, level, level_id);
-                                                $$->place = t;
-                                                emit("E--", $1->place, NULL, $$->place);
+                                                if ($1->address){
+                                                  $$->address = $1->address;
+                                                  $$->place = newtmp($$->nodetype, level, level_id);
+                                                  emit("=", NULL, $1->place, $$->place);
+                                                  if (is_type_float($$->nodetype)){
+                                                    int k = emit("-float", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1.0), k);
+                                                    emit("* =", NULL, $1->place, $$->address);
+                                                  }
+                                                  else {
+                                                    int k = emit("-int", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1), k);
+                                                    emit("* =", NULL, $1->place, $$->address);
+                                                  }
+                                                }
+                                                else {
+                                                  $$->place = newtmp($$->nodetype, level, level_id);
+                                                  emit("=", NULL, $1->place, $$->place);
+                                                  if (is_type_float($$->nodetype)){
+                                                    int k = emit("-float", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1.0), k);
+                                                  }
+                                                  else {
+                                                    int k = emit("-int", $1->place, NULL, $1->place);
+                                                    patch_constant(to_string(1), k);
+                                                  }
+                                                }
                                               }
                                              }
   ;
@@ -508,16 +569,31 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Increment used with incompatible type\n", line);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+                                      if ($2->address){
                                         $$->address = $2->address;
-                                        if ($2->address){
-                                          $$->place = newtmp($$->nodetype, level, level_id);
-                                          emit("* ++E", $2->address, NULL, $$->address);
-                                          emit("*", NULL, $$->address, $$->place);
+                                        $$->place = $2->place;
+                                        if (is_type_float($$->nodetype)){
+                                          int k = emit("+float", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1.0), k);
+                                          emit("* =", NULL, $2->place, $$->address);
                                         }
                                         else {
-                                          $$->place = newtmp($$->nodetype, level, level_id);
-                                          emit("++E", $2->place, NULL, $$->place);
+                                          int k = emit("+int", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1), k);
+                                          emit("* =", NULL, $2->place, $$->address);
                                         }
+                                      }
+                                      else {
+                                        $$->place = $2->place;
+                                        if (is_type_float($$->nodetype)){
+                                          int k = emit("+float", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1.0), k);
+                                        }
+                                        else {
+                                          int k = emit("+int", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1), k);
+                                        }
+                                      }
                                     }
                                   }
 
@@ -532,15 +608,30 @@ unary_expression
                                       fprintf(stderr, "%d |\t Error : Decrement used with incompatible type\n", line);
                                     }
                                     if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-                                      $$->address = $2->address;
                                       if ($2->address){
-                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                        emit("* --E", $2->address, NULL, $$->address);
-                                        emit("*", NULL, $$->address, $$->place);
+                                        $$->address = $2->address;
+                                        $$->place = $2->place;
+                                        if (is_type_float($$->nodetype)){
+                                          int k = emit("-float", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1.0), k);
+                                          emit("* =", NULL, $2->place, $$->address);
+                                        }
+                                        else {
+                                          int k = emit("-int", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1), k);
+                                          emit("* =", NULL, $2->place, $$->address);
+                                        }
                                       }
                                       else {
-                                        $$->place = newtmp($$->nodetype, level, level_id);
-                                        emit("--E", $2->place, NULL, $$->place);
+                                        $$->place = $2->place;
+                                        if (is_type_float($$->nodetype)){
+                                          int k = emit("-float", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1.0), k);
+                                        }
+                                        else {
+                                          int k = emit("-int", $$->place, NULL, $$->place);
+                                          patch_constant(to_string(1), k);
+                                        }
                                       }
                                     }
                                   }
@@ -1888,7 +1979,6 @@ struct_declarator
                                           if ($1->expr_type == 15){
                                             set_struct_arr_flag($$->symbol);
                                           }
-                                          // handle common struct errors
                                         }
 	;
 
@@ -2650,10 +2740,8 @@ int main (int argc, char* argv[]){
 }
 // exhaustive code review
 
-// typecasting for func call
 // correct switch case (types + switch_type nested bug)
-// incop decop 3ac
-// remove void* warnings, add null
+// register optimizations
 
 // normal syntax errors ??
 // propagate symbol names
@@ -2661,6 +2749,4 @@ int main (int argc, char* argv[]){
 // set up software like flow (dump relevant stuff)
 // documentation and readme
 // make test cases to display special stuff
-
-// register/code optimizations
 // pass flag to link lib funcs

@@ -44,6 +44,7 @@ bool is_type_structptr(string str){
 }
 
 string is_valid(string str1, string str2){
+    if (str1 == "null" || str2 == "null") return string("1");
     if (str1 == str2){
         if (is_type_func(str1) && is_type_struct(str1)) return "null";
         return "1";
@@ -53,7 +54,10 @@ string is_valid(string str1, string str2){
     }
     else if (is_type_ptr(str1) && is_type_int(str2)) return string("0");
     else if (is_type_ptr(str2) && is_type_int(str1)) return string("0");
-    else if (is_type_ptr(str1) && is_type_ptr(str2)) return string("0");
+    else if (is_type_ptr(str1) && is_type_ptr(str2)){
+        if (str1 == "void*" || str2 == "void*") return string("1");
+        else return string("0");
+    }
     return string("null");
 }
 
@@ -112,7 +116,7 @@ string unary_type(char* op, string str){
     else if (*op == '*' && !is_type_func(str)){
         if (is_type_ptr(str)){
             str.pop_back();
-            if (!is_type_ptr(str)) return string(str);
+            if (!is_type_ptr(str) && !(str == "void")) return string(str);
             else return string("null");
         }
         else return string("null");
@@ -138,6 +142,7 @@ string cast_type(string str1, string str2){
 }
 
 string mul_type(string str1, string str2, char op){
+    if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
     string ret_type = string("null");
     if ((is_type_int(str1) || is_type_float(str1) || is_type_bool(str1) || is_type_char(str1)) && (is_type_int(str2) || is_type_float(str2) || is_type_bool(str2) || is_type_char(str2))){
         if (op == '*' || op == '/'){
@@ -152,6 +157,7 @@ string mul_type(string str1, string str2, char op){
 }
 
 string add_type(string str1, string str2){
+    if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
     string ret_type = string("null");
     if ((is_type_int(str1) || is_type_float(str1) || is_type_bool(str1) || is_type_char(str1)) && (is_type_int(str2) || is_type_float(str2) || is_type_bool(str2) || is_type_char(str2))){
         if (is_type_float(str1) || is_type_float(str2)) return "float";
@@ -167,6 +173,7 @@ string add_type(string str1, string str2){
 }
 
 string shift_type(string str1, string str2){
+    if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
     if ((is_type_int(str1) || is_type_bool(str1) || is_type_char(str1)) && (is_type_int(str2) || is_type_bool(str2) || is_type_char(str2))){
         if (is_type_int(str1) || is_type_int(str2)) return "int";
         return "char";
@@ -175,13 +182,14 @@ string shift_type(string str1, string str2){
 }
 
 string relat_type(string str1, string str2){
+    if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
     string ret_type = string("null");
     if ((is_type_int(str1) || is_type_float(str1) || is_type_bool(str1) || is_type_char(str1)) && (is_type_int(str2) || is_type_float(str2) || is_type_bool(str2) || is_type_char(str2))){
         if (is_type_float(str1) || is_type_float(str2)) return "float";
         else return "int";
     }
     if (is_type_ptr(str1) && is_type_ptr(str2)){
-        if (str1 == str2){
+        if (str1 == str2 || ((str1 == "void*" || str2 == "void*"))){
             return string("*");
         }
         else {
@@ -195,6 +203,7 @@ string relat_type(string str1, string str2){
 }
 
 string bit_type(string str1, string str2){
+    if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
     string ret_type = string("null");
     if ((is_type_int(str1) || is_type_char(str1) || is_type_bool(str1)) && (is_type_int(str2) || is_type_char(str2) || is_type_bool(str2))){
         if (is_type_int(str1) || is_type_int(str2)) return "int";
@@ -204,8 +213,9 @@ string bit_type(string str1, string str2){
 }
 
 string cond_type(string str1, string str2){
+    if (str1 == "null" || str2 == "null") return "int"; // to avoid error propagation
     if (str1 == str2){
-        if (is_type_func(str1) && is_type_struct(str1)) return "null";
+        if (is_type_func(str1) || is_type_struct(str1)) return "null";
         return string(str1);
     }
     if ((is_type_int(str1) || is_type_float(str1) || is_type_char(str1) || is_type_bool(str1)) && (is_type_int(str2) || is_type_float(str2) || is_type_char(str2) || is_type_bool(str2))){
