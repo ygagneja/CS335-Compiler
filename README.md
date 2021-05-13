@@ -1,7 +1,7 @@
 # CS335-Compiler
- C to MIPS compiler developed under CS335 at IIT Kanpur
+ C to MIPS compiler developed under Prof. Amey Karkare, CS335 at IIT Kanpur
  
- ### Steps to build and run the compiler :
+ ### Steps to build and run the Compiler :
  ```ruby
  make
  ./bin/compiler -help  # To see the usage info
