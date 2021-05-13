@@ -21,11 +21,11 @@ void insert(int data) {
    //if tree is empty
    if(root == NULL) {
       root = tempNode;
-   } else {
+   }else{
       current = root;
       parent = NULL;
 
-      while(1) { 
+      while(1){ 
          parent = current;
          
          //go to left of the tree
@@ -107,7 +107,7 @@ int main() {
    struct node* temp;
    prints("Enter number of elements, n = ");
    n = scani();
-   prints("Enter n numbers : ");
+   prints("Enter n numbers : \n");
    for(i = 0; i < n; i++)
    {
       int x;
@@ -119,18 +119,18 @@ int main() {
    temp = search(i);
 
    if(temp != 0) {
-      prints("given element found in the tree.");
+      prints("\ngiven element found in the tree.");
    }else {
-      prints("[ x ] element not found.");
+      prints("\ngiven element not found.");
    }            
 
-   prints("Preorder traversal: ");
+   prints("\nPreorder traversal: ");
    pre_order_traversal(root);
 
-   prints("Inorder traversal: ");
+   prints("\nInorder traversal: ");
    inorder_traversal(root);
 
-   prints("Post order traversal: ");
+   prints("\nPost order traversal: ");
    post_order_traversal(root);       
 
    return 0;

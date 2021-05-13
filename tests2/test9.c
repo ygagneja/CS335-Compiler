@@ -35,6 +35,8 @@ int main()
     prints("\nM : ");
     for (i = 0; i < 5; i++) 
         printi(hofstaderMale(i));
-  
+    //Expected output
+    //F : 1 1 2 2 3 
+    //M : 0 0 1 1 2
     return 0;
 }

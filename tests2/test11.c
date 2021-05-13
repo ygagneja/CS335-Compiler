@@ -1,4 +1,4 @@
-// Program to test multi dimensional arrays using matrix multiplicatuon
+// Program to test arrays using matrix multiplication 
 
 int main()
 {

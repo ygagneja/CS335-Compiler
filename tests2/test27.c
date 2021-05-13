@@ -9,15 +9,19 @@ int main(){
     for(i = 0, j = 0, y = 0; i < 10 && j < 10; j += (i++)*2){
         switch (i)
         {
-        case 1:
-            z = ++y*i+1;
-            break;
-        case 2:
-            z = y >= 10 ? i++ : ++j;
-            break;
-        case 3:
-            if(y) x++;
-            break;
+        case 1: {
+                    z = ++y*i+1;
+                    break;
+                } 
+        case 2: {
+                    z = y >= 10 ? i++ : ++j;
+                    break;
+                }
+            
+        case 3: {
+                    if(y) x++;
+                    break;
+                }
         default:
             break;
         }

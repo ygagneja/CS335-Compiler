@@ -91,13 +91,11 @@ int main()
 {
     int n, keyToSearch, index;
 
-    // Input node count to create
     prints("Enter number of node to create list of: ");
     n = scani();
 
     createList(n);
 
-    // Display list
     prints("Data in the list: ");
     displayList();
 
@@ -110,7 +108,7 @@ int main()
     
     // Element found in the list
     if (index >= 0){
-        prints("key found in the list at position :");
+        prints("key found in the list at position: ");
         printi(index+1);
     }
     else

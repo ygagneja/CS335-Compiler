@@ -11,16 +11,16 @@ int main(){
     f2 = scanf();
     printf(f2);
     printi(strlen("hello"));
-    prints("Enter element to find sqrt :");
+    prints("Enter element to find sqrt: ");
 	printi(isqrt(scani()));
-    prints("Enter element to find log10 :");
+    prints("Enter element to find log10: ");
 	printf(log10(scanf()));
-    prints("Enter element to find floor :");
+    prints("Enter element to find floor: ");
 	printf(floor(scanf()));
-    prints("Enter two elements x and y to find pow(x, y) :");
+    prints("Enter two elements x and y to find pow(x, y): ");
 	printi(power(scani(), scani()));
-    prints("Enter element to find sin :");
+    prints("Enter element to find sin: ");
 	printf(sin(scanf()));
-    prints("Enter element to find cos :");
+    prints("Enter element to find cos: ");
 	printf(cos(scanf()));
 }

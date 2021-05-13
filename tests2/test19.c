@@ -10,14 +10,14 @@ int main() {
     int m = 25;
     int n = 100;
     int *ret;
-    prints("Values of m and n before swapping : ");
+    prints("Values of m and n before swapping : \n");
     printi(m);
     printi(n);
     ret = swap(&m, &n);
-    prints("Values of m and n after swapping : ");
+    prints("Values of m and n after swapping : \n");
     printi(m);
     printi(n);
-    prints("Returned values is :");
+    prints("Returned values is: ");
     printi(*ret);
     return 0;
 }

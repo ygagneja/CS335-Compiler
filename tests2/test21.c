@@ -25,10 +25,10 @@ int main(int i){
     switch(1){
         case 1 : {break;}
         case 2 : {break;}
-        case 3 : {
-            a = x ? 1 : 2;
-            break;
-            }
+        case 3 :{
+                    a = x ? 1 : 2;
+                    break;
+                }
         default : {break;}
     }
     while (true){

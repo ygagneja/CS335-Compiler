@@ -18,7 +18,8 @@ string func_name;
 string func_args;
 string func_symbols;
 string t_name;
-string switch_type;
+int loop = 0;
+stack <qid> switch_expr_stack;
 int struct_id = 0;
 unsigned long long level_id[MAX_LEVELS];
 unsigned long long level = 0;
@@ -52,8 +53,8 @@ extern int line;
 
 %start translation_unit
 
-%type <str> empty1 empty2 empty3 op_brace cl_brace assignment_operator
-%type <ptr> marker1 marker2 marker3 N switch_case_marker expr_marker exprstmt_marker if_expression
+%type <str> empty1 empty2 empty3 op_brace cl_brace assignment_operator loop_mark
+%type <ptr> marker1 marker2 marker3 N switch_case_marker expr_marker exprstmt_marker if_expression switch_expr_marker
 %type <ptr> multiplicative_expression additive_expression cast_expression primary_expression expression
 %type <ptr> type_name assignment_expression postfix_expression argument_expression_list initializer_list unary_expression
 %type <ptr> unary_operator shift_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression
@@ -1658,9 +1659,7 @@ assignment_operator
   ;
 
 expression
-  : assignment_expression                 {$$ = $1;
-                                            switch_type = string($$->nodetype);
-                                          }
+  : assignment_expression                 {$$ = $1; }
   | expression ',' M assignment_expression  {$$ = non_terminal(0, "expression", $1, $4);
                                               if (!error_throw){
                                                 $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
@@ -2310,29 +2309,36 @@ switch_case_marker
   : CASE constant_expression ':'                {
                                                   $$ = $2;
                                                   if (!error_throw){
-                                                    qid res = newtmp("bool", level, level_id);
-                                                    string type = relat_type(switch_type, $2->place->type);
-                                                    int tmp;
-                                                    if (type == "int") tmp = emit("==int", $2->place, NULL, res);
-                                                    else if (is_type_float(switch_type) && is_type_float($2->place->type)) tmp = emit("==float", $2->place, NULL, res);
-                                                    else {
-                                                      if (is_type_int(switch_type)){
-                                                        qid mid = newtmp($2->place->type, level, level_id);
-                                                        int k = emit("inttofloat", NULL, NULL, mid);
-                                                        ($$->caselist) = insert($$->caselist, k);
-                                                        tmp = emit("==float", mid, NULL, res);
+                                                    qid tmp = switch_expr_stack.top();
+                                                    string type = relat_type(tmp->type, $2->nodetype);
+                                                    if (type != "null"){
+                                                      qid t = newtmp("bool", level, level_id);
+                                                      if (type == "*warning"){
+                                                        fprintf(stderr, "%d |\t Warning : Comparison between different pointer types in switch case\n", line);
+                                                        type = "*";
                                                       }
-                                                      else {
-                                                        qid mid = newtmp(switch_type, level, level_id);
-                                                        emit("inttofloat", NULL, $2->place, mid);
-                                                        tmp = emit("==float", mid, NULL, res);
+                                                      if (type == "*"){
+                                                        emit("==ptr", $2->place, tmp, t);
                                                       }
+                                                      else if (type == "int"){
+                                                        qid p = emit_assignment(type, $2->nodetype, $2->place, level, level_id, line);
+                                                        qid q = emit_assignment(type, tmp->type, tmp, level, level_id, line);
+                                                        emit("==int", p, q, t);
+                                                      }
+                                                      else if (type == "float"){
+                                                        qid p = emit_assignment(type, $2->nodetype, $2->place, level, level_id, line);
+                                                        qid q = emit_assignment(type, tmp->type, tmp, level, level_id, line);
+                                                        emit("==float", p, q, t);
+                                                      }
+                                                      int tmp1 = emit("GOTO IF", NULL, t, NULL);
+                                                      int tmp2 = emit("GOTO", NULL, NULL, NULL);
+                                                      ($$->truelist) = insert($$->truelist, tmp1);
+                                                      ($$->falselist) = insert($$->falselist, tmp2);
                                                     }
-                                                    int tmp1 = emit("GOTO IF", NULL, res, NULL);
-                                                    int tmp2 = emit("GOTO", NULL, NULL, NULL);
-                                                    ($$->caselist) = insert($$->caselist, tmp);
-                                                    ($$->truelist) = insert($$->truelist, tmp1);
-                                                    ($$->falselist) = insert($$->falselist, tmp2);
+                                                    else {
+                                                      error_throw = true;
+                                                      fprintf(stderr, "%d |\t Error : Comparison between incompatible types in switch case\n", line);
+                                                    }
                                                   }
                                                 }
 
@@ -2346,7 +2352,6 @@ labeled_statement
                                                   backpatch($1->truelist, $2);
                                                   $$->breaklist = copy($3->breaklist);
                                                   $$->nextlist = merge($3->nextlist, $1->falselist);
-                                                  $$->caselist = copy($1->caselist);
                                                   $$->continuelist = copy($3->continuelist);
                                                 }
                                               }
@@ -2370,7 +2375,6 @@ compound_statement
                                                               $$->nextlist = copy($4->nextlist);
                                                               $$->truelist = copy($4->truelist);
                                                               $$->falselist = copy($4->falselist);
-                                                              $$->caselist = copy($4->caselist);
                                                               $$->continuelist = copy($4->continuelist);
                                                               $$->breaklist = copy($4->breaklist);
                                                             }
@@ -2407,7 +2411,6 @@ statement_list
                                   if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
                                     backpatch($1->nextlist, $2);
                                     $$->nextlist = copy($3->nextlist);
-                                    $$->caselist = merge($1->caselist, $3->caselist);
                                     $$->continuelist = merge($1->continuelist, $3->continuelist);
                                     $$->breaklist = merge($1->breaklist, $3->breaklist);
                                   }
@@ -2432,6 +2435,12 @@ if_expression
 
   ;
 
+switch_expr_marker
+  : expression              {
+                              $$ = $1;
+                              if (!error_throw) switch_expr_stack.push($1->place);
+                            }
+
 selection_statement
 	: if_expression M statement ELSE N M statement
           {
@@ -2443,6 +2452,10 @@ selection_statement
               $$->nextlist = merge($$->nextlist, $5->nextlist);
               $$->breaklist = merge($3->breaklist, $7->breaklist);
               $$->continuelist = merge($3->continuelist, $7->continuelist);
+              if (($$->continuelist || $$->breaklist) && !loop){
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : Cannot use continue or break statements inside an if else statement if it is not nested within a loop\n", line);
+              }
             }
           }
 	| if_expression M statement
@@ -2453,15 +2466,23 @@ selection_statement
               $$->nextlist = merge($1->falselist, $3->nextlist);
               $$->continuelist = copy($3->continuelist);
               $$->breaklist = copy($3->breaklist);
+              if (($$->continuelist || $$->breaklist) && !loop){
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : Cannot use continue or break statements inside an if statement if it is not nested within a loop\n", line);
+              }
             }
           }
-	| SWITCH '(' expression ')' statement
+	| SWITCH '(' switch_expr_marker ')' statement
           {
             $$ = non_terminal(0, "SWITCH (expr) stmt", $3, $5);
             if (!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-              patch_caselist($5->caselist, $3->place);
               $$->nextlist = merge($5->nextlist, $5->breaklist);
               $$->continuelist = copy($5->continuelist);
+              switch_expr_stack.pop();
+              if ($$->continuelist && !loop){
+                error_throw = true;
+                fprintf(stderr, "%d |\t Error : Cannot use continue statements inside a switch statement if it is not nested within a loop\n", line);
+              }
             }
           }
 	;
@@ -2493,56 +2514,63 @@ exprstmt_marker
   ;
 
 iteration_statement
-	: WHILE '(' M expr_marker ')' M statement
+	: WHILE '(' M expr_marker ')' M loop_mark statement
         {
-          $$ = non_terminal(0, "WHILE (expr) stmt", $4, $7);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-            int k = emit("GOTO", NULL, NULL, NULL);
-            ($7->nextlist) = insert($7->nextlist, k);
-            backpatch($7->nextlist, $3);
-            backpatch($7->continuelist, $3);
-            backpatch($4->truelist, $6);
-            $$->nextlist = merge($4->falselist, $7->breaklist);
-          }
-        }
-	| DO M statement WHILE '(' M expr_marker ')' ';'
-        {
-          $$ = non_terminal(0, "DO stmt WHILE (expr)", $3, $7);
-          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
-            backpatch($3->continuelist, $6);
-            backpatch($3->nextlist, $6);
-            backpatch($7->truelist, $2);
-            $$->nextlist = merge($3->breaklist, $7->falselist);
-          }
-        }
-	| FOR '(' expression_statement M exprstmt_marker ')' M statement
-        {
-          $$ = non_terminal(1, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $8);
+          $$ = non_terminal(0, "WHILE (expr) stmt", $4, $8);
+          loop--;
           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
             ($8->nextlist) = insert($8->nextlist, k);
-            backpatch($5->truelist, $7);
-            backpatch($3->nextlist, $4);
-            backpatch($8->nextlist, $4);
-            backpatch($8->continuelist, $4);
-            $$->nextlist = merge($5->falselist, $8->breaklist);
+            backpatch($8->nextlist, $3);
+            backpatch($8->continuelist, $3);
+            backpatch($4->truelist, $6);
+            $$->nextlist = merge($4->falselist, $8->breaklist);
           }
         }
-	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M statement
+	| DO M loop_mark statement WHILE '(' M expr_marker ')' ';'
         {
-          $$ = non_terminal(1, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $11);
+          $$ = non_terminal(0, "DO stmt WHILE (expr)", $4, $8);
+          loop--;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+            backpatch($4->continuelist, $7);
+            backpatch($4->nextlist, $7);
+            backpatch($8->truelist, $2);
+            $$->nextlist = merge($4->breaklist, $8->falselist);
+          }
+        }
+	| FOR '(' expression_statement M exprstmt_marker ')' M loop_mark statement
+        {
+          $$ = non_terminal(1, "FOR (expr_stmt expr_stmt) stmt", $3, $5, $9);
+          loop--;
           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
-            ($11->nextlist) = insert($11->nextlist, k);
-            backpatch($11->nextlist, $6);
-            backpatch($11->continuelist, $6);
+            ($9->nextlist) = insert($9->nextlist, k);
+            backpatch($5->truelist, $7);
+            backpatch($3->nextlist, $4);
+            backpatch($9->nextlist, $4);
+            backpatch($9->continuelist, $4);
+            $$->nextlist = merge($5->falselist, $9->breaklist);
+          }
+        }
+	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M loop_mark statement
+        {
+          $$ = non_terminal(1, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $12);
+          loop--;
+          if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
+            int k = emit("GOTO", NULL, NULL, NULL);
+            ($12->nextlist) = insert($12->nextlist, k);
+            backpatch($12->nextlist, $6);
+            backpatch($12->continuelist, $6);
             backpatch($5->truelist, $10);
             backpatch($3->nextlist, $4);
-            $$->nextlist = merge($5->falselist, $11->breaklist);
+            $$->nextlist = merge($5->falselist, $12->breaklist);
             backpatch($8->nextlist, $4);
           }
         }
 	;
+
+loop_mark
+  : %empty          { loop++; }
 
 jump_statement
 	: GOTO IDENTIFIER ';'       {

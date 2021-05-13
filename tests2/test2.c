@@ -20,29 +20,30 @@ int main(){
     printi(arr[8]);
 
     a += a+i*b-a;
-    printi(a);
+    printi(a); // should print 28
     a <<= 1;
-    printi(a);
+    printi(a); // should print 56
     a >>= 3;
-    printi(a);
+    printi(a); // should print 7
     a ^= 3;
-    printi(a);
+    printi(a); // should print 4
     a &= 3;
-    printi(a);
+    printi(a); // should print 0
     a |= 3;
-    printi(a);
+    printi(a); // should print 3
     a %= 3;
-    printi(a);
-    a /= 3;
-    printi(a);
+    printi(a); // should print 0
+    a += 10;
+    a /= 3; 
+    printi(a); // should print 3 
     a -= 3;
-    printi(a);
+    printi(a); // should print 0
 
-    printi(!a);
-    printi(~a);
-    printf(res1);
-    printf(res2);
-    printi(comp);
+    printi(!a); // should print 1
+    printi(~a); // should print -1
+    printf(res1); // 2.207
+    printf(res2); // 0
+    printi(comp); // 1
     prints("\n");
     return 0;
 }

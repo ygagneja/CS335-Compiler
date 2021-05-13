@@ -10,29 +10,29 @@ int main(){
                     {
                         switch (j)
                         {
-                        case 1:
-                            pass = true;
-                            break;
-                        case 2:{
-                            for(k = 0; k < 10; k++){
-                                i++;
-                                if(i == 1) j = 10;
-                            }
-                        }
-                        default:
-                            break;
+                            case 1:
+                                pass = true;
+                                break;
+                            case 2: {
+                                        for(k = 0; k < 10; k++){
+                                            i++;
+                                            if(i == 1) j = 10;
+                                        }
+                                    }
+                            default:
+                                break;
                         }
                     }
                 case 2:
                     {
                         switch (j)
                         {
-                        case 1:
-                            pass = true;
-                            break;
-                        case 2:
-                        default:
-                            break;
+                            case 1:
+                                pass = true;
+                                break;
+                            case 2:
+                            default:
+                                break;
                         }
                     }
                        

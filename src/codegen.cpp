@@ -51,7 +51,7 @@ void asmb_line(string s){
 }
 
 void dump_asm_code(bool link_lib_funcs){
-  ofstream out_file("./out/out.asm");
+  ofstream out_file("out.asm");
   for(string it : assembly_code){
     out_file << it << endl;
     if (it == ".text\n" && link_lib_funcs){
@@ -800,10 +800,11 @@ void code_gen(bool link_lib_funcs){
           // arg2 is never NULL for ==ptr (for now)
           string res_reg = get_reg(code_arr[i].res, false);
           string arg_reg = get_reg(code_arr[i].arg1);
-          if(code_arr[i].op == "==int") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
-          else if(code_arr[i].op == "==ptr") asmb_line("seq " + reg3 + ", " + reg1 + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
+          if(code_arr[i].op == "==int") asmb_line("seq " + res_reg + ", " + arg_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
+          else if(code_arr[i].op == "==ptr") asmb_line("seq " + res_reg + ", " + arg_reg + ", " + code_arr[i].constant + "\t # "+code_arr[i].res->sym_name + " = "+code_arr[i].arg1->sym_name + " ==int "+code_arr[i].constant+"? 1 : 0");
           else {
-            asmb_line("c.eq.s " + reg1 + ", " + code_arr[i].constant+"\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].constant + " ?");
+            asmb_line("li.s $f0, " + code_arr[i].constant);
+            asmb_line("c.eq.s " + reg1 + ", $f0" + "\t # "+code_arr[i].arg1->sym_name + " ==float " + code_arr[i].constant + " ?");
             asmb_line("bc1t _fp_cond_true_" + to_string(fp_cond));
             asmb_line("li " + reg3 + ", 0");
             asmb_line("b _fp_cond_end_" + to_string(fp_cond));
@@ -860,9 +861,17 @@ void code_gen(bool link_lib_funcs){
       }
       else if(code_arr[i].op == "GOTO IF"){ // GOTO IF
         string arg_reg = get_reg(code_arr[i].arg2);
-        asmb_line("move $a0, " + arg_reg);
-        spill_regs();
-        asmb_line("bnez $a0, _jump_label_" + to_string(code_arr[i].goto_label));
+        if (is_type_float(code_arr[i].arg2->type)){
+          asmb_line("li.s $f0, 0.0");
+          asmb_line("c.eq.s $f0, " + arg_reg);
+          spill_regs();
+          asmb_line("bc1f _jump_label_" + to_string(code_arr[i].goto_label));
+        }
+        else {
+          asmb_line("move $a0, " + arg_reg);
+          spill_regs();
+          asmb_line("bnez $a0, _jump_label_" + to_string(code_arr[i].goto_label));
+        }
       }
       else if(code_arr[i].op == "inttochar"){ // Load only one byte(lower 8 bits)
         string res_reg = get_reg(code_arr[i].res, false);
