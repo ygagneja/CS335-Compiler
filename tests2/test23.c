@@ -16,7 +16,6 @@ int main(){
     if(t > 10)
         prints("\nt is big");
 
-    i = 1;
     switch (i)
     {
     case 1: {

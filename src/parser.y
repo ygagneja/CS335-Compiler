@@ -2308,6 +2308,10 @@ statement
 switch_case_marker
   : CASE constant_expression ':'                {
                                                   $$ = $2;
+                                                  if ($2->truelist || $2->falselist || $2->nextlist){
+                                                    error_throw = true;
+                                                    fprintf(stderr, "%d |\t Error : Boolean/Conditional expressions not allowed as case expressions\n", line);
+                                                  }
                                                   if (!error_throw){
                                                     qid tmp = switch_expr_stack.top();
                                                     string type = relat_type(tmp->type, $2->nodetype);
@@ -2430,6 +2434,7 @@ if_expression
                                 int tmp2 = emit("GOTO", NULL, NULL, NULL);
                                 ($$->truelist) = insert($$->truelist, tmp1);
                                 ($$->falselist) = insert($$->falselist, tmp2);
+                                backpatch($3->nextlist, tmp1);
                               }
                             }
 
@@ -2438,6 +2443,10 @@ if_expression
 switch_expr_marker
   : expression              {
                               $$ = $1;
+                              if ($$->truelist || $$->falselist || $$->nextlist){
+                                error_throw = true;
+                                fprintf(stderr, "%d |\t Error : Boolean/Conditional expressions not allowed as switch expressions\n", line);
+                              }
                               if (!error_throw) switch_expr_stack.push($1->place);
                             }
 
@@ -2495,6 +2504,7 @@ expr_marker
                                 int tmp2 = emit("GOTO", NULL, NULL, NULL);
                                 ($$->truelist) = insert($$->truelist, tmp1);
                                 ($$->falselist) = insert($$->falselist, tmp2);
+                                backpatch($1->nextlist, tmp1);
                               }
                             }
 
@@ -2508,6 +2518,7 @@ exprstmt_marker
                                 int tmp2 = emit("GOTO", NULL, NULL, NULL);
                                 ($$->truelist) = insert($$->truelist, tmp1);
                                 ($$->falselist) = insert($$->falselist, tmp2);
+                                backpatch($1->nextlist, tmp1);
                               }
                             }
 
@@ -2555,6 +2566,10 @@ iteration_statement
 	| FOR '(' expression_statement M exprstmt_marker M expression N ')' M loop_mark statement
         {
           $$ = non_terminal(1, "FOR (expr_stmt expr_stmt expr) stmt", $3, $5, $7, $12);
+          if ($7->truelist || $7->falselist){
+            error_throw = true;
+            fprintf(stderr, "%d |\t Error : Do not use boolean update expressions in for loops\n", line);
+          }
           loop--;
           if(!error_throw){ $$->nextlist = NULL; $$->truelist = NULL; $$->falselist = NULL; $$->breaklist = NULL; $$->continuelist = NULL; $$->caselist = NULL; $$->place = NULL; $$->address = NULL;
             int k = emit("GOTO", NULL, NULL, NULL);
@@ -2565,6 +2580,7 @@ iteration_statement
             backpatch($3->nextlist, $4);
             $$->nextlist = merge($5->falselist, $12->breaklist);
             backpatch($8->nextlist, $4);
+            backpatch($7->nextlist, $4);
           }
         }
 	;
@@ -2794,8 +2810,6 @@ int main (int argc, char* argv[]){
     return 0;
 }
 // exhaustive code review
-
-// correct switch case (types + switch_type nested bug)
 
 // else of reqd expr type condn
 // documentation and readme

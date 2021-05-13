@@ -28,25 +28,6 @@ int emit(string op, qid arg1, qid arg2, qid res){
     tmp.arg2 = arg2;
     tmp.res = res;
     code_arr.push_back(tmp);
-    // cout << code_arr.size()-1 << ".\t";
-    // if (tmp.res){
-    //     cout << tmp.res->sym_name;
-    // }
-    // else if (tmp.op == "GOTO" || tmp.op == "GOTO IF"){
-    //     cout << tmp.goto_label;
-    // }
-    // cout << " <- ";
-    // if (tmp.arg1){
-    //     cout << tmp.arg1->sym_name;
-    // }
-    // cout << " " << tmp.op << " ";
-    // if (tmp.arg2){
-    //     cout << tmp.arg2->sym_name;
-    // }
-    // else {
-    //     cout << tmp.constant;
-    // }
-    // cout << endl;
     return code_arr.size()-1;
 }
 
