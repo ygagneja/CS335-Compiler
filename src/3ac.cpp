@@ -271,33 +271,24 @@ void dump_3ac(){
     int i = 0;
     for (quad q : code_arr){
         out_file << i << ".\t";
-        cout << i << ".\t";
         if (q.res){
             out_file << q.res->sym_name;
-            cout << q.res->sym_name;
         }
         else if (q.op == "GOTO" || q.op == "GOTO IF"){
             out_file << q.goto_label;
-            cout << q.goto_label;
         }
         out_file << " <- ";
-        cout << " <- ";
         if (q.arg1){
             out_file << q.arg1->sym_name;
-            cout << q.arg1->sym_name;
         }
         out_file << " " << q.op << " ";
-        cout << " " << q.op << " ";
         if (q.arg2){
             out_file << q.arg2->sym_name;
-            cout << q.arg2->sym_name;
         }
         else {
             out_file << q.constant;
-            cout << q.constant;
         }
         out_file << endl;
-        cout << endl;
         i++;
     }
 }

@@ -1,40 +1,57 @@
-void printf(char* str, ...);
-void strcpy(char* str1, char* str2);
+// Quicksort to test arrays and recursion
 
-struct Books {
-   char title[50];
-   char author[50];
-   char subject[100];
-   int book_id;
-} book;
+void swap(int* x, int* y){
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
 
-int main(){
-    int a, b;
-    int c; 
-    struct Books Book1;        
-    struct Books Book2; 
-    c = a + b;
-    printf("%d",c);       
-    
-    strcpy( Book1.title, "CLRS");
-    strcpy( Book1.author, "Bose"); 
-    strcpy( Book1.subject, "Algo");
-    Book1.book_id = 6495407;
+void quicksort(int* list, int low, int high)
+{
+    int pivot, i, j, temp;
+    if (low < high)
+    {
+        pivot = low;
+        i = low;
+        j = high;
+        while (i < j) 
+        {
+            while (list[i] <= list[pivot] && i <= high)
+            {
+                i = i+1;
+            }
+            while (list[j] > list[pivot] && j >= low)
+            {
+                j = j-1;
+            }
+            if (i < j)
+            {
+                swap(list+i, list+j);
+            }
+        }
+        swap(&list[j], &list[pivot]);
+        quicksort(list, low, j - 1);
+        quicksort(list, j + 1, high);
+    }
+}
 
-    strcpy( Book2.title, "Quantum Physics");
-    strcpy( Book2.author, "Senapati");
-    strcpy( Book2.subject, "Physics");
-    Book2.book_id = 6495700;
-    
-    printf( "Book 1 title : %s\n", Book1.title);
-    printf( "Book 1 author : %s\n", Book1.author);
-    printf( "Book 1 subject : %s\n", Book1.subject);
-    printf( "Book 1 book_id : %d\n", Book1.book_id);
-
-    printf( "Book 2 title : %s\n", Book2.title);
-    printf( "Book 2 author : %s\n", Book2.author);
-    printf( "Book 2 subject : %s\n", Book2.subject);
-    printf( "Book 2 book_id : %d\n", Book2.book_id);
-
+int main()
+{
+    int list[50];
+    int size, i;
+    prints("Enter the number of elements in the array (must be <= 50) :\n");
+    size = scani();
+    prints("Enter the elements of the array to be sorted :\n");
+    for (i = 0; i < size; i++)
+    {
+        list[i] = scani();
+    } 
+    quicksort(list, 0, size-1);
+    prints("Array after applying quick sort :\n");
+    for (i = 0; i < size; i++)
+    {
+        printi(list[i]);
+    }
+    prints("\n");
     return 0;
 }

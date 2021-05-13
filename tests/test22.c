@@ -1,10 +1,5 @@
 // Test program to test jump statements in C
 
-int fact(int n){
-    if(n == 0) return 1;
-    return n*fact(n - 1);
-}
-
 int main(){
     int i, j;
 
@@ -19,9 +14,8 @@ int main(){
         if(i == 1) continue;
         printi(i);
     }
-    
-    printi(fact(7));
 
+    prints("\n");
     // return jump
     return 0;
 }

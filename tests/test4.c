@@ -1,38 +1,26 @@
-void printf(char* str, ...);
-void scanf(char* str, ...);
+//Program to test short-circuiting for && and ||
 
-int main() {
-    int a[10][10], transpose[10][10], r, c, i, j;
-    int x = 2.5;
-    printf("Enter rows and columns: ");
-    scanf("%d %d", &r, &c);
-
-    printf("\nEnter matrix elements:\n");
-    for (i = 0; i < r; ++i)
-        for (j = 0; j < c; ++j) {
-            printf("Enter element a%d%d: ", i + 1, j + 1);
-            scanf("%d", &a[i][j]);
-        }
-
-    printf("\nEntered matrix: \n");
-    for (i = 0; i < r; ++i)
-        for (j = 0; j < c; ++j) {
-            printf("%d  ", a[i][j]);
-            if (j == c - 1)
-                printf("\n");
-        }
-
-    for (i = 0; i < r; ++i)
-        for (j = 0; j < c; ++j) {
-            *(*(transpose+j)+i) = *(*(a+i)+j);
-        }
-
-    printf("\nTranspose of the matrix:\n");
-    for (i = 0; i < c; ++i)
-        for (j = 0; j < r; ++j) {
-            printf("%d  ", transpose[i][j]);
-            if (j == r - 1)
-                printf("\n");
-        }
+int main(){
+    int a = 1;
+    int b = 2;
+    bool res = false;
+    printi(res); // should be 0
+    if(a == 1 && b++){
+        res = true;
+    }
+    printi(b); // should be 3
+    if(a == 2 && b++){
+        res = true;
+    }
+    printi(b); // should be 3
+    if(a == 2 || b++){
+        res = true;
+    }
+    printi(b); // should be 4
+    if(a == 1 || b++){
+        res = true;
+    }
+    printi(b); // should be 4
+    prints("\n");
     return 0;
 }

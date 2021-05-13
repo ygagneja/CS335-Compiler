@@ -181,6 +181,7 @@ void set_struct_scope(){
 }
 
 bool insert_struct_symbol(string sym_name, string type, unsigned long long size){
+    if (size % 4) return false;
     struct_sym_tab* curr;
     if (curr_struct_stack.size()) curr = curr_struct_stack.top();
     else return true;
@@ -190,7 +191,7 @@ bool insert_struct_symbol(string sym_name, string type, unsigned long long size)
         entry->type = type;
         entry->size = size;
         entry->offset = offsets_struct[curr];
-        offsets_struct[curr] = offsets_struct[curr]%4 && size >= 4 ? offsets_struct[curr] + (4 - offsets_struct[curr]%4) + size : offsets_struct[curr] + size;
+        offsets_struct[curr] += size;
         (*curr)[sym_name] = entry;
         return true;
     }

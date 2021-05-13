@@ -1,39 +1,41 @@
-void printf(char* str, ...);
-void scanf(char* str, ...);
+// Binary Search to test arrays and recursion
 
-// Test program to test jump statements in C
-
-int fact(int n){
-    if(n == 0) return 1;
-    return n*fact(n - 1);
+int binarySearch(int* arr, int l, int r, int x)
+{
+    int mid;
+    if (r >= l)
+    {
+        mid = l + (r - l)/2;
+        if (arr[mid] == x)  return mid;
+        if (arr[mid] > x) return binarySearch(arr, l, mid-1, x);
+        return binarySearch(arr, mid+1, r, x);
+    }
+   return -1;
 }
+  
+int main()
+{
+    int arr[50];
+    int size, i, result;
 
-int main(){
-    int i, j;
-
-    // Break stmt
-    for(i = 0; i < 100; i++){
-        printf("%d\n", i);
-        if(i == 2) break;
+    // User input search
+    int x;
+    prints("Enter the number of elements in the array (must be <= 50) :\n");
+    size = scani();
+    prints("Enter the elements of the array (must be sorted) :\n");
+    for(i = 0; i < size; i++){
+        arr[i] = scani();
     }
-
-    //Continue stmt
-    for(i = 0; i < 3; i++){
-        if(i == 1) continue;
-        printf("%d\n", i);
+    prints("Enter element to search in the array :\n");
+    x = scani();
+    result = binarySearch(arr, 0, size-1, x);
+    if (result == -1)
+        prints("Element is not present in the array\n");
+    else
+    {
+        prints("Element is present at index : ");
+        printi(result);
+        prints("\n");
     }
-
-    Print_three:
-        printf("3\n");
-
-    //goto jump stmt
-    for(i = 0; i < 5; i++){
-        if(i == 3)
-            goto Print_three;
-        printf("%d\n", i);
-    }
-
-    // return jump
-    printf("%d\n", fact(7));
     return 0;
 }

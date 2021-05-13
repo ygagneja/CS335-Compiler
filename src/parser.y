@@ -658,6 +658,7 @@ unary_expression
                                         $$->place = newtmp(type, level, level_id);
                                         if ($2->address){
                                           emit("=", NULL, $2->address, $$->place);
+                                          $$->address = newtmp(type, level, level_id);
                                         }
                                         else {
                                           emit("&", NULL, $2->place, $$->place);
@@ -1842,23 +1843,23 @@ storage_class_specifier
   ;
 
 type_specifier
-  : VOID     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "void";}
-  | BOOL     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "bool";}
-  | CHAR     {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "char";}
+  : VOID     {$$ = terminal($1); t_name = $1; $$->nodetype = "void";}
+  | BOOL     {$$ = terminal($1); t_name = $1; $$->nodetype = "bool";}
+  | CHAR     {$$ = terminal($1); t_name = $1; $$->nodetype = "char";}
   | SHORT    {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'short'\ datatypes not allowed\n", line);
                 $$->nodetype = "null";
                 t_name = "null";
               }
-  | INT      {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "int";}
+  | INT      {$$ = terminal($1); t_name = $1; $$->nodetype = "int";}
   | LONG     {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'long'\ datatypes not allowed\n", line);
                 $$->nodetype = "null";
                 t_name = "null";
               }
-  | FLOAT    {$$ = terminal($1); t_name = (t_name=="") ? $1 : t_name+" "+$1; $$->nodetype = "float";}
+  | FLOAT    {$$ = terminal($1); t_name = $1; $$->nodetype = "float";}
   | DOUBLE   {$$ = terminal($1);
                 error_throw = true;
                 fprintf(stderr, "%d |\t Error : \'double'\ datatypes not allowed\n", line);
@@ -1877,7 +1878,7 @@ type_specifier
                 $$->nodetype = "null";
                 t_name = "null";
               }
-  | struct_or_union_specifier  {$$ = $1; t_name = (t_name=="") ? $1->nodetype : t_name+" "+string($1->nodetype);}
+  | struct_or_union_specifier  {$$ = $1; t_name = $1->nodetype; }
   | enum_specifier  {$$ = $1;
                     error_throw = true;
                     fprintf(stderr, "%d |\t Error : Enum not implemented yet\n", line);
@@ -1978,7 +1979,7 @@ struct_declarator
   : declarator                          {$$ = $1;
                                           if (!insert_struct_symbol($$->symbol, $$->nodetype, $$->size)){
                                             error_throw = true;
-                                            fprintf(stderr, "$d |\t Error : Redeclaration of symbol \'%s\' in struct\n", line, $$->symbol);
+                                            fprintf(stderr, "%d |\t Error : Redeclaration of a symbol in struct or using char/bool types, which are not allowed due to alignment issues\n", line);
                                           }
                                           if ($1->expr_type == 15){
                                             set_struct_arr_flag($$->symbol);
@@ -2142,12 +2143,10 @@ direct_declarator
                                                                 }
                                                               }
                                                               else {
+                                                                insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
+                                                                insert_func_args($1->symbol, func_args);
                                                                 if (args_to_scope($$->symbol, func_args, func_symbols)){
-                                                                  if (check_args_constraints($1->symbol, func_args)){
-                                                                    insert_entry($1->symbol, "func " + string($$->nodetype), 0, 0, false, level, level_id[level]);
-                                                                    insert_func_args($1->symbol, func_args);
-                                                                  }
-                                                                  else {
+                                                                  if (!check_args_constraints($1->symbol, func_args)){
                                                                     error_throw = true;
                                                                     fprintf(stderr, "%d |\t Error : Maximum arguments number is 8 (4 non-float and 4 float)\n", line);
                                                                   }
@@ -2797,10 +2796,11 @@ int main (int argc, char* argv[]){
     yyparse();
     graph_end();
     if (error_throw){
-      remove("./out/tree.ast");
       return 0;
     }
     sort_and_align_offsets();
+    system("exec rm -r ./out/sym_tables/*");
+    system("exec rm -r ./out/type_tables/*");
     dump_tables();
     dump_type_tables();
     dump_3ac();
@@ -2809,8 +2809,3 @@ int main (int argc, char* argv[]){
     fclose (ast);
     return 0;
 }
-// exhaustive code review
-
-// else of reqd expr type condn
-// documentation and readme
-// make test cases to display special stuff

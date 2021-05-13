@@ -1,31 +1,32 @@
-//Switch cases
+// Code to test struct data type as function parameter and return
 
-int main(){
-    int a, b, c, k, res = 30, j;
-    int i = 10;
-    a = 10, b = 10, c = 2;
-    switch (i+a+b*c)
-    {
-    case 10:
-        for(k = 0; k<10; k++){
-            if(k % 2) a++;
-            else a++;
-        }
-        break;
-    case 40:
-        if(k % 2) a++;
-        else a--;
-        break;
-    case 50:
-        while(res--){
-            for(i = 1; i < 10; i++){
-                for(j = 0; j < i; j++){
-                    res--;
-                }
-            }
-        }
-        break;
-    default:
-        break;
-    }
+struct employee {
+    int id;
+    struct salary {int intern; float money; } sal;
+};
+
+void print_info(struct employee* e){
+    printi(e->id);
+    prints("id employee takes salary : ");
+    printf(e->sal.money);
+    if (e->sal.intern) prints(", might be an intern\n");
+    else prints("\n");
+}
+
+struct employee* create_employee(int id, int intern, float money){
+    struct employee* e = malloc(sizeof(struct employee));
+    e->id = id;
+    e->sal.intern = intern;
+    e->sal.money = e->sal.intern ? 0 : money;
+    return e;
+}
+  
+int main()
+{
+    struct employee *e, *f;
+    e = create_employee(1, true, 123.3);
+    f = create_employee(2, false, 3244.0);
+    print_info(e);
+    print_info(f);  
+    return 0;
 }

@@ -1,70 +1,35 @@
- 
-// Program to check all kinds of errors handled
+// Bubble sort to test array and nested loops
 
-int foo(int a, int b){
-    a = 1;
-    b = 1;
-    b = i;
-    return a;
-}
-
-int tmp(int a, int b);
-
-int tmp2(){
-    return;
-}
-
-void tmp3(){
-    tmp(1, 2);
-    tmp2();
-    return 11;
-}
-
-int main(){
-    int b;
-    int b = 1, i;
-    bool c = true;
-    void d;
-    char arr[-10];
-    int arr[50];
-    b = a;
-    arr[2.5] = 0;
-    foo(b);
-    foo();
-    foo(a, b, 5);
-    goto uv;
-    b();
-
-    uv:
-        b = 1;
+int main()
+{
+    int size, i, j, temp;
+    int list[50];
     
-    c++;
-    ++c;
-    i = (float)b;
-    i = 3<<2.5;
-    i = 2.5<<3;
-    d = 1;
-
-    switch (1)
+    prints("Enter the number of elements in the array (must be <= 50) :\n");
+    size = scani();
+    prints("Enter the elements of the array to be sorted :\n");
+    for (i = 0; i < size; i++)
     {
-        case 1:
-            continue;
-            break;
-        
-        case 2:
-            a = 10;
-            break;
+        list[i] = scani();
+    } 
+
+    for(i = 0; i < size - 1; i++)
+    {
+        for(j = 0; j < size - i - 1; j++)
+        {
+            if(list[j] > list[j + 1])
+            {
+                temp = list[j];
+                list[j] = list[j + 1];
+                list[j + 1] = temp;
+            }
+        }
     }
-
-    goto uv;
-    
-
-}
-
-bool foo(int a, int b){
-    return -1;
-}
-
-bool tmp(float c, float d){
-    return -1;
+    prints("List Sorted in Ascending Order :\n");
+    for(i = 0; i < size; i++)
+    {
+        printi(list[i]);
+    }
+    prints("\n");
+    return 0;
 }
